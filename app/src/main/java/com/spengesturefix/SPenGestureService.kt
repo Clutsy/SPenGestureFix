@@ -9,27 +9,12 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 
-/**
- * Servizio in foreground che:
- * 1. Trova il digitizer "sec_e-pen" e ci legge sopra gli eventi grezzi.
- * 2. Li passa a PenGestureAnalyzer per riconoscere clic/doppio clic/
- *    pressione lunga/hover.
- * 3. (Sperimentale) Ascolta anche il device "w1" per il rilevamento
- *    penna dentro/fuori dall'alloggiamento — vedi README.
- * 4. Per ogni gesto, esegue la PenAction assegnata in GestureBindings
- *    tramite ActionExecutor — quindi COSA succede a ogni gesto è
- *    scelto dall'utente in MainActivity, non hardcoded qui.
- * 5. Ogni gesto genera anche un broadcast "com.denis.spenfix.GESTURE"
- *    (extra "type"), utilizzabile da Tasker o altre automazioni.
- */
 class SPenGestureService : Service() {
 
     companion object {
         const val CHANNEL_ID = "spen_gesture_service"
         const val NOTIFICATION_ID = 1
         const val DIGITIZER_DEVICE_NAME = "sec_e-pen"
-
-        // Ipotesi non confermata, vedi README: device "w1", switch code 001a.
         const val PRESENCE_DEVICE_NAME = "w1"
         const val PRESENCE_SWITCH_CODE = "001a"
     }
@@ -42,7 +27,7 @@ class SPenGestureService : Service() {
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, buildNotification("In attesa del digitizer S Pen…"))
+        startForeground(NOTIFICATION_ID, buildNotification(getString(R.string.notif_waiting)))
 
         wheelOverlay = WheelOverlay(applicationContext)
 
@@ -56,14 +41,14 @@ class SPenGestureService : Service() {
         Thread {
             val digitizerPath = EventDeviceFinder.findDevicePath(DIGITIZER_DEVICE_NAME)
             if (digitizerPath == null) {
-                updateNotification("Digitizer \"$DIGITIZER_DEVICE_NAME\" non trovato")
+                updateNotification(getString(R.string.notif_not_found, DIGITIZER_DEVICE_NAME))
                 return@Thread
             }
             digitizerReader = EPenInputReader(digitizerPath) { type, code, value ->
                 gestureAnalyzer.onEvent(type, code, value)
             }
             digitizerReader?.start()
-            updateNotification("Attivo su $digitizerPath")
+            updateNotification(getString(R.string.notif_active, digitizerPath))
 
             val presencePath = EventDeviceFinder.findDevicePath(PRESENCE_DEVICE_NAME)
             if (presencePath != null) {
@@ -106,7 +91,7 @@ class SPenGestureService : Service() {
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID, "S Pen Gesture Service", NotificationManager.IMPORTANCE_LOW
+                CHANNEL_ID, getString(R.string.notif_channel_name), NotificationManager.IMPORTANCE_LOW
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
@@ -114,7 +99,7 @@ class SPenGestureService : Service() {
 
     private fun buildNotification(text: String): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("S Pen Gesture Fix")
+            .setContentTitle(getString(R.string.notif_title))
             .setContentText(text)
             .setSmallIcon(android.R.drawable.ic_menu_edit)
             .setOngoing(true)

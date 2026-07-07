@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Rect
+import android.graphics.Typeface
 import android.os.Build
 import android.view.MotionEvent
 import android.view.View
@@ -88,27 +89,31 @@ private class WheelView(
 
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
-        strokeWidth = 3f
-        color = Color.parseColor("#552979FF")
+        strokeWidth = 2f
+        color = Color.parseColor("#446C63FF")
     }
     private val slotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#EE2979FF")
+        color = Color.parseColor("#EE6C63FF")
+    }
+    private val slotGlowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = Color.parseColor("#226C63FF")
     }
     private val centerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#DD444444")
+        color = Color.parseColor("#DD1A1A2E")
     }
-    private val scrimPaint = Paint().apply { color = Color.parseColor("#99000000") }
+    private val scrimPaint = Paint().apply { color = Color.parseColor("#CC000000") }
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        textSize = 30f
+        textSize = 20f
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
     }
 
     private var centerX = 0f
     private var centerY = 0f
-    private val radius = 340f
-    private val slotRadius = 90f
-    private val closeRadius = 70f
+    private val radius = 200f
+    private val slotRadius = 52f
+    private val closeRadius = 38f
 
     override fun onDraw(canvas: Canvas) {
         centerX = width / 2f
@@ -126,15 +131,20 @@ private class WheelView(
                 val angle = (2 * Math.PI * i / count) - Math.PI / 2
                 val sx = centerX + radius * cos(angle).toFloat()
                 val sy = centerY + radius * sin(angle).toFloat()
+
+                // Draw a nice glow behind the slot circle
+                canvas.drawCircle(sx, sy, slotRadius + 6f, slotGlowPaint)
+                // Draw slot circle
                 canvas.drawCircle(sx, sy, slotRadius, slotPaint)
-                canvas.drawText(action.label.take(12), sx, sy + 12f, textPaint)
+                // Draw text
+                canvas.drawText(action.label.take(10), sx, sy + 7f, textPaint)
             }
         } else {
-            canvas.drawText("Nessuno spicchio configurato", centerX, centerY - radius - 40f, textPaint)
+            canvas.drawText(context.getString(R.string.wheel_no_slots), centerX, centerY - radius - 40f, textPaint)
         }
 
         canvas.drawCircle(centerX, centerY, closeRadius, centerPaint)
-        canvas.drawText("X", centerX, centerY + 12f, textPaint)
+        canvas.drawText("✕", centerX, centerY + 8f, textPaint)
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

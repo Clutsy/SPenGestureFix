@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000">
+
+    <!-- Drawing Canvas Area -->
+    <com.spengesturefix.GridBackgroundView
+        android:id="@+id/drawingArea"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000" />
+
+    <!-- Top Status Overlay -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:background="#99000000">
+
+        <!-- Status Indicator Dot -->
+        <View
+            android:id="@+id/statusIndicator"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
+            android:background="@android:drawable/presence_offline"
+            android:layout_marginRight="8dp" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/tablet_status_ready"
+            android:textColor="#888888"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvPressureValue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="P: 0%"
+            android:textColor="#6C63FF"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Right Side Pressure Indicator Bar -->
+    <View
+        android:id="@+id/pressureBar"
+        android:layout_width="6dp"
+        android:layout_height="match_parent"
+        android:layout_gravity="right"
+        android:background="#6C63FF"
+        android:visibility="gone" />
+
+    <!-- Center Toggle Play/Stop Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnToggleTablet"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
+        android:layout_gravity="center"
+        android:text=""
+        app:icon="@android:drawable/ic_media_play"
+        app:iconSize="48dp"
+        app:iconGravity="textStart"
+        app:iconPadding="0dp"
+        app:cornerRadius="60dp"
+        app:backgroundTint="#6C63FF"
+        app:elevation="8dp" />
+
+    <!-- Bottom Left Close/Exit Button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnExitTablet"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|left"
+        android:layout_margin="24dp"
+        android:text="✕"
+        android:textColor="#EAEAEA"
+        android:textSize="18sp"
+        app:strokeColor="#1E1E2E"
+        app:cornerRadius="28dp"
+        app:backgroundTint="#22000000" />
+
+    <!-- Bottom Right Settings FAB -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fabSettings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|right"
+        android:layout_margin="24dp"
+        android:src="@android:drawable/ic_menu_preferences"
+        app:backgroundTint="#6C63FF"
+        app:tint="#FFFFFF"
+        app:elevation="6dp" />
+
+</FrameLayout>

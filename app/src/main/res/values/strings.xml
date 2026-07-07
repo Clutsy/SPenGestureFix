@@ -1,3 +1,108 @@
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <!-- Status section -->
+    <string name="section_status">⚡ Status</string>
+    <string name="btn_check_root">Check root permissions</string>
+    <string name="btn_overlay_permission">Grant overlay permission</string>
+    <string name="btn_start">Start</string>
+    <string name="btn_stop">Stop</string>
+    <!-- S Pen Button section -->
+    <string name="section_spen_button">✏️ S Pen Button — programmable</string>
+    <string name="hint_tap_row">Tap a row to change the action</string>
+    <!-- Gesture labels -->
+    <string name="gesture_click">Single click</string>
+    <string name="gesture_double_click">Double click</string>
+    <string name="gesture_long_press">Long press</string>
+    <!-- Wheel section -->
+    <string name="section_wheel">🎯 S Pen Wheel</string>
+    <string name="btn_pick_background">Choose background</string>
+    <string name="btn_clear_background">Remove</string>
+    <string name="wheel_slots_label">Wheel slots</string>
+    <string name="wheel_slot_label">Slot %d</string>
+    <string name="wheel_no_slots">No slots configured</string>
+    <string name="wheel_bg_updated">Wheel background updated</string>
+    <!-- Quick Notes section -->
+    <string name="section_notes">📝 Quick Notes (Action Memo)</string>
+    <string name="btn_view_notes">View saved notes</string>
+    <!-- Tablet Mode section -->
+    <string name="section_tablet_mode">🖊️ Wacom Tablet Mode</string>
+    <string name="tablet_mode_subtitle">Use your Note 3 as a Wacom pen tablet for PC</string>
+    <string name="btn_start_tablet">Start Tablet Mode</string>
+    <string name="btn_tablet_settings">Settings</string>
+    <!-- Footer -->
+    <string name="footer_experimental">Pen Window and pen removal detection are experimental: see README for details.</string>
+    <string name="subtitle_device">Note 3 SM-N9005 · digitizer sec_e-pen</string>
+    <!-- ActionType labels -->
+    <string name="action_none">No action</string>
+    <string name="action_launch_app">Open app</string>
+    <string name="action_open_wheel">Open S Pen Wheel</string>
+    <string name="action_screenshot">Screenshot</string>
+    <string name="action_screen_write">Screen Write (annotate screenshot)</string>
+    <string name="action_smart_select">Crop screen area</string>
+    <string name="action_quick_note">Quick Note (Action Memo)</string>
+    <string name="action_app_search">Search and open app (S Finder)</string>
+    <string name="action_pen_window">Floating window (Pen Window)</string>
+    <string name="action_flashlight">Flashlight</string>
+    <string name="action_wifi">Wi-Fi on/off</string>
+    <string name="action_bluetooth">Bluetooth on/off</string>
+    <string name="action_mute">Mute/unmute volume</string>
+    <string name="action_lock_screen">Lock screen</string>
+    <string name="action_custom_shell">Custom root command</string>
+    <!-- Dialogs -->
+    <string name="dialog_choose_action">Choose an action</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_choose_app">Choose an app</string>
+    <string name="dialog_search_app">Search app…</string>
+    <string name="dialog_shell_title">Command run as root (su -c "…")</string>
+    <string name="dialog_shell_hint">e.g. settings put system screen_brightness 255</string>
+    <string name="command_prefix">Command: %s</string>
+    <!-- Toasts -->
+    <string name="toast_root_ok">Root permissions OK</string>
+    <string name="toast_root_fail">Root not available or denied</string>
+    <string name="toast_overlay_granted">Overlay permission already granted</string>
+    <string name="toast_service_started">Service started</string>
+    <!-- Service notifications -->
+    <string name="notif_channel_name">S Pen Gesture Service</string>
+    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_waiting">Waiting for S Pen digitizer…</string>
+    <string name="notif_not_found">Digitizer \"%s\" not found</string>
+    <string name="notif_active">Active on %s</string>
+    <!-- Tablet Mode strings -->
+    <string name="tablet_status_ready">Ready — connect USB to PC</string>
+    <string name="tablet_status_active">Active — drawing on PC</string>
+    <string name="tablet_status_error">Error: USB HID not available</string>
+    <string name="tablet_pressure">Pressure</string>
+    <string name="tablet_settings_title">Tablet Settings</string>
+    <string name="tablet_section_pressure">Pressure Curve</string>
+    <string name="tablet_section_mapping">Mapping</string>
+    <string name="tablet_section_performance">Performance</string>
+    <string name="tablet_section_pen_button">Pen Button</string>
+    <string name="tablet_curve_linear">Linear</string>
+    <string name="tablet_curve_soft">Soft</string>
+    <string name="tablet_curve_firm">Firm</string>
+    <string name="tablet_curve_scurve">S-Curve</string>
+    <string name="tablet_curve_custom">Custom</string>
+    <string name="tablet_pressure_min">Min pressure</string>
+    <string name="tablet_pressure_max">Max pressure</string>
+    <string name="tablet_smoothing">Smoothing</string>
+    <string name="tablet_orientation">Orientation</string>
+    <string name="tablet_orientation_auto">Auto</string>
+    <string name="tablet_orientation_portrait">Portrait</string>
+    <string name="tablet_orientation_landscape">Landscape</string>
+    <string name="tablet_orientation_landscape_inv">Landscape (inverted)</string>
+    <string name="tablet_mapping_full">Full screen</string>
+    <string name="tablet_mapping_custom">Custom area</string>
+    <string name="tablet_invert_x">Invert X axis</string>
+    <string name="tablet_invert_y">Invert Y axis</string>
+    <string name="tablet_aspect_lock">Lock aspect ratio</string>
+    <string name="tablet_monitor_res">Monitor resolution</string>
+    <string name="tablet_send_rate">Report rate (Hz)</string>
+    <string name="tablet_haptic">Haptic feedback</string>
+    <string name="tablet_show_grid">Show grid</string>
+    <string name="tablet_auto_restore">Restore USB on exit</string>
+    <string name="tablet_btn_right_click">Right click</string>
+    <string name="tablet_btn_middle_click">Middle click</string>
+    <string name="tablet_btn_eraser">Eraser</string>
+    <string name="tablet_btn_disabled">Disabled</string>
 </resources>

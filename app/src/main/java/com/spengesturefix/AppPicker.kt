@@ -10,7 +10,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ListView
 
-/** Dialog con ricerca live per scegliere un'app tra quelle installate. */
 object AppPicker {
 
     data class AppEntry(val label: String, val packageName: String)
@@ -24,7 +23,7 @@ object AppPicker {
 
         var visibleEntries = allEntries
 
-        val searchBox = EditText(context).apply { hint = "Cerca app…" }
+        val searchBox = EditText(context).apply { hint = context.getString(R.string.dialog_search_app) }
         val listView = ListView(context)
         val adapter = ArrayAdapter(context, android.R.layout.simple_list_item_1, visibleEntries.map { it.label })
         listView.adapter = adapter
@@ -37,9 +36,9 @@ object AppPicker {
         }
 
         val dialog = AlertDialog.Builder(context)
-            .setTitle("Scegli un'app")
+            .setTitle(R.string.dialog_choose_app)
             .setView(container)
-            .setNegativeButton("Annulla", null)
+            .setNegativeButton(R.string.dialog_cancel, null)
             .create()
 
         listView.setOnItemClickListener { _, _, position, _ ->

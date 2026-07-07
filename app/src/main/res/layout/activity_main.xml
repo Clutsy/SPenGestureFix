@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F2F2F7">
+    android:background="#000000">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,6 +15,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/app_name"
+            android:textColor="#EAEAEA"
             android:textSize="26sp"
             android:textStyle="bold"
             android:layout_marginBottom="2dp" />
@@ -22,18 +23,21 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Note 3 SM-N9005 · digitizer sec_e-pen"
+            android:text="@string/subtitle_device"
+            android:textColor="#888888"
             android:textSize="13sp"
-            android:alpha="0.6"
             android:layout_marginBottom="16dp" />
 
-        <!-- Stato -->
+        <!-- Status -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#121212"
+            app:strokeColor="#1E1E2E"
+            app:strokeWidth="1dp"
             app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -44,7 +48,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Stato"
+                    android:text="@string/section_status"
+                    android:textColor="#EAEAEA"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
@@ -54,7 +59,9 @@
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Verifica permessi root" />
+                    android:text="@string/btn_check_root"
+                    android:textColor="#6C63FF"
+                    app:strokeColor="#6C63FF" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnOverlayPermission"
@@ -62,7 +69,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Concedi permesso overlay" />
+                    android:text="@string/btn_overlay_permission"
+                    android:textColor="#6C63FF"
+                    app:strokeColor="#6C63FF" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -75,8 +84,10 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginEnd="4dp"
-                        android:text="Avvia" />
+                        android:layout_marginRight="4dp"
+                        android:text="@string/btn_start"
+                        android:textColor="#FFFFFF"
+                        app:backgroundTint="#6C63FF" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnStopService"
@@ -84,8 +95,10 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginStart="4dp"
-                        android:text="Ferma" />
+                        android:layout_marginLeft="4dp"
+                        android:text="@string/btn_stop"
+                        android:textColor="#6C63FF"
+                        app:strokeColor="#6C63FF" />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -95,8 +108,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#121212"
+            app:strokeColor="#1E1E2E"
+            app:strokeWidth="1dp"
             app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -107,7 +123,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tasto S Pen — riprogrammabile"
+                    android:text="@string/section_spen_button"
+                    android:textColor="#EAEAEA"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="4dp" />
@@ -115,9 +132,9 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tocca una riga per cambiare l'azione"
+                    android:text="@string/hint_tap_row"
+                    android:textColor="#888888"
                     android:textSize="12sp"
-                    android:alpha="0.6"
                     android:layout_marginBottom="8dp" />
 
                 <LinearLayout
@@ -133,8 +150,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#121212"
+            app:strokeColor="#1E1E2E"
+            app:strokeWidth="1dp"
             app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -145,7 +165,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Ruota S Pen"
+                    android:text="@string/section_wheel"
+                    android:textColor="#EAEAEA"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
@@ -153,9 +174,12 @@
                 <ImageView
                     android:id="@+id/imgWheelBackground"
                     android:layout_width="match_parent"
-                    android:layout_height="120dp"
-                    android:scaleType="centerCrop"
-                    android:background="#DDDDDD"
+                    android:layout_height="wrap_content"
+                    android:maxHeight="180dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="fitCenter"
+                    android:clipToOutline="true"
+                    android:background="#121212"
                     android:layout_marginBottom="8dp" />
 
                 <LinearLayout
@@ -169,8 +193,10 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginEnd="4dp"
-                        android:text="Scegli foto sfondo" />
+                        android:layout_marginRight="4dp"
+                        android:text="@string/btn_pick_background"
+                        android:textColor="#FFFFFF"
+                        app:backgroundTint="#6C63FF" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnClearBackground"
@@ -178,16 +204,18 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginStart="4dp"
-                        android:text="Rimuovi" />
+                        android:layout_marginLeft="4dp"
+                        android:text="@string/btn_clear_background"
+                        android:textColor="#6C63FF"
+                        app:strokeColor="#6C63FF" />
                 </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Spicchi della ruota"
+                    android:text="@string/wheel_slots_label"
+                    android:textColor="#888888"
                     android:textSize="13sp"
-                    android:alpha="0.6"
                     android:layout_marginBottom="4dp" />
 
                 <LinearLayout
@@ -203,8 +231,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#121212"
+            app:strokeColor="#1E1E2E"
+            app:strokeWidth="1dp"
             app:cardCornerRadius="16dp"
-            app:cardElevation="2dp">
+            app:cardElevation="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -215,7 +246,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Note rapide (Action Memo)"
+                    android:text="@string/section_notes"
+                    android:textColor="#EAEAEA"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     android:layout_marginBottom="8dp" />
@@ -225,16 +257,80 @@
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Vedi note salvate" />
+                    android:text="@string/btn_view_notes"
+                    android:textColor="#6C63FF"
+                    app:strokeColor="#6C63FF" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Wacom Tablet Mode -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            app:cardBackgroundColor="#121212"
+            app:strokeColor="#1E1E2E"
+            app:strokeWidth="1dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/section_tablet_mode"
+                    android:textColor="#EAEAEA"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tablet_mode_subtitle"
+                    android:textColor="#888888"
+                    android:textSize="12sp"
+                    android:layout_marginBottom="12dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnStartTablet"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginRight="4dp"
+                        android:text="@string/btn_start_tablet"
+                        android:textColor="#FFFFFF"
+                        app:backgroundTint="#6C63FF" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTabletSettings"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="4dp"
+                        android:text="@string/btn_tablet_settings"
+                        android:textColor="#6C63FF"
+                        app:strokeColor="#6C63FF" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Pen Window e rilevamento estrazione penna sono sperimentali: vedi il README per dettagli e verifica."
+            android:text="@string/footer_experimental"
+            android:textColor="#666666"
             android:textSize="11sp"
-            android:alpha="0.55"
             android:layout_marginBottom="24dp" />
 
     </LinearLayout>

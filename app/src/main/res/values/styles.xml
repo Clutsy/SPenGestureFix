@@ -1,6 +1,22 @@
 <resources>
-    <style name="Theme.SPenFix" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+    <style name="Theme.SPenFix" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#6C63FF</item>
+        <item name="colorPrimaryVariant">#5A52E0</item>
+        <item name="colorSecondary">#03DAC6</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnSecondary">#000000</item>
+        <item name="colorSurface">#000000</item>
+        <item name="colorOnSurface">#E0E0E0</item>
+        <item name="android:colorBackground">#000000</item>
+        <item name="colorOnBackground">#E0E0E0</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:navigationBarColor">#000000</item>
+    </style>
 
-    <!-- Usato da QuickNoteActivity: popup centrato invece di schermo intero. -->
-    <style name="Theme.SPenFix.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog" />
+    <style name="Theme.SPenFix.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
+        <item name="colorPrimary">#6C63FF</item>
+        <item name="colorSurface">#121212</item>
+        <item name="colorOnSurface">#E0E0E0</item>
+    </style>
 </resources>

@@ -36,7 +36,7 @@ object WheelConfig {
 
     fun saveSlot(context: Context, index: Int, action: PenAction) {
         val slots = loadSlots(context).toMutableList()
-        while (slots.size <= index) slots.add(PenAction(ActionType.NONE, ActionType.NONE.defaultLabel))
+        while (slots.size <= index) slots.add(PenAction(ActionType.NONE, ActionType.NONE.label(context)))
         slots[index] = action
         saveSlots(context, slots)
     }

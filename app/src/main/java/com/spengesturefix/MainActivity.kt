@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
             }
             WheelConfig.saveBackgroundUri(this, uri)
             refreshWheelBackground()
-            Toast.makeText(this, "Sfondo ruota aggiornato", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.wheel_bg_updated), Toast.LENGTH_SHORT).show()
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,6 +48,14 @@ class MainActivity : AppCompatActivity() {
             refreshWheelBackground()
         }
         binding.btnViewNotes.setOnClickListener { startActivity(Intent(this, NotesListActivity::class.java)) }
+
+        // Wacom Tablet Mode click listeners
+        binding.btnStartTablet.setOnClickListener {
+            startActivity(Intent(this, TabletModeActivity::class.java))
+        }
+        binding.btnTabletSettings.setOnClickListener {
+            startActivity(Intent(this, TabletSettingsActivity::class.java))
+        }
 
         buildGestureRows()
         buildWheelSlotRows()
@@ -77,9 +85,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun labelFor(gesture: GestureKind): String = when (gesture) {
-        GestureKind.CLICK -> "Clic singolo"
-        GestureKind.DOUBLE_CLICK -> "Doppio clic"
-        GestureKind.LONG_PRESS -> "Pressione lunga"
+        GestureKind.CLICK -> getString(R.string.gesture_click)
+        GestureKind.DOUBLE_CLICK -> getString(R.string.gesture_double_click)
+        GestureKind.LONG_PRESS -> getString(R.string.gesture_long_press)
     }
 
     // --- Righe per gli spicchi della ruota ---
@@ -88,8 +96,8 @@ class MainActivity : AppCompatActivity() {
         binding.wheelSlotsContainer.removeAllViews()
         val slots = WheelConfig.loadSlots(this)
         for (i in 0 until WheelConfig.SLOT_COUNT) {
-            val action = slots.getOrNull(i) ?: PenAction(ActionType.NONE, ActionType.NONE.defaultLabel)
-            binding.wheelSlotsContainer.addView(createActionRow("Spicchio ${i + 1}", action.label) {
+            val action = slots.getOrNull(i) ?: PenAction(ActionType.NONE, ActionType.NONE.label(this))
+            binding.wheelSlotsContainer.addView(createActionRow(getString(R.string.wheel_slot_label, i + 1), action.label) {
                 ActionPickerDialog.show(this) { picked ->
                     WheelConfig.saveSlot(this, i, picked)
                     buildWheelSlotRows()
@@ -104,7 +112,7 @@ class MainActivity : AppCompatActivity() {
             binding.imgWheelBackground.setImageBitmap(bitmap)
         } else {
             binding.imgWheelBackground.setImageDrawable(null)
-            binding.imgWheelBackground.setBackgroundColor(Color.parseColor("#DDDDDD"))
+            binding.imgWheelBackground.setBackgroundColor(Color.parseColor("#121212"))
         }
     }
 
@@ -121,12 +129,14 @@ class MainActivity : AppCompatActivity() {
             addView(TextView(this@MainActivity).apply {
                 text = title
                 textSize = 14f
+                setTextColor(Color.parseColor("#EAEAEA"))
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
             addView(TextView(this@MainActivity).apply {
                 text = currentLabel
                 textSize = 13f
                 alpha = 0.7f
+                setTextColor(Color.parseColor("#888888"))
                 gravity = Gravity.END
             })
         }
@@ -146,7 +156,7 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 Toast.makeText(
                     this,
-                    if (hasRoot) "Permessi root OK" else "Root non disponibile o negato",
+                    if (hasRoot) getString(R.string.toast_root_ok) else getString(R.string.toast_root_fail),
                     Toast.LENGTH_LONG
                 ).show()
             }
@@ -157,7 +167,7 @@ class MainActivity : AppCompatActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(this)) {
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
         } else {
-            Toast.makeText(this, "Permesso overlay già concesso", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, getString(R.string.toast_overlay_granted), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -171,6 +181,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             startService(serviceIntent)
         }
-        Toast.makeText(this, "Servizio avviato", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, getString(R.string.toast_service_started), Toast.LENGTH_SHORT).show()
     }
 }

@@ -4,19 +4,14 @@ import android.app.AlertDialog
 import android.content.Context
 import android.widget.EditText
 
-/**
- * Usato sia per riprogrammare i 3 gesti del tasto sia per configurare
- * gli spicchi della ruota: mostra prima l'elenco dei tipi di azione,
- * poi un secondo passo solo se il tipo scelto lo richiede.
- */
 object ActionPickerDialog {
 
     fun show(context: Context, onPicked: (PenAction) -> Unit) {
         val types = ActionType.values().toList()
-        val labels = types.map { it.defaultLabel }.toTypedArray()
+        val labels = types.map { it.label(context) }.toTypedArray()
 
         AlertDialog.Builder(context)
-            .setTitle("Scegli un'azione")
+            .setTitle(R.string.dialog_choose_action)
             .setItems(labels) { _, which ->
                 val type = types[which]
                 when {
@@ -24,28 +19,28 @@ object ActionPickerDialog {
                         onPicked(PenAction(type, entry.label, entry.packageName))
                     }
                     type.needsTextTarget -> showTextInput(context, type, onPicked)
-                    else -> onPicked(PenAction(type, type.defaultLabel))
+                    else -> onPicked(PenAction(type, type.label(context)))
                 }
             }
-            .setNegativeButton("Annulla", null)
+            .setNegativeButton(R.string.dialog_cancel, null)
             .show()
     }
 
     private fun showTextInput(context: Context, type: ActionType, onPicked: (PenAction) -> Unit) {
         val input = EditText(context).apply {
-            hint = "es. settings put system screen_brightness 255"
+            hint = context.getString(R.string.dialog_shell_hint)
             setPadding(48, 32, 48, 32)
         }
         AlertDialog.Builder(context)
-            .setTitle("Comando eseguito come root (su -c \"...\")")
+            .setTitle(R.string.dialog_shell_title)
             .setView(input)
-            .setPositiveButton("OK") { _, _ ->
+            .setPositiveButton(R.string.dialog_ok) { _, _ ->
                 val command = input.text.toString()
                 if (command.isNotBlank()) {
-                    onPicked(PenAction(type, "Comando: ${command.take(24)}", command))
+                    onPicked(PenAction(type, context.getString(R.string.command_prefix, command.take(24)), command))
                 }
             }
-            .setNegativeButton("Annulla", null)
+            .setNegativeButton(R.string.dialog_cancel, null)
             .show()
     }
 }
