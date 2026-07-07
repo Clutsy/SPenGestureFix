@@ -1,0 +1,40 @@
+# Gradle
+.gradle/
+**/build/
+
+# Android SDK locale
+.android-sdk/
+local.properties
+
+# Android Studio / IntelliJ
+*.iml
+.idea/
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/workspace.xml
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# VS Code
+.vscode/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Build artifacts Android
+captures/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Native build
+.externalNativeBuild/
+.cxx/
+
+# Chiavi di firma (NON committare mai)
+*.jks
+*.keystore
+*keystore.properties

@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.SPenFix" parent="Theme.MaterialComponents.DayNight.NoActionBar" />
+
+    <!-- Usato da QuickNoteActivity: popup centrato invece di schermo intero. -->
+    <style name="Theme.SPenFix.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog" />
+</resources>
