@@ -1,20 +1,30 @@
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
     <!-- Status section -->
-    <string name="section_status">⚡ Stato</string>
+    <string name="section_status">Stato</string>
     <string name="btn_check_root">Verifica permessi root</string>
     <string name="btn_overlay_permission">Concedi permesso overlay</string>
     <string name="btn_start">Avvia</string>
     <string name="btn_stop">Ferma</string>
+    <!-- Settings section -->
+    <string name="section_settings">Impostazioni</string>
+    <string name="settings_language">Lingua</string>
+    <string name="settings_amoled">Modalità Nero AMOLED</string>
+    <string name="settings_amoled_desc">Sfondo nero puro per risparmiare batteria su schermi OLED</string>
+    <string name="settings_autostart_pen">Avvia automatico all\'estrazione S Pen</string>
+    <string name="settings_autostart_pen_desc">Avvia il servizio quando la S Pen viene estratta, fermalo quando inserita</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_it">Italiano</string>
+    <string name="settings_language_system">Predefinito di sistema</string>
     <!-- S Pen Button section -->
-    <string name="section_spen_button">✏️ Tasto S Pen — riprogrammabile</string>
+    <string name="section_spen_button">Tasto S Pen — riprogrammabile</string>
     <string name="hint_tap_row">Tocca una riga per cambiare l\'azione</string>
     <!-- Gesture labels -->
     <string name="gesture_click">Clic singolo</string>
     <string name="gesture_double_click">Doppio clic</string>
     <string name="gesture_long_press">Pressione lunga</string>
     <!-- Wheel section -->
-    <string name="section_wheel">🎯 Ruota S Pen</string>
+    <string name="section_wheel">Ruota S Pen</string>
     <string name="btn_pick_background">Scegli foto sfondo</string>
     <string name="btn_clear_background">Rimuovi</string>
     <string name="wheel_slots_label">Spicchi della ruota</string>
@@ -22,16 +32,28 @@
     <string name="wheel_no_slots">Nessuno spicchio configurato</string>
     <string name="wheel_bg_updated">Sfondo ruota aggiornato</string>
     <!-- Quick Notes section -->
-    <string name="section_notes">📝 Note rapide (Action Memo)</string>
+    <string name="section_notes">Note rapide (Action Memo)</string>
     <string name="btn_view_notes">Vedi note salvate</string>
     <!-- Tablet Mode section -->
-    <string name="section_tablet_mode">🖊️ Modalità Tavoletta Wacom</string>
+    <string name="section_tablet_mode">Modalità Tavoletta Wacom</string>
     <string name="tablet_mode_subtitle">Usa il tuo Note 3 come tavoletta grafica Wacom per PC</string>
     <string name="btn_start_tablet">Avvia Modalità Tavoletta</string>
     <string name="btn_tablet_settings">Impostazioni</string>
     <!-- Footer -->
-    <string name="footer_experimental">Pen Window e rilevamento estrazione penna sono sperimentali: vedi il README per dettagli e verifica.</string>
+    <string name="footer_experimental">Pen Window e rilevamento estrazione penna sono sperimentali. Vedi il README per dettagli.</string>
     <string name="subtitle_device">Note 3 SM-N9005 · digitizer sec_e-pen</string>
+    <!-- Permission dialog -->
+    <string name="perm_title">Permessi Necessari</string>
+    <string name="perm_overlay">Il permesso overlay è necessario per mostrare la ruota S Pen e i gesti sopra altre app.</string>
+    <string name="perm_notification">Il permesso notifiche è necessario per mantenere il servizio in esecuzione in background.</string>
+    <string name="perm_root">L\'accesso root è consigliato per la funzionalità completa (rilevamento penna, blocco schermo).</string>
+    <string name="perm_grant_all">Concedi tutti</string>
+    <string name="perm_grant_overlay">Concedi overlay</string>
+    <string name="perm_grant_notification">Concedi notifiche</string>
+    <string name="perm_check_root">Verifica root</string>
+    <string name="perm_continue">Continua</string>
+    <string name="perm_all_granted">Tutti i permessi concessi</string>
+    <string name="perm_some_missing">Alcuni permessi mancano ancora. La funzionalità completa richiede tutti i permessi.</string>
     <!-- ActionType labels -->
     <string name="action_none">Nessuna azione</string>
     <string name="action_launch_app">Apri app</string>
@@ -62,6 +84,10 @@
     <string name="toast_root_fail">Root non disponibile o negato</string>
     <string name="toast_overlay_granted">Permesso overlay già concesso</string>
     <string name="toast_service_started">Servizio avviato</string>
+    <string name="toast_service_stopped">Servizio fermato</string>
+    <string name="toast_language_changed">Lingua cambiata. Riavvia l\'app per applicare.</string>
+    <string name="toast_pen_extracted">S Pen estratta — servizio avviato</string>
+    <string name="toast_pen_inserted">S Pen inserita — servizio fermato</string>
     <!-- Service notifications -->
     <string name="notif_channel_name">Servizio Gesti S Pen</string>
     <string name="notif_title">S Pen Gesture Fix</string>

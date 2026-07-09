@@ -1,22 +1,99 @@
 <resources>
-    <style name="Theme.SPenFix" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">#6C63FF</item>
-        <item name="colorPrimaryVariant">#5A52E0</item>
-        <item name="colorSecondary">#03DAC6</item>
+    <!-- Base application theme — Material3 expressive dark, edge-to-edge ready -->
+    <style name="Theme.SPenFix" parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Brand accent -->
+        <item name="colorPrimary">#7C73FF</item>
         <item name="colorOnPrimary">#FFFFFF</item>
-        <item name="colorOnSecondary">#000000</item>
-        <item name="colorSurface">#000000</item>
-        <item name="colorOnSurface">#E0E0E0</item>
+        <item name="colorPrimaryContainer">#2A2945</item>
+        <item name="colorOnPrimaryContainer">#E6E1FF</item>
+        <item name="colorSecondary">#5DD4C7</item>
+        <item name="colorOnSecondary">#00382F</item>
+        <item name="colorSecondaryContainer">#005048</item>
+        <item name="colorOnSecondaryContainer">#B9F2EA</item>
+        <!-- Surfaces — AMOLED-friendly dark palette -->
+        <item name="colorSurface">#101012</item>
+        <item name="colorOnSurface">#E7E7EA</item>
+        <item name="colorSurfaceVariant">#1C1C20</item>
+        <item name="colorOnSurfaceVariant">#C3C3C9</item>
+        <item name="colorOutline">#3A3A42</item>
+        <item name="colorOutlineVariant">#56565F</item>
+        <item name="colorError">#FFB4AB</item>
+        <item name="colorOnError">#690005</item>
+        <item name="colorErrorContainer">#93000A</item>
+        <item name="colorOnErrorContainer">#FFDAD6</item>
+        <!-- Background — AMOLED pure black -->
         <item name="android:colorBackground">#000000</item>
-        <item name="colorOnBackground">#E0E0E0</item>
+        <item name="colorOnBackground">#E7E7EA</item>
         <item name="android:windowBackground">@android:color/black</item>
-        <item name="android:statusBarColor">#000000</item>
-        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <!-- Ripple + chat -->
+        <item name="colorControlHighlight">#22FFFFFF</item>
+        <item name="android:textColorPrimary">#E7E7EA</item>
     </style>
 
-    <style name="Theme.SPenFix.Dialog" parent="Theme.MaterialComponents.DayNight.Dialog">
-        <item name="colorPrimary">#6C63FF</item>
-        <item name="colorSurface">#121212</item>
-        <item name="colorOnSurface">#E0E0E0</item>
+    <!-- Dialog theme -->
+    <style name="Theme.SPenFix.Dialog" parent="Theme.Material3.Dark.Dialog">
+        <item name="colorPrimary">#7C73FF</item>
+        <item name="colorSurface">#16161A</item>
+        <item name="colorOnSurface">#E7E7EA</item>
+        <item name="android:windowBackground">#16161A</item>
+    </style>
+
+    <!-- Reusable card style -->
+    <style name="Card.Section" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardBackgroundColor">#101012</item>
+        <item name="cardCornerRadius">20dp</item>
+        <item name="cardElevation">0dp</item>
+        <item name="strokeColor">#1E1E22</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="contentPadding">16dp</item>
+    </style>
+
+    <!-- Section header text -->
+    <style name="TextAppearance.SectionHeader" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">#E7E7EA</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
+
+    <!-- Body hint -->
+    <style name="TextAppearance.Hint" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">#8E8E95</item>
+    </style>
+
+    <!-- Settings row title -->
+    <style name="TextAppearance.RowTitle" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">#E7E7EA</item>
+    </style>
+
+    <!-- Settings row subtitle -->
+    <style name="TextAppearance.RowSubtitle" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">#8E8E95</item>
+    </style>
+
+    <!-- Primary fill button (reuse via style attr) -->
+    <style name="Button.Primary" parent="Widget.Material3.Button">
+        <item name="backgroundTint">#7C73FF</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <!-- Outlined button -->
+    <style name="Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="strokeColor">#7C73FF</item>
+        <item name="android:textColor">#7C73FF</item>
+        <item name="cornerRadius">12dp</item>
+    </style>
+
+    <!-- Text button -->
+    <style name="Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">#7C73FF</item>
+        <item name="cornerRadius">12dp</item>
     </style>
 </resources>

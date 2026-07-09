@@ -81,6 +81,7 @@ class SPenGestureService : Service() {
 
     private fun handlePenRemovedSwitch(switchOn: Boolean) {
         sendGestureBroadcast(if (switchOn) "PEN_REMOVED" else "PEN_INSERTED")
+        if (!AppSettings.isAutoStartOnPen(applicationContext)) return
         if (switchOn) wheelOverlay.show() else wheelOverlay.dismiss()
     }
 

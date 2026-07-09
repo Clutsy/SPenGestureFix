@@ -1,20 +1,30 @@
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
     <!-- Status section -->
-    <string name="section_status">⚡ Status</string>
+    <string name="section_status">Status</string>
     <string name="btn_check_root">Check root permissions</string>
     <string name="btn_overlay_permission">Grant overlay permission</string>
     <string name="btn_start">Start</string>
     <string name="btn_stop">Stop</string>
+    <!-- Settings section -->
+    <string name="section_settings">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_amoled">AMOLED Black Mode</string>
+    <string name="settings_amoled_desc">Pure black background to save battery on OLED screens</string>
+    <string name="settings_autostart_pen">Auto-start on S Pen extraction</string>
+    <string name="settings_autostart_pen_desc">Start service when S Pen is removed, stop when inserted</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_it">Italiano</string>
+    <string name="settings_language_system">System default</string>
     <!-- S Pen Button section -->
-    <string name="section_spen_button">✏️ S Pen Button — programmable</string>
+    <string name="section_spen_button">S Pen Button — programmable</string>
     <string name="hint_tap_row">Tap a row to change the action</string>
     <!-- Gesture labels -->
     <string name="gesture_click">Single click</string>
     <string name="gesture_double_click">Double click</string>
     <string name="gesture_long_press">Long press</string>
     <!-- Wheel section -->
-    <string name="section_wheel">🎯 S Pen Wheel</string>
+    <string name="section_wheel">S Pen Wheel</string>
     <string name="btn_pick_background">Choose background</string>
     <string name="btn_clear_background">Remove</string>
     <string name="wheel_slots_label">Wheel slots</string>
@@ -22,16 +32,28 @@
     <string name="wheel_no_slots">No slots configured</string>
     <string name="wheel_bg_updated">Wheel background updated</string>
     <!-- Quick Notes section -->
-    <string name="section_notes">📝 Quick Notes (Action Memo)</string>
+    <string name="section_notes">Quick Notes (Action Memo)</string>
     <string name="btn_view_notes">View saved notes</string>
     <!-- Tablet Mode section -->
-    <string name="section_tablet_mode">🖊️ Wacom Tablet Mode</string>
+    <string name="section_tablet_mode">Wacom Tablet Mode</string>
     <string name="tablet_mode_subtitle">Use your Note 3 as a Wacom pen tablet for PC</string>
     <string name="btn_start_tablet">Start Tablet Mode</string>
     <string name="btn_tablet_settings">Settings</string>
     <!-- Footer -->
-    <string name="footer_experimental">Pen Window and pen removal detection are experimental: see README for details.</string>
+    <string name="footer_experimental">Pen Window and pen removal detection are experimental. See README for details.</string>
     <string name="subtitle_device">Note 3 SM-N9005 · digitizer sec_e-pen</string>
+    <!-- Permission dialog -->
+    <string name="perm_title">Permissions Required</string>
+    <string name="perm_overlay">Overlay permission is needed to show the S Pen Wheel and gestures over other apps.</string>
+    <string name="perm_notification">Notification permission is needed to keep the service running in the background.</string>
+    <string name="perm_root">Root access is recommended for full functionality (pen detection, screen lock).</string>
+    <string name="perm_grant_all">Grant all</string>
+    <string name="perm_grant_overlay">Grant overlay</string>
+    <string name="perm_grant_notification">Grant notification</string>
+    <string name="perm_check_root">Check root</string>
+    <string name="perm_continue">Continue</string>
+    <string name="perm_all_granted">All permissions granted</string>
+    <string name="perm_some_missing">Some permissions are still missing. Full functionality requires all permissions.</string>
     <!-- ActionType labels -->
     <string name="action_none">No action</string>
     <string name="action_launch_app">Open app</string>
@@ -62,6 +84,10 @@
     <string name="toast_root_fail">Root not available or denied</string>
     <string name="toast_overlay_granted">Overlay permission already granted</string>
     <string name="toast_service_started">Service started</string>
+    <string name="toast_service_stopped">Service stopped</string>
+    <string name="toast_language_changed">Language changed. Restart app to apply.</string>
+    <string name="toast_pen_extracted">S Pen extracted — service started</string>
+    <string name="toast_pen_inserted">S Pen inserted — service stopped</string>
     <!-- Service notifications -->
     <string name="notif_channel_name">S Pen Gesture Service</string>
     <string name="notif_title">S Pen Gesture Fix</string>
