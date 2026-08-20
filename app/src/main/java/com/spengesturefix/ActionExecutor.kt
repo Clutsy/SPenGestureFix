@@ -6,10 +6,10 @@ import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 
 /**
- * Punto unico in cui ogni ActionType diventa un effetto reale.
- * Per aggiungere una nuova funzione: aggiungi una voce a ActionType e
- * il relativo branch qui — tutto il resto (persistenza, UI di scelta,
- * binding ai gesti, slot della ruota) funziona già in automatico.
+ * Single point where each ActionType becomes a real effect.
+ * To add a new function: add an entry to ActionType and the
+ * corresponding branch here — everything else (persistence, picker UI,
+ * gesture binding, wheel slots) already works automatically.
  */
 object ActionExecutor {
 
@@ -26,7 +26,7 @@ object ActionExecutor {
             ActionType.SCREEN_WRITE -> screenWrite(context)
             ActionType.SMART_SELECT -> smartSelect(context)
             ActionType.QUICK_NOTE -> openQuickNote(context)
-            ActionType.APP_SEARCH -> AppPicker.pick(context) { entry -> launchApp(context, entry.packageName) }
+            ActionType.APP_SEARCH -> openAppSearch(context)
             ActionType.PEN_WINDOW -> openPenWindow(context, action.target)
             ActionType.TOGGLE_FLASHLIGHT -> toggleFlashlight(context)
             ActionType.TOGGLE_WIFI -> toggleWifi()
@@ -86,12 +86,18 @@ object ActionExecutor {
         })
     }
 
+    private fun openAppSearch(context: Context) {
+        context.startActivity(Intent(context, AppSearchActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        })
+    }
+
     private fun openPenWindow(context: Context, packageName: String) {
         if (packageName.isBlank()) return
         Thread {
             try {
-                // Setup una tantum (serve un riavvio la prima volta perché
-                // il flag venga applicato del tutto su alcune ROM).
+                // One-time setup (requires a reboot the first time for the
+                // flag to be fully applied on some ROMs).
                 rootShellSync("settings put global enable_freeform_support 1")
                 rootShellSync("settings put global force_resizable_activities 1")
 
@@ -115,10 +121,10 @@ object ActionExecutor {
         }
     }
 
-    // WiFi/Bluetooth: invece di leggere lo stato di sistema (che richiederebbe
-    // permessi extra su Android recenti), teniamo traccia noi dell'ultimo stato
-    // impostato. Se lo cambi da fuori dall'app, il toggle potrebbe risultare
-    // "sfasato" finché non lo riusi una volta.
+    // WiFi/Bluetooth: instead of reading the system state (which would require
+    // extra permissions on recent Android versions), we track the last state we
+    // set ourselves. If you change it from outside the app, the toggle may end
+    // up "out of sync" until you use it once more.
     private fun toggleWifi() {
         wifiAssumedOn = !wifiAssumedOn
         rootShell(if (wifiAssumedOn) "svc wifi enable" else "svc wifi disable")

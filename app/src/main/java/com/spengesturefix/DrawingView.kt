@@ -9,7 +9,7 @@ import android.graphics.Path
 import android.view.MotionEvent
 import android.view.View
 
-/** Canvas di disegno libero (dito o pennino) per annotare uno screenshot. */
+/** Free drawing canvas (finger or stylus) to annotate a screenshot. */
 class DrawingView(context: Context) : View(context) {
 
     var currentColor: Int = Color.RED
@@ -49,7 +49,7 @@ class DrawingView(context: Context) : View(context) {
         invalidate()
     }
 
-    /** Ridisegna tutti i tratti sopra il bitmap originale e restituisce il risultato. */
+    /** Redraws all strokes on top of the original bitmap and returns the result. */
     fun flattenOnto(bitmap: Bitmap): Bitmap {
         val result = bitmap.copy(Bitmap.Config.ARGB_8888, true)
         val canvas = Canvas(result)

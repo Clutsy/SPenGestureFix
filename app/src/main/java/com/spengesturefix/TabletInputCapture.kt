@@ -2,51 +2,47 @@ package com.denis.spenfix
 
 import android.util.Log
 
+/** A normalized frame emitted from the sec_e-pen input reader. */
 data class TabletFrame(
-    val x: Float,        // 0.0-1.0 normalized
-    val y: Float,        // 0.0-1.0 normalized
-    val pressure: Float, // 0.0-1.0 normalized (RAW)
+    val x: Float,
+    val y: Float,
+    val pressure: Float,
     val touching: Boolean,
-    val button: Boolean, // BTN_STYLUS
-    val inRange: Boolean // BTN_DIGI / proximity
+    val button: Boolean,
+    val inRange: Boolean
 )
 
 class TabletInputCapture(
     private val devicePath: String,
+    private val capabilities: InputDeviceCapabilities = InputDeviceCapabilities(),
     private val onFrame: (TabletFrame) -> Unit
 ) {
     private var reader: EPenInputReader? = null
-
-    private var rawX = 0
-    private var rawY = 0
-    private var rawPressure = 0
-    private var touching = false
-    private var button = false
-    private var inRange = false
+    @Volatile private var rawX = capabilities.xMin
+    @Volatile private var rawY = capabilities.yMin
+    @Volatile private var rawPressure = capabilities.pressureMin
+    @Volatile private var touching = false
+    @Volatile private var button = false
+    @Volatile private var inRange = false
 
     fun start() {
+        if (reader != null) return
         reader = EPenInputReader(devicePath) { type, code, value ->
             var changed = false
             try {
                 when (type) {
                     "EV_ABS" -> {
-                        val numVal = Integer.parseInt(value, 16)
-                        when (code) {
-                            "ABS_X" -> { rawX = numVal; changed = true }
-                            "ABS_Y" -> { rawY = numVal; changed = true }
-                            "ABS_PRESSURE" -> { rawPressure = numVal; changed = true }
-                            "ABS_DISTANCE" -> {
-                                // Fallback range check
-                                val distInRange = numVal < 50
-                                if (distInRange != inRange) {
-                                    inRange = distInRange
-                                    changed = true
-                                }
+                        val number = parseValue(value)
+                        if (number != null) {
+                            when (code) {
+                                "ABS_X" -> { rawX = number; changed = true }
+                                "ABS_Y" -> { rawY = number; changed = true }
+                                "ABS_PRESSURE" -> { rawPressure = number; changed = true }
                             }
                         }
                     }
                     "EV_KEY" -> {
-                        val isDown = value == "DOWN" || value == "00000001"
+                        val isDown = isDown(value)
                         when (code) {
                             "BTN_TOUCH" -> { touching = isDown; changed = true }
                             "BTN_STYLUS" -> { button = isDown; changed = true }
@@ -54,33 +50,47 @@ class TabletInputCapture(
                         }
                     }
                 }
-            } catch (e: Exception) {
-                Log.e("TabletInputCapture", "Error parsing event type=$type code=$code value=$value", e)
+            } catch (error: Exception) {
+                Log.w("TabletInputCapture", "Invalid input event $type/$code/$value", error)
             }
-
-            if (changed) {
-                // Normalize. Note 3 typical values:
-                // ABS_X: 0 to 4095
-                // ABS_Y: 0 to 4095
-                // ABS_PRESSURE: 0 to 1024
-                val normX = rawX / 4095f
-                val normY = rawY / 4095f
-                val normPressure = rawPressure / 1024f
-                onFrame(TabletFrame(
-                    x = normX.coerceIn(0f, 1f),
-                    y = normY.coerceIn(0f, 1f),
-                    pressure = normPressure.coerceIn(0f, 1f),
-                    touching = touching,
-                    button = button,
-                    inRange = inRange
-                ))
-            }
+            if (changed) onFrame(snapshot())
         }
         reader?.start()
     }
 
+    private fun snapshot(): TabletFrame = TabletFrame(
+        x = normalize(rawX, capabilities.xMin, capabilities.xMax),
+        y = normalize(rawY, capabilities.yMin, capabilities.yMax),
+        pressure = normalize(rawPressure, capabilities.pressureMin, capabilities.pressureMax),
+        touching = touching,
+        button = button,
+        inRange = inRange
+    )
+
     fun stop() {
         reader?.stop()
         reader = null
+    }
+
+    companion object {
+        fun normalize(value: Int, min: Int, max: Int): Float {
+            if (max <= min) return 0f
+            return ((value - min).toFloat() / (max - min).toFloat()).coerceIn(0f, 1f)
+        }
+
+        fun parseValue(value: String): Int? = try {
+            when {
+                value.equals("DOWN", true) -> 1
+                value.equals("UP", true) -> 0
+                value.startsWith("0x", true) -> value.substring(2).toLong(16).toInt()
+                value.matches(Regex("[0-9a-fA-F]+")) && value.length > 2 -> value.toLong(16).toInt()
+                else -> value.toInt()
+            }
+        } catch (_: NumberFormatException) {
+            null
+        }
+
+        fun isDown(value: String): Boolean =
+            value.equals("DOWN", true) || value.equals("1") || value.equals("00000001", true)
     }
 }

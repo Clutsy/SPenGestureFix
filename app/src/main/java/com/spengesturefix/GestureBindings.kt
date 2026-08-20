@@ -13,7 +13,16 @@ object GestureBindings {
             ?: return defaultFor(context, gesture)
         return try {
             val obj = JSONObject(json)
-            PenAction(ActionType.valueOf(obj.getString("type")), obj.getString("label"), obj.optString("target", ""))
+            val type = ActionType.valueOf(obj.getString("type"))
+            val target = obj.optString("target", "")
+            val storedLabel = obj.optString("label", "")
+            val label = when {
+                type.needsAppTarget && storedLabel.isNotBlank() -> storedLabel
+                type.needsTextTarget && target.isNotBlank() ->
+                    context.getString(R.string.command_prefix, target.take(24))
+                else -> type.label(context)
+            }
+            PenAction(type, label, target)
         } catch (e: Exception) {
             defaultFor(context, gesture)
         }

@@ -11,8 +11,8 @@
     <string name="settings_language">Lingua</string>
     <string name="settings_amoled">Modalità Nero AMOLED</string>
     <string name="settings_amoled_desc">Sfondo nero puro per risparmiare batteria su schermi OLED</string>
-    <string name="settings_autostart_pen">Avvia automatico all\'estrazione S Pen</string>
-    <string name="settings_autostart_pen_desc">Avvia il servizio quando la S Pen viene estratta, fermalo quando inserita</string>
+    <string name="settings_autostart_pen">Apri la ruota all\'estrazione S Pen</string>
+    <string name="settings_autostart_pen_desc">Mostra la ruota quando il listener attivo rileva l\'estrazione della penna</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_it">Italiano</string>
     <string name="settings_language_system">Predefinito di sistema</string>
@@ -34,6 +34,20 @@
     <!-- Quick Notes section -->
     <string name="section_notes">Note rapide (Action Memo)</string>
     <string name="btn_view_notes">Vedi note salvate</string>
+    <string name="hint_quick_note">Scrivi una nota rapida…</string>
+    <string name="btn_call_number">Chiama numero</string>
+    <string name="btn_search_maps">Cerca in Maps</string>
+    <string name="btn_save_note">Salva</string>
+    <string name="btn_update_note">Aggiorna</string>
+    <string name="toast_note_saved">Nota salvata</string>
+    <string name="toast_note_updated">Nota aggiornata</string>
+    <string name="toast_note_empty">La nota è vuota</string>
+    <string name="notes_empty_state">Nessuna nota salvata. Scrivine una dalla ruota o con un gesto.</string>
+    <string name="notes_delete">Elimina</string>
+    <string name="notes_confirm_delete">Eliminare questa nota?</string>
+    <string name="notes_share">Condividi</string>
+    <string name="toast_note_deleted">Nota eliminata</string>
+    <string name="notes_empty_list">Le tue note appariranno qui. Creane una dalla ruota.</string>
     <!-- Tablet Mode section -->
     <string name="section_tablet_mode">Modalità Tavoletta Wacom</string>
     <string name="tablet_mode_subtitle">Usa il tuo Note 3 come tavoletta grafica Wacom per PC</string>
@@ -86,8 +100,8 @@
     <string name="toast_service_started">Servizio avviato</string>
     <string name="toast_service_stopped">Servizio fermato</string>
     <string name="toast_language_changed">Lingua cambiata. Riavvia l\'app per applicare.</string>
-    <string name="toast_pen_extracted">S Pen estratta — servizio avviato</string>
-    <string name="toast_pen_inserted">S Pen inserita — servizio fermato</string>
+    <string name="toast_pen_extracted">S Pen estratta — ruota aperta</string>
+    <string name="toast_pen_inserted">S Pen inserita — ruota chiusa</string>
     <!-- Service notifications -->
     <string name="notif_channel_name">Servizio Gesti S Pen</string>
     <string name="notif_title">S Pen Gesture Fix</string>
@@ -131,4 +145,43 @@
     <string name="tablet_btn_middle_click">Tasto centrale</string>
     <string name="tablet_btn_eraser">Gomma</string>
     <string name="tablet_btn_disabled">Disattivato</string>
+    <!-- Compose dashboard e stato runtime -->
+    <string name="home_tagline">Il centro di comando della tua S Pen</string>
+    <string name="home_subtitle">Input Wacom a bassa latenza, gesti programmabili e un flusso tavoletta essenziale.</string>
+    <string name="settings_subtitle">Personalizza l’esperienza senza toccare la pipeline di input.</string>
+    <string name="status_subtitle">Stato in tempo reale del servizio e del digitizer del Note 3.</string>
+    <string name="wheel_slots_subtitle">Configura le sei azioni radiali e uno sfondo opzionale.</string>
+    <string name="notes_card_subtitle">Cattura le idee al volo e ritrovale offline.</string>
+    <string name="status_service_active">Servizio attivo</string>
+    <string name="status_service_stopped">Servizio fermo</string>
+    <string name="status_digitizer_active">Lettore digitizer Wacom attivo</string>
+    <string name="status_digitizer_missing">Digitizer non collegato o accesso root non disponibile</string>
+    <string name="status_presence_unknown">Presenza sconosciuta</string>
+    <string name="status_presence_inserted">S Pen inserita</string>
+    <string name="status_presence_extracted">S Pen estratta</string>
+    <string name="root_ok">Root disponibile</string>
+    <string name="root_failed">Root non disponibile</string>
+    <string name="overlay_ready">Overlay pronto</string>
+    <string name="notification_missing">Il permesso notifiche è ancora necessario per il servizio in primo piano.</string>
+    <string name="settings_language_es">Español</string>
+    <string name="dialog_back">Indietro</string>
+    <string name="notif_starting">Avvio dei reader S Pen…</string>
+    <string name="notif_pen_extracted">S Pen estratta · digitizer attivo</string>
+    <string name="notif_pen_inserted">S Pen inserita · monitoraggio attivo</string>
+    <string name="notes_new_title">Nuova nota</string>
+    <string name="notes_edit_title">Modifica nota</string>
+    <string name="notes_edit">Modifica</string>
+    <string name="editor_undo">Annulla</string>
+    <string name="editor_save">Salva</string>
+    <string name="editor_crop_save">Ritaglia e salva</string>
+    <string name="editor_image_missing">Screenshot non trovato</string>
+    <string name="editor_saved">Salvato in Pictures/SPenScreenshots</string>
+    <string name="editor_save_failed">Impossibile salvare l’immagine</string>
+    <string name="editor_selection_empty">Seleziona prima un’area più grande</string>
+    <string name="tablet_status_starting">Avvio del reader Wacom…</string>
+    <string name="tablet_status_waiting">In attesa della connessione PC</string>
+    <string name="tablet_status_error_digitizer">Digitizer Wacom non trovato</string>
+    <string name="tablet_connect_to">PC: %1$s:%2$d</string>
+    <string name="tablet_stop">Ferma modalità tavoletta</string>
+    <string name="tablet_options">Opzioni</string>
 </resources>

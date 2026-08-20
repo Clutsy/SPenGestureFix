@@ -1,9 +1,9 @@
 package com.denis.spenfix
 
 /**
- * Un'azione concreta: il tipo (vedi ActionType), l'etichetta mostrata
- * nell'app e nella ruota, e un target opzionale — package name per
- * LAUNCH_APP/PEN_WINDOW, comando shell per CUSTOM_SHELL, altrimenti vuoto.
+ * A concrete action: the type (see ActionType), the label shown in the
+ * app and in the wheel, and an optional target — package name for
+ * LAUNCH_APP/PEN_WINDOW, shell command for CUSTOM_SHELL, otherwise empty.
  */
 data class PenAction(
     val type: ActionType,

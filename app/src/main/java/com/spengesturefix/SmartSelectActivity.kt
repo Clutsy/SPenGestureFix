@@ -2,103 +2,79 @@ package com.denis.spenfix
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.os.Bundle
-import android.view.Gravity
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import java.io.File
 import java.io.FileOutputStream
 
-/**
- * Equivalente semplificato di Scrapbook/Image Clip: ritaglio rettangolare
- * (non a forma libera come l'originale, per affidabilità) di un'area dello
- * screenshot già catturato.
- */
-class SmartSelectActivity : AppCompatActivity() {
-
-    companion object {
-        const val EXTRA_IMAGE_PATH = "image_path"
-    }
-
-    private lateinit var selectionView: SelectionView
+class SmartSelectActivity : ComponentActivity() {
     private lateinit var sourceBitmap: Bitmap
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val path = intent.getStringExtra(EXTRA_IMAGE_PATH)
-        val bitmap = path?.let { BitmapFactory.decodeFile(it) }
+        val bitmap = path?.let(BitmapFactory::decodeFile)
         if (bitmap == null) {
-            Toast.makeText(this, "Screenshot non trovato", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.editor_image_missing, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
         sourceBitmap = bitmap
-
-        val root = FrameLayout(this)
-        val imageView = ImageView(this).apply { setImageBitmap(sourceBitmap) }
-        selectionView = SelectionView(this)
-
-        root.addView(imageView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        root.addView(selectionView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        root.addView(buildToolbar(), FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            bottomMargin = 48
-        })
-
-        setContentView(root)
-    }
-
-    private fun buildToolbar(): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(24, 16, 24, 16)
-            setBackgroundColor(Color.parseColor("#DD222222"))
-
-            addView(Button(context).apply {
-                text = "Annulla"
-                setOnClickListener { finish() }
-            })
-            addView(Button(context).apply {
-                text = "Ritaglia e salva"
-                setOnClickListener { saveCrop() }
-            })
+        setContent {
+            SpenFixTheme {
+                SmartSelectComposeScreen(
+                    bitmap = sourceBitmap,
+                    onSave = ::saveCrop,
+                    onClose = ::finish
+                )
+            }
         }
     }
 
-    private fun saveCrop() {
-        val rect = selectionView.getSelectionRect()
-        if (rect.width() < 10 || rect.height() < 10) {
-            Toast.makeText(this, "Trascina per selezionare un'area", Toast.LENGTH_SHORT).show()
-            return
-        }
+    private fun saveCrop(rect: android.graphics.Rect) {
         Thread {
             try {
-                val safeRect = android.graphics.Rect(
-                    rect.left.coerceIn(0, sourceBitmap.width),
-                    rect.top.coerceIn(0, sourceBitmap.height),
-                    rect.right.coerceIn(0, sourceBitmap.width),
-                    rect.bottom.coerceIn(0, sourceBitmap.height)
+                val safe = android.graphics.Rect(
+                    rect.left.coerceIn(0, sourceBitmap.width - 1),
+                    rect.top.coerceIn(0, sourceBitmap.height - 1),
+                    rect.right.coerceIn(1, sourceBitmap.width),
+                    rect.bottom.coerceIn(1, sourceBitmap.height)
                 )
-                val cropped = Bitmap.createBitmap(sourceBitmap, safeRect.left, safeRect.top, safeRect.width(), safeRect.height())
-                val cacheFile = File(cacheDir, "clip_${System.currentTimeMillis()}.png")
-                FileOutputStream(cacheFile).use { cropped.compress(Bitmap.CompressFormat.PNG, 100, it) }
-
-                val destPath = "/sdcard/Pictures/SPenScreenshots/clip_${System.currentTimeMillis()}.png"
-                Runtime.getRuntime().exec(arrayOf("su", "-c", "cp '${cacheFile.absolutePath}' '$destPath'")).waitFor()
-
-                runOnUiThread {
-                    Toast.makeText(this, "Ritaglio salvato in Pictures/SPenScreenshots", Toast.LENGTH_LONG).show()
-                    finish()
+                if (safe.width() <= 1 || safe.height() <= 1) {
+                    runOnUiThread { Toast.makeText(this, R.string.editor_selection_empty, Toast.LENGTH_SHORT).show() }
+                    return@Thread
                 }
-            } catch (e: Exception) {
-                runOnUiThread { Toast.makeText(this, "Errore nel salvataggio", Toast.LENGTH_SHORT).show() }
+                val cropped = Bitmap.createBitmap(sourceBitmap, safe.left, safe.top, safe.width(), safe.height())
+                val timestamp = System.currentTimeMillis()
+                val cacheFile = File(cacheDir, "clip_$timestamp.png")
+                FileOutputStream(cacheFile).use {
+                    cropped.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+                val destination = "/sdcard/Pictures/SPenScreenshots/clip_$timestamp.png"
+                val process = ProcessBuilder(
+                    "su", "-c",
+                    "mkdir -p /sdcard/Pictures/SPenScreenshots && cp '${cacheFile.absolutePath}' '$destination'"
+                ).start()
+                val success = process.waitFor() == 0
+                runOnUiThread {
+                    if (success) {
+                        Toast.makeText(this, R.string.editor_saved, Toast.LENGTH_LONG).show()
+                        finish()
+                    } else {
+                        Toast.makeText(this, R.string.editor_save_failed, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, R.string.editor_save_failed, Toast.LENGTH_SHORT).show()
+                }
             }
-        }.start()
+        }.apply { isDaemon = true; start() }
+    }
+
+    companion object {
+        const val EXTRA_IMAGE_PATH = "image_path"
     }
 }

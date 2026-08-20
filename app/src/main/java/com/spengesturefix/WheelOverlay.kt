@@ -1,337 +1,435 @@
 package com.denis.spenfix
 
-import android.animation.ValueAnimator
-import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.PixelFormat
-import android.graphics.RectF
-import android.graphics.Typeface
 import android.os.Build
-import android.view.MotionEvent
-import android.view.View
+import android.os.Handler
+import android.os.Looper
+import android.view.Gravity
 import android.view.WindowManager
-import android.view.animation.DecelerateInterpolator
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.changedToUp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
+import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import kotlinx.coroutines.delay
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.min
 import kotlin.math.sin
-import kotlin.math.max
 
-/**
- * Radial wheel overlay for quick S Pen actions.
- * Renders a compact, elegant circular menu with a frosted-glass feel:
- *   - Small overall footprint (fits near the pen tip)
- *   - Smooth fade/scale entrance animation
- *   - Slot highlight follows touch position
- *   - Center dismiss zone
- */
-class WheelOverlay(private val context: Context) {
-
-    private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-    private var wheelView: WheelView? = null
-    private var isVisible = false
+/** Owns two overlay windows: a non-touchable visual backdrop and a compact ring. */
+class WheelOverlay(private val context: android.content.Context) {
+    private val windowManager = context.getSystemService(WindowManager::class.java)
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var session: OverlaySession? = null
+    @Volatile private var visible = false
 
     fun toggle() {
-        if (isVisible) dismiss() else show()
+        mainHandler.post { if (visible) dismissOnMain() else showOnMain() }
     }
 
     fun show() {
-        if (isVisible) return
+        mainHandler.post { showOnMain() }
+    }
+
+    private fun showOnMain() {
+        if (visible) return
+        visible = true
         val slots = WheelConfig.loadSlots(context)
-        val background = WheelConfig.loadBackgroundBitmap(context)
+        // URI decoding is I/O; keep it off the main looper so showing Air Command
+        // can never delay the input pipeline.
+        Thread {
+            val background = WheelConfig.loadBackgroundBitmap(context)
+            mainHandler.post {
+                if (!visible) return@post
+                addSession(slots, background)
+            }
+        }.apply { isDaemon = true; start() }
+    }
 
-        val view = WheelView(
-            context = context,
-            slots = slots,
-            background = background,
-            onSlotTapped = { action -> ActionExecutor.execute(context, action, this); dismiss() },
-            onDismiss = { dismiss() }
-        )
-
-        val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        else
-            WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
-
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            overlayType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_DIM_BEHIND,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            dimAmount = 0.35f
+    private fun addSession(slots: List<PenAction>, background: Bitmap?) {
+        if (session != null) return
+        val state = OverlaySession()
+        val lifecycleOwner = OverlayLifecycleOwner()
+        val backdrop = ComposeView(context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setContent { SpenFixTheme { WheelBackdrop(state.visible) } }
         }
+        val wheel = ComposeView(context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
+            setContent {
+                SpenFixTheme {
+                    WheelRing(
+                        slots = slots,
+                        background = background,
+                        visible = state.visible,
+                        onAction = { action ->
+                            ActionExecutor.execute(context, action, this@WheelOverlay)
+                            dismiss()
+                        },
+                        onDismiss = ::dismiss,
+                        onExitFinished = { removeSession(state) }
+                    )
+                }
+            }
+        }
+        val backdropParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        )
+        val size = (context.resources.displayMetrics.density * 420f).toInt()
+            .coerceAtMost(min(context.resources.displayMetrics.widthPixels, context.resources.displayMetrics.heightPixels))
+        val wheelParams = WindowManager.LayoutParams(
+            size,
+            size,
+            overlayType(),
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply { gravity = Gravity.CENTER }
 
+        // ComposeView is hosted by a Service window, not an Activity. Install a
+        // lifecycle owner before attachment so WindowRecomposer can be created.
+        backdrop.setViewTreeLifecycleOwner(lifecycleOwner)
+        backdrop.setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+        backdrop.setViewTreeViewModelStoreOwner(lifecycleOwner)
+        wheel.setViewTreeLifecycleOwner(lifecycleOwner)
+        wheel.setViewTreeSavedStateRegistryOwner(lifecycleOwner)
+        wheel.setViewTreeViewModelStoreOwner(lifecycleOwner)
         try {
-            windowManager.addView(view, params)
-            wheelView = view
-            isVisible = true
-            view.startEnterAnimation()
+            windowManager.addView(backdrop, backdropParams)
+            windowManager.addView(wheel, wheelParams)
+            state.backdrop = backdrop
+            state.wheel = wheel
+            state.lifecycleOwner = lifecycleOwner
+            session = state
         } catch (_: Exception) {
-            // Overlay permission missing
+            try { windowManager.removeViewImmediate(backdrop) } catch (_: Exception) { }
+            lifecycleOwner.destroy()
+            visible = false
         }
     }
 
     fun dismiss() {
-        wheelView?.let {
-            it.startExitAnimation {
-                try { windowManager.removeView(it) } catch (_: Exception) {}
-            }
+        mainHandler.post { dismissOnMain() }
+    }
+
+    private fun dismissOnMain() {
+        if (!visible) return
+        visible = false
+        session?.visible = false
+    }
+
+    private fun removeSession(state: OverlaySession) {
+        if (session?.id != state.id) return
+        try { state.wheel?.let(windowManager::removeView) } catch (_: Exception) { }
+        try { state.backdrop?.let(windowManager::removeView) } catch (_: Exception) { }
+        state.lifecycleOwner?.destroy()
+        session = null
+    }
+
+    private fun overlayType(): Int = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+    } else {
+        @Suppress("DEPRECATION")
+        WindowManager.LayoutParams.TYPE_SYSTEM_ALERT
+    }
+
+    private class OverlaySession(val id: Long = System.nanoTime()) {
+        var visible by mutableStateOf(true)
+        var backdrop: ComposeView? = null
+        var wheel: ComposeView? = null
+        var lifecycleOwner: OverlayLifecycleOwner? = null
+    }
+
+    private class OverlayLifecycleOwner :
+        LifecycleOwner,
+        SavedStateRegistryOwner,
+        ViewModelStoreOwner {
+        private val registry = LifecycleRegistry(this)
+        private val savedStateController = SavedStateRegistryController.create(this)
+        private val models = ViewModelStore()
+
+        init {
+            savedStateController.performAttach()
+            savedStateController.performRestore(null)
+            registry.currentState = Lifecycle.State.RESUMED
         }
-        wheelView = null
-        isVisible = false
+
+        override val lifecycle: Lifecycle
+            get() = registry
+
+        override val savedStateRegistry
+            get() = savedStateController.savedStateRegistry
+
+        override val viewModelStore: ViewModelStore
+            get() = models
+
+        fun destroy() {
+            registry.currentState = Lifecycle.State.DESTROYED
+            models.clear()
+        }
     }
 }
 
-private class WheelView(
-    context: Context,
-    private val slots: List<PenAction>,
-    private val background: Bitmap?,
-    private val onSlotTapped: (PenAction) -> Unit,
-    private val onDismiss: () -> Unit
-) : View(context) {
+@Composable
+private fun WheelBackdrop(visible: Boolean) {
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "backdrop-alpha"
+    )
+    Box(
+        Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                this.alpha = alpha
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    renderEffect = android.graphics.RenderEffect.createBlurEffect(
+                        22f * alpha,
+                        22f * alpha,
+                        android.graphics.Shader.TileMode.CLAMP
+                    ).asComposeRenderEffect()
+                }
+            }
+            .background(Color.Black.copy(alpha = .62f * alpha))
+    )
+}
 
-    // --- Paints ---
-    private val scrimPaint = Paint().apply {
-        isAntiAlias = true
-        color = Color.TRANSPARENT
-    }
-    private val dimPaint = Paint().apply { color = Color.parseColor("#59000000") }
-    private val ringStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f
-        color = Color.parseColor("#28FFFFFF")
-    }
-    private val centerDiscPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = Color.parseColor("#E6121216")
-    }
-    private val centerStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1f
-        color = Color.parseColor("#1FFFFFFF")
-    }
-    private val slotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = Color.parseColor("#CC1B1B22")
-    }
-    private val slotStrokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeWidth = 1f
-        color = Color.parseColor("#16FFFFFF")
-    }
-    private val slotActivePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = Color.parseColor("#FF7C73FF")
-    }
-    private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#EDEDF0")
-        textAlign = Paint.Align.CENTER
-        textSize = 22f
-        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-    }
-    private val secondaryTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#FF7C73FF")
-        textAlign = Paint.Align.CENTER
-        textSize = 20f
-        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-    }
-    private val closeTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.parseColor("#8E8E95")
-        textAlign = Paint.Align.CENTER
-        textSize = 26f
-        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-    }
+private data class WheelGeometry(
+    val center: Float,
+    val ringRadius: Float,
+    val slotSize: Float,
+    val closeRadius: Float
+)
 
-    // Filled path paints for slot pie segments
-    private val piePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.FILL
-        color = Color.parseColor("#10101400")
-    }
-
-    private var centerX = 0f
-    private var centerY = 0f
-
-    // Sizing - smaller and elegant
-    private val radiusDp = 88f   // distance of slot centers from center
-    private var radius = 0f
-    private var slotRadius = 0f  // computed
-    private val closeRadiusDp = 26f
-    private var closeRadius = 0f
-
-    // Animation progress 0..1 (enter), 1..0 (exit)
-    private var progress = 0f
-    private var animator: ValueAnimator? = null
-
-    // Touch highlight
-    private var activeSlot = -1
-
-    private fun dp(v: Float): Float = v * resources.displayMetrics.density
-
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        super.onSizeChanged(w, h, oldw, oldh)
-        centerX = w / 2f
-        centerY = h / 2f
-        radius = dp(radiusDp)
-        slotRadius = dp(38f)
-        closeRadius = dp(closeRadiusDp)
-    }
-
-    fun startEnterAnimation() {
-        animator?.cancel()
-        progress = 0f
-        animator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 220
-            interpolator = DecelerateInterpolator()
-            addUpdateListener { v -> progress = v.animatedValue as Float; invalidate() }
-            start()
+@Composable
+private fun WheelRing(
+    slots: List<PenAction>,
+    background: Bitmap?,
+    visible: Boolean,
+    onAction: (PenAction) -> Unit,
+    onDismiss: () -> Unit,
+    onExitFinished: () -> Unit
+) {
+    val progress by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(if (visible) 260 else 180, easing = FastOutSlowInEasing),
+        label = "wheel-progress"
+    )
+    val alpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(if (visible) 220 else 150),
+        label = "wheel-alpha"
+    )
+    LaunchedEffect(visible) {
+        if (!visible) {
+            delay(210)
+            onExitFinished()
         }
     }
 
-    fun startExitAnimation(onEnd: () -> Unit) {
-        animator?.cancel()
-        animator = ValueAnimator.ofFloat(progress, 0f).apply {
-            duration = 160
-            interpolator = DecelerateInterpolator()
-            addUpdateListener { v -> progress = v.animatedValue as Float; invalidate() }
-            addListener(object : android.animation.AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: android.animation.Animator) { onEnd() }
-            })
-            start()
-        }
-    }
-
-    private fun slotCenter(i: Int, count: Int): Pair<Float, Float> {
-        val angle = (2 * Math.PI * i / count) - Math.PI / 2
-        return Pair(
-            centerX + (radius * progress) * cos(angle).toFloat(),
-            centerY + (radius * progress) * sin(angle).toFloat()
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                this.alpha = alpha
+                scaleX = .82f + .18f * progress
+                scaleY = .82f + .18f * progress
+                rotationZ = -8f * (1f - progress)
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        val side = min(maxWidth, maxHeight)
+        val density = LocalDensity.current
+        val sidePx = with(density) { side.toPx() }
+        val center = sidePx / 2f
+        val slotSize = (sidePx * .205f).coerceIn(68f, 98f)
+        val geometry = WheelGeometry(
+            center = center,
+            ringRadius = (sidePx * .31f).coerceIn(104f, 142f),
+            slotSize = slotSize,
+            closeRadius = slotSize * .34f
         )
-    }
-
-    override fun onDraw(canvas: Canvas) {
-        // Dim scrim
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), dimPaint)
-
-        // Background image (centered, blurred-feel circle clip)
-        if (background != null) {
-            val src = android.graphics.Rect(0, 0, background.width, background.height)
-            val dst = android.graphics.RectF(
-                centerX - (radius + slotRadius + dp(10f)) * progress,
-                centerY - (radius + slotRadius + dp(10f)) * progress,
-                centerX + (radius + slotRadius + dp(10f)) * progress,
-                centerY + (radius + slotRadius + dp(10f)) * progress
+        var activeSlot by remember { mutableIntStateOf(-1) }
+        Box(
+            modifier = Modifier
+                .size(side)
+                .pointerInput(slots, geometry, progress) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val initialSlot = slotAt(down.position.x, down.position.y, geometry, slots.size)
+                        val initialDistance = hypot(
+                            down.position.x - geometry.center,
+                            down.position.y - geometry.center
+                        )
+                        // Do not consume unrelated taps/pen hover in the compact
+                        // overlay window; let the underlying app receive them.
+                        if (initialSlot < 0 && initialDistance > geometry.closeRadius) {
+                            return@awaitEachGesture
+                        }
+                        down.consume()
+                        activeSlot = initialSlot
+                        var up: PointerInputChange? = null
+                        while (up == null) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull() ?: break
+                            if (change.changedToUp()) {
+                                up = change
+                            } else {
+                                activeSlot = slotAt(change.position.x, change.position.y, geometry, slots.size)
+                                change.consume()
+                            }
+                        }
+                        val x = up?.position?.x ?: geometry.center
+                        val y = up?.position?.y ?: geometry.center
+                        val distance = hypot(x - geometry.center, y - geometry.center)
+                        if (distance <= geometry.closeRadius) onDismiss()
+                        else if (activeSlot in slots.indices) onAction(slots[activeSlot])
+                        activeSlot = -1
+                    }
+                }
+        ) {
+            if (background != null) {
+                Image(
+                    background.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .graphicsLayer { this.alpha = .52f }
+                )
+            }
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(Color(0xBB171522), Color(0xEE050507))
+                        )
+                    )
             )
-            canvas.save()
-            canvas.drawBitmap(background, src, dst, null)
-            // Soft overlay tint
-            canvas.drawRect(dst, dimPaint)
-            canvas.restore()
-        }
-
-        // Faint outer ring
-        canvas.drawCircle(centerX, centerY, (radius + slotRadius * 0.5f) * progress, ringStrokePaint)
-
-        val count = slots.size.coerceAtLeast(1)
-        if (slots.isNotEmpty()) {
-            slots.forEachIndexed { i, action ->
-                val (sx, sy) = slotCenter(i, count)
-                val r = slotRadius * progress
-
-                // Glow when active
-                if (activeSlot == i) {
-                    val glow = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                        color = Color.parseColor("#337C73FF")
-                    }
-                    canvas.drawCircle(sx, sy, r + dp(6f), glow)
-                    canvas.drawCircle(sx, sy, r, slotActivePaint)
-                } else {
-                    canvas.drawCircle(sx, sy, r, slotPaint)
-                    canvas.drawCircle(sx, sy, r, slotStrokePaint)
-                }
-
-                // Letter mark: first 1–2 letters of the label
-                val mark = labelMark(action.label)
-                textPaint.textSize = 16f * max(0.6f, progress)
-                canvas.drawText(mark, sx, sy + 6f * progress, textPaint)
-            }
-        } else {
-            secondaryTextPaint.textSize = 16f * progress
-            canvas.drawText(context.getString(R.string.wheel_no_slots), centerX, centerY - radius * progress - dp(30f), secondaryTextPaint)
-        }
-
-        // Center disc (close button)
-        val cr = closeRadius * progress
-        canvas.drawCircle(centerX, centerY, cr, centerDiscPaint)
-        canvas.drawCircle(centerX, centerY, cr, centerStrokePaint)
-        closeTextPaint.textSize = 22f * max(0.6f, progress)
-        canvas.drawText("×", centerX, centerY + 7f * progress, closeTextPaint)
-    }
-
-    private fun labelMark(label: String): String {
-        // Take first significant word's first letters (max 2)
-        val parts = label.trim().split(" ").filter { it.isNotBlank() }
-        if (parts.isEmpty()) return ""
-        if (parts.size == 1) return parts[0].take(2).uppercase()
-        return (parts[0].take(1) + parts[1].take(1)).uppercase()
-    }
-
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.action) {
-            MotionEvent.ACTION_DOWN -> {
-                updateActiveSlot(event.x, event.y)
-                return true
-            }
-            MotionEvent.ACTION_MOVE -> {
-                updateActiveSlot(event.x, event.y)
-                return true
-            }
-            MotionEvent.ACTION_UP -> {
-                val dx = event.x - centerX
-                val dy = event.y - centerY
-                if (hypot(dx, dy) < closeRadius) {
-                    onDismiss()
-                    return true
-                }
-                if (slots.isNotEmpty()) {
-                    val idx = activeSlot
-                    activeSlot = -1
-                    invalidate()
-                    if (idx in slots.indices) {
-                        onSlotTapped(slots[idx])
+            slots.forEachIndexed { index, action ->
+                val angle = -PI / 2.0 + 2.0 * PI * index / maxOf(1, slots.size)
+                val x = center + geometry.ringRadius * cos(angle).toFloat() - geometry.slotSize / 2f
+                val y = center + geometry.ringRadius * sin(angle).toFloat() - geometry.slotSize / 2f
+                val selected = activeSlot == index
+                Surface(
+                    color = if (selected) Color(0xFF5D56A8) else Color(0xE51A1924),
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    shape = RoundedCornerShape(24.dp),
+                    shadowElevation = if (selected) 14.dp else 4.dp,
+                    modifier = Modifier
+                        .size(with(density) { geometry.slotSize.toDp() })
+                        .offset { IntOffset(x.toInt(), y.toInt()) }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                        modifier = Modifier.padding(5.dp)
+                    ) {
+                        Text(action.type.icon, fontSize = 25.sp)
+                        Text(
+                            action.label.take(16),
+                            maxLines = 1,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
-                return true
             }
-            MotionEvent.ACTION_CANCEL -> {
-                activeSlot = -1
-                invalidate()
-                return true
+            Surface(
+                color = Color(0xEE08080C),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shape = CircleShape,
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .size(with(density) { (geometry.closeRadius * 2f).toDp() })
+                    .offset {
+                        IntOffset(
+                            (center - geometry.closeRadius).toInt(),
+                            (center - geometry.closeRadius).toInt()
+                        )
+                    }
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("×", fontSize = 28.sp)
+                }
             }
         }
-        return true
     }
+}
 
-    private fun updateActiveSlot(x: Float, y: Float) {
-        val dx = x - centerX
-        val dy = y - centerY
-        if (slots.isEmpty()) return
-        val count = slots.size.coerceAtLeast(1)
-        var newActive = -1
-        slots.forEachIndexed { i, _ ->
-            val (sxActual, syActual) = slotCenter(i, count)
-            if (hypot(dx - (sxActual - centerX), dy - (syActual - centerY)) < slotRadius) {
-                newActive = i
-            }
-        }
-        if (newActive != activeSlot) {
-            activeSlot = newActive
-            invalidate()
-        }
+private fun slotAt(x: Float, y: Float, geometry: WheelGeometry, count: Int): Int {
+    for (index in 0 until count) {
+        val angle = -PI / 2.0 + 2.0 * PI * index / maxOf(1, count)
+        val sx = geometry.center + geometry.ringRadius * cos(angle).toFloat()
+        val sy = geometry.center + geometry.ringRadius * sin(angle).toFloat()
+        if (hypot(x - sx, y - sy) <= geometry.slotSize / 2f) return index
     }
+    return -1
 }

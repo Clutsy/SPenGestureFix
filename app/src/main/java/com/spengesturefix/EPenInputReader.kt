@@ -3,19 +3,13 @@ package com.denis.spenfix
 import android.util.Log
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Legge in streaming gli eventi grezzi di un device /dev/input/eventX
- * lanciando "getevent -l <device>" tramite una shell root, e restituisce
- * ogni riga già divisa in (tipo, codice, valore) come stringhe grezze
- * (es. "EV_KEY", "BTN_STYLUS", "DOWN" oppure "EV_ABS", "ABS_DISTANCE", "00000005").
+ * Streams one Linux input device without touching Android's MotionEvent pipeline.
  *
- * Perché parsing testuale e non lettura binaria della struct input_event:
- * la struct cambia dimensione tra ABI a 32 e 64 bit (per via del padding
- * di timeval), quindi il parsing binario andrebbe scritto due volte e
- * verificato per architettura. Il parsing testuale costa qualche
- * millisecondo in più per riga ma è identico ovunque: per gesti basati
- * su click/hover (non per drawing ad alta frequenza) è più che sufficiente.
+ * The process is intentionally owned by this reader. Do not use a global pkill:
+ * the service can have two independent readers (w1 and sec_e-pen) alive at once.
  */
 class EPenInputReader(
     private val devicePath: String,
@@ -23,60 +17,128 @@ class EPenInputReader(
 ) {
     companion object {
         private const val TAG = "EPenInputReader"
-        // Metti a false una volta calibrato tutto, per non riempire il logcat.
-        const val DEBUG_LOG = true
+        private val DEVICE_PATH = Regex("/dev/input/event\\d+")
+        private val SPLIT = Regex("\\s+")
+
+        /** Enable with `setprop log.tag.SPenDebug DEBUG` during device diagnostics. */
+        private val DEBUG_LOG = try {
+            Log.isLoggable("SPenDebug", Log.DEBUG)
+        } catch (_: Throwable) {
+            false
+        }
+
+        fun parseLine(line: String): Triple<String, String, String>? {
+            val parts = line.trim().split(SPLIT)
+            if (parts.isEmpty()) return null
+            val offset = if (parts.first().startsWith("/dev/")) 1 else 0
+            if (parts.size < offset + 3) return null
+
+            val type = parts[offset].removeSuffix(":")
+            var code = parts[offset + 1]
+            var value = parts[offset + 2]
+            // Some old toolbox builds print an unknown switch as:
+            // `EV_SW SW 001a 00000001` instead of `EV_SW SW_001A 00000001`.
+            if (type == "EV_SW" && code == "SW" && parts.size >= offset + 4) {
+                code = parts[offset + 2]
+                value = parts[offset + 3]
+            }
+            return Triple(type, code, value)
+        }
     }
 
-    @Volatile private var running = false
-    private var process: Process? = null
+    private val running = AtomicBoolean(false)
+    @Volatile private var process: Process? = null
+    @Volatile private var childPid: Int? = null
+    @Volatile private var worker: Thread? = null
 
     fun start() {
-        if (running) return
-        running = true
-        Thread {
-            try {
-                process = Runtime.getRuntime().exec(arrayOf("su", "-c", "getevent -l \"$devicePath\""))
-                val reader = BufferedReader(InputStreamReader(process!!.inputStream))
-                while (running) {
-                    val line = reader.readLine() ?: break
-                    parseLine(line)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Lettura eventi interrotta per $devicePath", e)
-            }
-        }.apply { isDaemon = true }.start()
+        if (!DEVICE_PATH.matches(devicePath)) {
+            Log.e(TAG, "Refusing invalid input device path: $devicePath")
+            return
+        }
+        if (!running.compareAndSet(false, true)) return
+
+        worker = Thread(::readLoop, "SpenInput-${devicePath.substringAfterLast('/')}").apply {
+            isDaemon = true
+            start()
+        }
     }
 
-    fun stop() {
-        running = false
+    private fun readLoop() {
         try {
-            process?.destroy()
-            // Rete di sicurezza: destroy() sul processo "su" a volte non
-            // uccide il vero "getevent" figlio. Nota: questo pkill è
-            // generico e killerebbe anche altre istanze di getevent -l
-            // eventualmente in corso; per un'app mono-utente va bene.
-            Runtime.getRuntime().exec(arrayOf("su", "-c", "pkill -f 'getevent -l'"))
+            // Magisk `su` can daemonize the command it launches. Run a tiny
+            // root shell that prints its own pid before exec'ing getevent, so
+            // stop() can terminate exactly this reader instead of using pkill.
+            val command = "echo ${'$'}${'$'}; exec getevent -l $devicePath"
+            val started = ProcessBuilder("su", "-c", command)
+                .redirectErrorStream(true)
+                .start()
+            process = started
+            var pidLineRead = false
+
+            BufferedReader(InputStreamReader(started.inputStream)).use { reader ->
+                while (running.get()) {
+                    val line = reader.readLine() ?: break
+                    if (!pidLineRead) {
+                        val parsedPid = line.trim().toIntOrNull()
+                        if (parsedPid != null && parsedPid > 1) {
+                            childPid = parsedPid
+                            pidLineRead = true
+                            Log.d(TAG, "Started $devicePath reader pid=$parsedPid")
+                            continue
+                        }
+                        // Keep compatibility with su implementations that do
+                        // not preserve the pid line and emit events immediately.
+                        pidLineRead = true
+                    }
+                    val event = parseLine(line) ?: continue
+                    val (type, code, value) = event
+                    if (type == "EV_SYN") continue
+                    if (DEBUG_LOG) Log.d("SPenDebug", "$devicePath -> $type $code $value")
+                    try {
+                        onEvent(type, code, value)
+                    } catch (callbackError: Throwable) {
+                        // A malformed callback must never terminate the reader.
+                        Log.e(TAG, "Input callback failed for $devicePath", callbackError)
+                    }
+                }
+            }
+        } catch (error: Exception) {
+            if (running.get()) Log.e(TAG, "Reading $devicePath failed", error)
+        } finally {
+            process = null
+            childPid = null
+            running.set(false)
+        }
+    }
+
+    /** Stops only this reader and returns immediately. */
+    fun stop() {
+        if (!running.getAndSet(false)) return
+        val pid = childPid
+        try {
+            process?.inputStream?.close()
         } catch (_: Exception) {
         }
-    }
-
-    private fun parseLine(line: String) {
-        val parts = line.trim().split(Regex("\\s+"))
-        if (parts.isEmpty()) return
-
-        val type: String
-        val code: String
-        val value: String
-        if (parts[0].startsWith("/dev/")) {
-            if (parts.size < 4) return
-            type = parts[1]; code = parts[2]; value = parts[3]
-        } else {
-            if (parts.size < 3) return
-            type = parts[0]; code = parts[1]; value = parts[2]
+        try {
+            process?.destroy()
+        } catch (_: Exception) {
         }
-
-        if (DEBUG_LOG) Log.d("SPenDebug", "$devicePath -> $type $code $value")
-        if (type == "EV_SYN") return
-        onEvent(type, code, value)
+        if (pid != null && pid > 1) {
+            // This is scoped to the pid printed by this reader; it cannot
+            // terminate the other sec_e-pen/w1 pipeline.
+            try {
+                ProcessBuilder("su", "-c", "kill -TERM -$pid")
+                    .redirectErrorStream(true)
+                    .start()
+            } catch (_: Exception) {
+            }
+        }
+        process = null
+        childPid = null
+        worker = null
     }
+
+    val isRunning: Boolean
+        get() = running.get()
 }

@@ -11,7 +11,7 @@ import android.view.View
 import kotlin.math.max
 import kotlin.math.min
 
-/** Vista per disegnare un rettangolo di selezione trascinando il dito/pennino. */
+/** View to draw a selection rectangle by dragging the finger/stylus. */
 class SelectionView(context: Context) : View(context) {
 
     private var startX = 0f

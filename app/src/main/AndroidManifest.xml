@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         android:maxSdkVersion="32" />
@@ -42,9 +45,9 @@
         <activity android:name=".SmartSelectActivity" android:exported="false" />
         <activity
             android:name=".QuickNoteActivity"
-            android:exported="false"
-            android:theme="@style/Theme.SPenFix.Dialog" />
+            android:exported="false" />
         <activity android:name=".NotesListActivity" android:exported="false" />
+        <activity android:name=".AppSearchActivity" android:exported="false" />
 
         <!-- Wacom Tablet Mode Activities -->
         <activity
@@ -58,7 +61,11 @@
         <service
             android:name=".SPenGestureService"
             android:exported="false"
-            android:foregroundServiceType="specialUse" />
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="S Pen Wacom digitizer and gesture monitoring" />
+        </service>
 
         <receiver
             android:name=".BootReceiver"

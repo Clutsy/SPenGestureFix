@@ -2,95 +2,68 @@ package com.denis.spenfix
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.os.Bundle
-import android.view.Gravity
-import android.widget.Button
-import android.widget.FrameLayout
-import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import java.io.File
 import java.io.FileOutputStream
 
-/** Screenshot già catturato da ActionExecutor prima di aprire questa activity, qui si annota. */
-class ScreenWriteActivity : AppCompatActivity() {
-
-    companion object {
-        const val EXTRA_IMAGE_PATH = "image_path"
-    }
-
-    private lateinit var drawingView: DrawingView
+class ScreenWriteActivity : ComponentActivity() {
     private lateinit var sourceBitmap: Bitmap
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         val path = intent.getStringExtra(EXTRA_IMAGE_PATH)
-        val bitmap = path?.let { BitmapFactory.decodeFile(it) }
+        val bitmap = path?.let(BitmapFactory::decodeFile)
         if (bitmap == null) {
-            Toast.makeText(this, "Screenshot non trovato", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, R.string.editor_image_missing, Toast.LENGTH_SHORT).show()
             finish()
             return
         }
         sourceBitmap = bitmap
-
-        val root = FrameLayout(this)
-        val imageView = ImageView(this).apply { setImageBitmap(sourceBitmap) }
-        drawingView = DrawingView(this)
-
-        root.addView(imageView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        root.addView(drawingView, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
-        root.addView(buildToolbar(), FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT).apply {
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            bottomMargin = 48
-        })
-
-        setContentView(root)
-    }
-
-    private fun buildToolbar(): LinearLayout {
-        return LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(24, 16, 24, 16)
-            setBackgroundColor(Color.parseColor("#DD222222"))
-
-            listOf(Color.RED, Color.YELLOW, Color.GREEN, Color.WHITE, Color.BLACK).forEach { color ->
-                addView(Button(context).apply {
-                    text = "●"
-                    setTextColor(color)
-                    setOnClickListener { drawingView.currentColor = color }
-                })
+        setContent {
+            SpenFixTheme {
+                ScreenWriteComposeScreen(
+                    bitmap = sourceBitmap,
+                    onSave = ::saveResult,
+                    onClose = ::finish
+                )
             }
-            addView(Button(context).apply {
-                text = "Annulla"
-                setOnClickListener { drawingView.undo() }
-            })
-            addView(Button(context).apply {
-                text = "Salva"
-                setOnClickListener { saveResult() }
-            })
         }
     }
 
-    private fun saveResult() {
+    private fun saveResult(bitmap: Bitmap) {
         Thread {
             try {
-                val flattened = drawingView.flattenOnto(sourceBitmap)
-                val cacheFile = File(cacheDir, "sw_${System.currentTimeMillis()}.png")
-                FileOutputStream(cacheFile).use { flattened.compress(Bitmap.CompressFormat.PNG, 100, it) }
-
-                val destPath = "/sdcard/Pictures/SPenScreenshots/screenwrite_${System.currentTimeMillis()}.png"
-                Runtime.getRuntime().exec(arrayOf("su", "-c", "cp '${cacheFile.absolutePath}' '$destPath'")).waitFor()
-
-                runOnUiThread {
-                    Toast.makeText(this, "Salvato in Pictures/SPenScreenshots", Toast.LENGTH_LONG).show()
-                    finish()
+                val timestamp = System.currentTimeMillis()
+                val cacheFile = File(cacheDir, "screenwrite_$timestamp.png")
+                FileOutputStream(cacheFile).use {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
                 }
-            } catch (e: Exception) {
-                runOnUiThread { Toast.makeText(this, "Errore nel salvataggio", Toast.LENGTH_SHORT).show() }
+                val destination = "/sdcard/Pictures/SPenScreenshots/screenwrite_$timestamp.png"
+                val process = ProcessBuilder(
+                    "su", "-c",
+                    "mkdir -p /sdcard/Pictures/SPenScreenshots && cp '${cacheFile.absolutePath}' '$destination'"
+                ).start()
+                val success = process.waitFor() == 0
+                runOnUiThread {
+                    if (success) {
+                        Toast.makeText(this, R.string.editor_saved, Toast.LENGTH_LONG).show()
+                        finish()
+                    } else {
+                        Toast.makeText(this, R.string.editor_save_failed, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (_: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, R.string.editor_save_failed, Toast.LENGTH_SHORT).show()
+                }
             }
-        }.start()
+        }.apply { isDaemon = true; start() }
+    }
+
+    companion object {
+        const val EXTRA_IMAGE_PATH = "image_path"
     }
 }

@@ -1,0 +1,36 @@
+package com.denis.spenfix
+
+import android.content.Context
+import androidx.core.content.edit
+
+/** Small app-level preferences shared by Compose screens and the service. */
+object AppSettings {
+    private const val PREFS = "app_settings"
+    private const val KEY_AMOLED = "amoled_black"
+    private const val KEY_AUTO_START_PEN = "auto_start_pen"
+    private const val KEY_LANGUAGE = "language"
+
+    private fun prefs(context: Context) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    fun isAmoled(context: Context): Boolean = prefs(context).getBoolean(KEY_AMOLED, true)
+
+    fun setAmoled(context: Context, value: Boolean) {
+        prefs(context).edit { putBoolean(KEY_AMOLED, value) }
+    }
+
+    fun isAutoStartOnPen(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_AUTO_START_PEN, true)
+
+    fun setAutoStartOnPen(context: Context, value: Boolean) {
+        prefs(context).edit { putBoolean(KEY_AUTO_START_PEN, value) }
+    }
+
+    fun language(context: Context): String? = prefs(context).getString(KEY_LANGUAGE, null)
+
+    fun setLanguage(context: Context, value: String?) {
+        prefs(context).edit {
+            if (value.isNullOrBlank()) remove(KEY_LANGUAGE) else putString(KEY_LANGUAGE, value)
+        }
+    }
+}
