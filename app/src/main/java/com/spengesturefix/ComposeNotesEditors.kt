@@ -1,6 +1,6 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
@@ -98,7 +99,7 @@ fun QuickNoteComposeScreen(
                 Column(Modifier.padding(16.dp)) {
                     OutlinedTextField(
                         value = text,
-                        onValueChange = { text = it },
+                        onValueChange = { text = it.take(4000) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 7,
                         maxLines = 14,
@@ -108,6 +109,12 @@ fun QuickNoteComposeScreen(
                             imeAction = ImeAction.Default
                         )
                     )
+                    Text(
+                        text = stringResource(R.string.notes_character_count, text.length),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                    )
                     if (phone != null) {
                         Spacer(Modifier.height(10.dp))
                         OutlinedButton(onClick = { onCall(phone) }, modifier = Modifier.fillMaxWidth()) {
@@ -116,7 +123,11 @@ fun QuickNoteComposeScreen(
                     }
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { onMaps(text) }, modifier = Modifier.weight(1f)) {
+                        OutlinedButton(
+                            onClick = { onMaps(text) },
+                            enabled = text.isNotBlank(),
+                            modifier = Modifier.weight(1f)
+                        ) {
                             Text(stringResource(R.string.btn_search_maps))
                         }
                         OutlinedButton(onClick = onOpenNotes, modifier = Modifier.weight(1f)) {
@@ -141,12 +152,19 @@ fun QuickNoteComposeScreen(
 fun NotesListComposeScreen(
     notes: List<QuickNote>,
     onNew: () -> Unit,
-    onEdit: (Int) -> Unit,
-    onDelete: (Int) -> Unit,
+    onEdit: (QuickNote) -> Unit,
+    onDelete: (QuickNote) -> Unit,
     onShare: (QuickNote) -> Unit,
+    onCopy: (QuickNote) -> Unit,
     onClose: () -> Unit
 ) {
-    var deleteIndex by remember { mutableStateOf<Int?>(null) }
+    var noteToDelete by remember { mutableStateOf<QuickNote?>(null) }
+    var query by remember { mutableStateOf("") }
+    val visibleNotes = remember(notes, query) {
+        val normalizedQuery = query.trim()
+        if (normalizedQuery.isEmpty()) notes
+        else notes.filter { it.text.contains(normalizedQuery, ignoreCase = true) }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -180,38 +198,74 @@ fun NotesListComposeScreen(
                 )
             }
         } else {
-            LazyColumn(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(insets)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                itemsIndexed(notes, key = { index, note -> "${note.timestamp}-$index" }) { index, note ->
-                    NoteCard(
-                        note = note,
-                        onEdit = { onEdit(index) },
-                        onDelete = { deleteIndex = index },
-                        onShare = { onShare(note) }
-                    )
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.notes_search)) }
+                )
+                if (visibleNotes.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            stringResource(R.string.notes_no_match),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(
+                            items = visibleNotes,
+                            key = { note -> note.timestamp },
+                            contentType = { "note" }
+                        ) { note ->
+                            NoteCard(
+                                note = note,
+                                onEdit = { onEdit(note) },
+                                onDelete = { noteToDelete = note },
+                                onShare = { onShare(note) },
+                                onCopy = { onCopy(note) }
+                            )
+                        }
+                        item { Spacer(Modifier.height(90.dp)) }
+                    }
                 }
-                item { Spacer(Modifier.height(90.dp)) }
             }
         }
     }
 
-    deleteIndex?.let { index ->
+    noteToDelete?.let { note ->
         AlertDialog(
-            onDismissRequest = { deleteIndex = null },
+            onDismissRequest = { noteToDelete = null },
             title = { Text(stringResource(R.string.notes_delete)) },
             text = { Text(stringResource(R.string.notes_confirm_delete)) },
             confirmButton = {
-                Button(onClick = { onDelete(index); deleteIndex = null }) {
+                Button(onClick = { onDelete(note); noteToDelete = null }) {
                     Text(stringResource(R.string.dialog_ok))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleteIndex = null }) {
+                TextButton(onClick = { noteToDelete = null }) {
                     Text(stringResource(R.string.dialog_cancel))
                 }
             }
@@ -224,7 +278,8 @@ private fun NoteCard(
     note: QuickNote,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onCopy: () -> Unit
 ) {
     val format = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
     Card(
@@ -243,6 +298,7 @@ private fun NoteCard(
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = onEdit) { Text(stringResource(R.string.notes_edit)) }
+                TextButton(onClick = onCopy) { Text(stringResource(android.R.string.copy)) }
                 TextButton(onClick = onShare) { Text(stringResource(R.string.notes_share)) }
                 TextButton(onClick = onDelete) { Text(stringResource(R.string.notes_delete)) }
             }

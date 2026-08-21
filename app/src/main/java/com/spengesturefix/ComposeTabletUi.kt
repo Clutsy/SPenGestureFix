@@ -1,6 +1,6 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
-package com.denis.spenfix
+package com.spengesturefix
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -68,7 +68,10 @@ fun TabletModeComposeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (running) stringResource(R.string.tablet_status_active) else status,
+                    text = status.ifBlank {
+                        if (running) stringResource(R.string.tablet_status_active)
+                        else stringResource(R.string.tablet_status_ready)
+                    },
                     modifier = Modifier.weight(1f),
                     color = if (running) Color(0xFF73D7A5) else MaterialTheme.colorScheme.onSurface
                 )
@@ -117,6 +120,7 @@ fun TabletSettingsComposeScreen(
     invertX: Boolean,
     invertY: Boolean,
     aspectLock: Boolean,
+    mappingMode: MappingMode,
     monitorWidth: Int,
     monitorHeight: Int,
     sendRate: Int,
@@ -133,6 +137,7 @@ fun TabletSettingsComposeScreen(
     onInvertXChanged: (Boolean) -> Unit,
     onInvertYChanged: (Boolean) -> Unit,
     onAspectLockChanged: (Boolean) -> Unit,
+    onMappingModeChanged: (MappingMode) -> Unit,
     onMonitorWidthChanged: (Int) -> Unit,
     onMonitorHeightChanged: (Int) -> Unit,
     onSendRateChanged: (Int) -> Unit,
@@ -141,6 +146,7 @@ fun TabletSettingsComposeScreen(
     onHapticChanged: (Boolean) -> Unit,
     onShowGridChanged: (Boolean) -> Unit,
     onAutoRestoreChanged: (Boolean) -> Unit,
+    onAutoDetectResolution: () -> Pair<Int, Int>?,
     onClose: () -> Unit
 ) {
     var selectedCurve by remember { mutableStateOf(curve) }
@@ -151,6 +157,7 @@ fun TabletSettingsComposeScreen(
     var selectedInvertX by remember { mutableStateOf(invertX) }
     var selectedInvertY by remember { mutableStateOf(invertY) }
     var selectedAspectLock by remember { mutableStateOf(aspectLock) }
+    var selectedMappingMode by remember { mutableStateOf(mappingMode) }
     var selectedSendRate by remember { mutableStateOf(sendRate) }
     var selectedSmoothing by remember { mutableStateOf(smoothing) }
     var selectedButtonAction by remember { mutableStateOf(buttonAction) }
@@ -211,6 +218,19 @@ fun TabletSettingsComposeScreen(
             }
 
             TabletSettingsCard(stringResource(R.string.tablet_section_mapping)) {
+                Text(stringResource(R.string.tablet_section_mapping), style = MaterialTheme.typography.labelLarge)
+                ChipRow {
+                    MappingMode.values().forEach { mode ->
+                        FilterChip(
+                            selected = selectedMappingMode == mode,
+                            onClick = {
+                                selectedMappingMode = mode
+                                onMappingModeChanged(mode)
+                            },
+                            label = { Text(mappingModeLabel(mode)) }
+                        )
+                    }
+                }
                 Text(stringResource(R.string.tablet_orientation), style = MaterialTheme.typography.labelLarge)
                 ChipRow {
                     OrientationType.values().forEach { type ->
@@ -248,6 +268,17 @@ fun TabletSettingsComposeScreen(
                         label = { Text("H") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                     )
+                }
+                OutlinedButton(
+                    onClick = {
+                        onAutoDetectResolution()?.let { (width, height) ->
+                            widthText = width.toString()
+                            heightText = height.toString()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.tablet_auto_detect_resolution))
                 }
             }
 
@@ -339,6 +370,12 @@ private fun curveLabel(type: PressureCurveType): String = when (type) {
     PressureCurveType.FIRM -> stringResource(R.string.tablet_curve_firm)
     PressureCurveType.S_CURVE -> stringResource(R.string.tablet_curve_scurve)
     PressureCurveType.CUSTOM -> stringResource(R.string.tablet_curve_custom)
+}
+
+@Composable
+private fun mappingModeLabel(mode: MappingMode): String = when (mode) {
+    MappingMode.FULL_SCREEN -> stringResource(R.string.tablet_mapping_full)
+    MappingMode.CUSTOM_AREA -> stringResource(R.string.tablet_mapping_custom)
 }
 
 @Composable

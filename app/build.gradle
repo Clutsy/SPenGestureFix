@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace 'com.spengesturefix'
+    namespace = 'com.spengesturefix'
     compileSdk {
         version = release(36) {
             it.minorApiLevel = 1
@@ -16,8 +16,8 @@ android {
         applicationId "com.spengesturefix"
         minSdk 21
         targetSdk 34
-        versionCode 2
-        versionName "1.1"
+        versionCode 3
+        versionName "1.2"
     }
 
     buildTypes {
@@ -37,12 +37,12 @@ android {
     }
 
     buildFeatures {
-        viewBinding true
-        compose true
+        viewBinding = true
+        compose = true
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion '1.5.8'
+        kotlinCompilerExtensionVersion = '1.5.8'
     }
 }
 

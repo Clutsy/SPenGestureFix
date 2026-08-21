@@ -1,4 +1,4 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.util.Log
 
@@ -45,8 +45,8 @@ class TabletInputCapture(
                         val isDown = isDown(value)
                         when (code) {
                             "BTN_TOUCH" -> { touching = isDown; changed = true }
-                            "BTN_STYLUS" -> { button = isDown; changed = true }
-                            "BTN_DIGI", "BTN_TOOL_PEN" -> { inRange = isDown; changed = true }
+                            "BTN_STYLUS", "BTN_STYLUS2" -> { button = isDown; changed = true }
+                            "BTN_DIGI", "BTN_TOOL_PEN", "BTN_TOOL_RUBBER" -> { inRange = isDown; changed = true }
                         }
                     }
                 }
@@ -91,6 +91,8 @@ class TabletInputCapture(
         }
 
         fun isDown(value: String): Boolean =
-            value.equals("DOWN", true) || value.equals("1") || value.equals("00000001", true)
+            value.equals("DOWN", true) || value.equals("1", true) ||
+                value.equals("2", true) || value.equals("00000001", true) ||
+                value.equals("00000002", true)
     }
 }

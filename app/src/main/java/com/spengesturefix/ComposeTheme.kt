@@ -1,4 +1,4 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography

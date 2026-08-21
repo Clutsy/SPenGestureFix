@@ -1,10 +1,12 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -69,6 +71,12 @@ sealed class BindingTarget {
     data class WheelSlot(val index: Int) : BindingTarget()
 }
 
+private val WHEEL_COLOR_PRESETS = listOf(
+    Color(0xFF29B6F6), Color(0xFF26C6DA), Color(0xFF66BB6A), Color(0xFF9CCC65),
+    Color(0xFFFFEE58), Color(0xFFFFA726), Color(0xFFEF5350), Color(0xFFEC407A),
+    Color(0xFFAB47BC), Color(0xFF7E57C2), Color(0xFF8D6E63), Color.White
+)
+
 @Composable
 fun MainComposeScreen(
     presence: PenPresenceState,
@@ -82,7 +90,7 @@ fun MainComposeScreen(
     languageCode: String?,
     gestures: Map<GestureKind, PenAction>,
     wheelSlots: List<PenAction>,
-    hasBackground: Boolean,
+    wheelColor: Color,
     onCheckRoot: () -> Unit,
     onRequestOverlay: () -> Unit,
     onStartService: () -> Unit,
@@ -91,12 +99,16 @@ fun MainComposeScreen(
     onAutoStartChanged: (Boolean) -> Unit,
     onLanguageChanged: (String?) -> Unit,
     onActionPicked: (BindingTarget, PenAction) -> Unit,
-    onPickBackground: () -> Unit,
-    onClearBackground: () -> Unit,
+    onWheelColorChanged: (Color) -> Unit,
     onOpenNotes: () -> Unit,
     onOpenTablet: () -> Unit,
     onOpenTabletSettings: () -> Unit
 ) {
+    val context = LocalContext.current
+    val gestureKinds = remember { GestureKind.values().toList() }
+    val emptyAction = remember(context) {
+        PenAction(ActionType.NONE, ActionType.NONE.label(context))
+    }
     var pickerTarget by remember { mutableStateOf<BindingTarget?>(null) }
     var languageDialog by remember { mutableStateOf(false) }
     var permissionDialog by remember { mutableStateOf(!overlayGranted || !notificationGranted) }
@@ -130,7 +142,7 @@ fun MainComposeScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item {
+            item(key = "intro", contentType = "header") {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.home_tagline),
@@ -145,7 +157,7 @@ fun MainComposeScreen(
                 )
             }
 
-            item {
+            item(key = "status", contentType = "card") {
                 DeviceStatusCard(
                     presence = presence,
                     serviceActive = serviceActive,
@@ -160,7 +172,7 @@ fun MainComposeScreen(
                 )
             }
 
-            item {
+            item(key = "settings", contentType = "card") {
                 SectionCard(
                     title = stringResource(R.string.section_settings),
                     subtitle = stringResource(R.string.settings_subtitle)
@@ -187,53 +199,38 @@ fun MainComposeScreen(
                 }
             }
 
-            item {
+            item(key = "gestures", contentType = "card") {
                 SectionCard(
                     title = stringResource(R.string.section_spen_button),
                     subtitle = stringResource(R.string.hint_tap_row)
                 ) {
-                    GestureKind.values().forEach { gesture ->
+                    gestureKinds.forEach { gesture ->
                         ActionRow(
                             title = gestureLabel(gesture),
-                            action = gestures[gesture] ?: PenAction(
-                                ActionType.NONE,
-                                ActionType.NONE.label(LocalContext.current)
-                            ),
+                            action = gestures[gesture] ?: emptyAction,
                             onClick = { pickerTarget = BindingTarget.Gesture(gesture) }
                         )
-                        if (gesture != GestureKind.values().last()) {
+                        if (gesture != gestureKinds.last()) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
                         }
                     }
                 }
             }
 
-            item {
+            item(key = "wheel", contentType = "card") {
                 SectionCard(
                     title = stringResource(R.string.section_wheel),
                     subtitle = stringResource(R.string.wheel_slots_subtitle)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(onClick = onPickBackground, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.btn_pick_background))
-                        }
-                        if (hasBackground) {
-                            TextButton(onClick = onClearBackground) {
-                                Text(stringResource(R.string.btn_clear_background))
-                            }
-                        }
-                    }
+                    WheelColorRow(
+                        selected = wheelColor,
+                        onSelect = onWheelColorChanged
+                    )
                     Spacer(Modifier.height(8.dp))
                     repeat(WheelConfig.SLOT_COUNT) { index ->
                         ActionRow(
                             title = stringResource(R.string.wheel_slot_label, index + 1),
-                            action = wheelSlots.getOrNull(index) ?: PenAction(
-                                ActionType.NONE,
-                                ActionType.NONE.label(LocalContext.current)
-                            ),
+                            action = wheelSlots.getOrNull(index) ?: emptyAction,
                             onClick = { pickerTarget = BindingTarget.WheelSlot(index) }
                         )
                         if (index < WheelConfig.SLOT_COUNT - 1) {
@@ -243,7 +240,7 @@ fun MainComposeScreen(
                 }
             }
 
-            item {
+            item(key = "notes", contentType = "card") {
                 SectionCard(
                     title = stringResource(R.string.section_notes),
                     subtitle = stringResource(R.string.notes_card_subtitle)
@@ -254,7 +251,7 @@ fun MainComposeScreen(
                 }
             }
 
-            item {
+            item(key = "tablet", contentType = "card") {
                 SectionCard(
                     title = stringResource(R.string.section_tablet_mode),
                     subtitle = stringResource(R.string.tablet_mode_subtitle)
@@ -270,7 +267,7 @@ fun MainComposeScreen(
                 }
             }
 
-            item {
+            item(key = "footer", contentType = "footer") {
                 Text(
                     text = stringResource(R.string.footer_experimental),
                     style = MaterialTheme.typography.labelSmall,
@@ -499,19 +496,43 @@ private fun LanguageDialog(
         null to stringResource(R.string.settings_language_system),
         "en" to stringResource(R.string.settings_language_en),
         "it" to stringResource(R.string.settings_language_it),
-        "es" to stringResource(R.string.settings_language_es)
+        "es" to stringResource(R.string.settings_language_es),
+        "fr" to stringResource(R.string.settings_language_fr),
+        "de" to stringResource(R.string.settings_language_de),
+        "pt" to stringResource(R.string.settings_language_pt),
+        "nl" to stringResource(R.string.settings_language_nl),
+        "pl" to stringResource(R.string.settings_language_pl),
+        "tr" to stringResource(R.string.settings_language_tr),
+        "ru" to stringResource(R.string.settings_language_ru),
+        "uk" to stringResource(R.string.settings_language_uk),
+        "zh-CN" to stringResource(R.string.settings_language_zh),
+        "ja" to stringResource(R.string.settings_language_ja),
+        "ko" to stringResource(R.string.settings_language_ko),
+        "ar" to stringResource(R.string.settings_language_ar),
+        "hi" to stringResource(R.string.settings_language_hi),
+        "id" to stringResource(R.string.settings_language_in)
     )
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_language)) },
         text = {
-            Column {
-                choices.forEach { (code, label) ->
+            // Keep the dialog bounded on the Note 3 while allowing every
+            // locale to be reached with ordinary touch scrolling.
+            LazyColumn(
+                modifier = Modifier.heightIn(min = 56.dp, max = 420.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                items(
+                    items = choices,
+                    key = { (code, _) -> code ?: "system" }
+                ) { (code, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .heightIn(min = 48.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable { onSelected(code) }
-                            .padding(vertical = 6.dp),
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(selected = selected == code, onClick = { onSelected(code) })
@@ -563,6 +584,7 @@ private fun ActionPickerSheet(
     var query by remember(target) { mutableStateOf("") }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val allApps = remember(context) { queryLauncherApps(context) }
+    val actionTypes = remember { ActionType.values().toList() }
     val visibleApps = remember(query, allApps) {
         allApps.filter { it.label.contains(query, ignoreCase = true) }
     }
@@ -585,7 +607,7 @@ private fun ActionPickerSheet(
                 selectedType == null -> {
                     Text(stringResource(R.string.dialog_choose_action), color = MaterialTheme.colorScheme.onSurfaceVariant)
                     LazyColumn(Modifier.heightIn(max = 520.dp)) {
-                        items(ActionType.values().toList(), key = { it.name }) { type ->
+                        items(actionTypes, key = { it.name }) { type ->
                             ListItem(
                                 headlineContent = { Text(type.label(context)) },
                                 leadingContent = { Text(type.icon, fontSize = 22.sp) },
@@ -674,6 +696,20 @@ private fun languageLabel(code: String?): String = when (code) {
     "en" -> stringResource(R.string.settings_language_en)
     "it" -> stringResource(R.string.settings_language_it)
     "es" -> stringResource(R.string.settings_language_es)
+    "fr" -> stringResource(R.string.settings_language_fr)
+    "de" -> stringResource(R.string.settings_language_de)
+    "pt" -> stringResource(R.string.settings_language_pt)
+    "nl" -> stringResource(R.string.settings_language_nl)
+    "pl" -> stringResource(R.string.settings_language_pl)
+    "tr" -> stringResource(R.string.settings_language_tr)
+    "ru" -> stringResource(R.string.settings_language_ru)
+    "uk" -> stringResource(R.string.settings_language_uk)
+    "zh-CN" -> stringResource(R.string.settings_language_zh)
+    "ja" -> stringResource(R.string.settings_language_ja)
+    "ko" -> stringResource(R.string.settings_language_ko)
+    "ar" -> stringResource(R.string.settings_language_ar)
+    "hi" -> stringResource(R.string.settings_language_hi)
+    "id" -> stringResource(R.string.settings_language_in)
     else -> stringResource(R.string.settings_language_system)
 }
 
@@ -696,3 +732,47 @@ private fun presenceColor(presence: PenPresenceState): Color = when (presence) {
     PenPresenceState.INSERTED -> Color(0xFF73D7A5)
     PenPresenceState.REMOVED -> Color(0xFFFFC470)
 }
+
+
+@Composable
+private fun WheelColorRow(
+    selected: Color,
+    onSelect: (Color) -> Unit
+) {
+    val presets = WHEEL_COLOR_PRESETS
+    Column {
+        Text(
+            text = stringResource(R.string.wheel_color_title),
+            style = MaterialTheme.typography.labelLarge
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = stringResource(R.string.wheel_color_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            presets.forEach { color ->
+                val isSelected = selected == color
+                Surface(
+                    color = color,
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .then(
+                            if (isSelected) Modifier.border(3.dp, Color.White, CircleShape)
+                            else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                        )
+                        .clickable { onSelect(color) }
+                ) {}
+            }
+        }
+    }
+}
+

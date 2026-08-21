@@ -1,5 +1,7 @@
-package com.denis.spenfix
+package com.spengesturefix
 
+import android.content.ClipData
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -19,16 +21,17 @@ class NotesListActivity : ComponentActivity() {
                 NotesListComposeScreen(
                     notes = notes,
                     onNew = { startActivity(Intent(this, QuickNoteActivity::class.java)) },
-                    onEdit = { index ->
+                    onEdit = { note ->
                         startActivity(Intent(this, QuickNoteActivity::class.java).apply {
-                            putExtra(QuickNoteActivity.EXTRA_NOTE_ID, index)
+                            putExtra(QuickNoteActivity.EXTRA_NOTE_TIMESTAMP, note.timestamp)
                         })
                     },
-                    onDelete = { index ->
-                        NotesStore.delete(this, index)
+                    onDelete = { note ->
+                        NotesStore.deleteByTimestamp(this, note.timestamp)
                         loadNotes()
                     },
                     onShare = ::shareNote,
+                    onCopy = ::copyNote,
                     onClose = ::finish
                 )
             }
@@ -49,5 +52,11 @@ class NotesListActivity : ComponentActivity() {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, note.text)
         }, getString(R.string.notes_share)))
+    }
+
+    private fun copyNote(note: QuickNote) {
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+            ?: return
+        clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.section_notes), note.text))
     }
 }

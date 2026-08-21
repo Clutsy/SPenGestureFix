@@ -37,6 +37,11 @@ BUTTON = 2
 ERASER = 4
 IN_RANGE = 8
 LEFT, RIGHT, MIDDLE = 0, 1, 2
+ROTATION_0, ROTATION_90, ROTATION_180, ROTATION_270 = 0, 1, 2, 3
+ORIENTATION_AUTO = "auto"
+ORIENTATION_PORTRAIT = "portrait"
+ORIENTATION_LANDSCAPE = "landscape"
+ORIENTATION_LANDSCAPE_INVERTED = "landscape-inverted"
 
 
 @dataclass(frozen=True)
@@ -139,11 +144,23 @@ class WindowsSendInputBackend:
     def move_absolute(self, x: int, y: int) -> None:
         x = max(0, min(self._width - 1, x))
         y = max(0, min(self._height - 1, y))
-        screen_x = self._left + int(x * self._virtual_width / max(1, self._width - 1))
-        screen_y = self._top + int(y * self._virtual_height / max(1, self._height - 1))
-        nx = int((screen_x - self._left) * 65535 / max(1, self._virtual_width - 1))
-        ny = int((screen_y - self._top) * 65535 / max(1, self._virtual_height - 1))
-        self._send(self.MOVE | self.ABSOLUTE | self.VIRTUAL_DESK, nx, ny)
+        screen_x = self._left + int(
+            x * max(0, self._virtual_width - 1) / max(1, self._width - 1)
+        )
+        screen_y = self._top + int(
+            y * max(0, self._virtual_height - 1) / max(1, self._height - 1)
+        )
+        nx = int(
+            (screen_x - self._left) * 65535 / max(1, self._virtual_width - 1)
+        )
+        ny = int(
+            (screen_y - self._top) * 65535 / max(1, self._virtual_height - 1)
+        )
+        self._send(
+            self.MOVE | self.ABSOLUTE | self.VIRTUAL_DESK,
+            max(0, min(65535, nx)),
+            max(0, min(65535, ny)),
+        )
 
     def press(self, button: int) -> None:
         if button in self._pressed:
@@ -247,6 +264,74 @@ def parse_value(value: str) -> Optional[int]:
         return None
 
 
+def normalize_resolution(width: int, height: int) -> Optional[Tuple[int, int]]:
+    """Return valid display dimensions in landscape order."""
+    if width <= 0 or height <= 0:
+        return None
+    return (max(width, height), min(width, height))
+
+
+def parse_wm_size(output: str) -> Optional[Tuple[int, int]]:
+    """Parse ``adb shell wm size`` and prefer the physical display size."""
+    candidates: list[Tuple[bool, int, int]] = []
+    pattern = re.compile(r"^\s*(Physical|Override)?\s*size:\s*(\d+)x(\d+)\s*$", re.IGNORECASE)
+    for line in output.splitlines():
+        match = pattern.search(line)
+        if match:
+            candidates.append((match.group(1).lower() == "physical", int(match.group(2)), int(match.group(3))))
+    for physical, width, height in candidates:
+        if physical:
+            return normalize_resolution(width, height)
+    if candidates:
+        _, width, height = candidates[0]
+        return normalize_resolution(width, height)
+    return None
+
+
+def parse_display_rotation(output: str) -> Optional[int]:
+    """Parse Android rotation values reported as indices or degrees."""
+    patterns = (
+        re.compile(r"mCurrentRotation\s*[=:]\s*(?:ROTATION_)?(\d+)", re.IGNORECASE),
+        re.compile(r"mDisplayRotation\s*[=:]\s*(?:ROTATION_)?(\d+)", re.IGNORECASE),
+        re.compile(r"\borientation\s*[=:]\s*(?:ROTATION_)?(\d+)", re.IGNORECASE),
+        re.compile(r"\brotation\s*[=:]\s*(?:ROTATION_)?(\d+)", re.IGNORECASE),
+    )
+    for pattern in patterns:
+        match = pattern.search(output)
+        if not match:
+            continue
+        value = int(match.group(1))
+        if value in (0, 1, 2, 3):
+            return value
+        if value in (90, 180, 270):
+            return value // 90
+    return None
+
+
+def orient_normalized(x: float, y: float, rotation: int) -> Tuple[float, float]:
+    """Rotate natural portrait Wacom axes into the Android display axes."""
+    x = max(0.0, min(1.0, x))
+    y = max(0.0, min(1.0, y))
+    if rotation == ROTATION_90:
+        return y, 1.0 - x
+    if rotation == ROTATION_180:
+        return 1.0 - x, 1.0 - y
+    if rotation == ROTATION_270:
+        return 1.0 - y, x
+    return x, y
+
+
+def orientation_rotation(orientation: str, display_rotation: int = ROTATION_0) -> int:
+    """Resolve a CLI orientation into a quarter-turn transform."""
+    if orientation == ORIENTATION_AUTO:
+        return display_rotation if display_rotation in (0, 1, 2, 3) else ROTATION_0
+    if orientation == ORIENTATION_LANDSCAPE:
+        return ROTATION_90
+    if orientation == ORIENTATION_LANDSCAPE_INVERTED:
+        return ROTATION_270
+    return ROTATION_0
+
+
 def parse_capabilities(output: str) -> DeviceCapabilities:
     ranges: dict[str, AxisRange] = {}
     pattern = re.compile(r"(ABS_[A-Z0-9_]+).*?min\s+(-?\d+),\s*max\s+(-?\d+)")
@@ -290,6 +375,20 @@ def normalize(value: int, axis: AxisRange) -> float:
     return max(0.0, min(1.0, (value - axis.minimum) / (axis.maximum - axis.minimum)))
 
 
+def query_device_resolution(adb: Sequence[str]) -> Optional[Tuple[int, int]]:
+    try:
+        return parse_wm_size(adb_output(list(adb) + ["shell", "wm", "size"]))
+    except (OSError, RuntimeError, subprocess.TimeoutExpired):
+        return None
+
+
+def query_device_rotation(adb: Sequence[str]) -> Optional[int]:
+    try:
+        return parse_display_rotation(adb_output(list(adb) + ["shell", "dumpsys", "display"]))
+    except (OSError, RuntimeError, subprocess.TimeoutExpired):
+        return None
+
+
 def screen_size() -> Tuple[int, int]:
     if sys.platform == "win32":
         try:
@@ -319,14 +418,18 @@ class AdbPenEmulator:
         screen_width: int,
         screen_height: int,
         reconnect: bool = True,
+        orientation: str = ORIENTATION_PORTRAIT,
+        display_rotation: int = ROTATION_0,
     ) -> None:
         self.adb = list(adb)
         self.device_path = device_path
         self.capabilities = capabilities
         self.backend = backend
         self.screen_width = screen_width
-        self.screen_height = screen_height
+        self.screen_height = max(1, screen_height)
         self.reconnect = reconnect
+        self.orientation = orientation
+        self.display_rotation = display_rotation
         self.stop_event = threading.Event()
         self.state = PenState()
         self.process: Optional[subprocess.Popen[str]] = None
@@ -358,16 +461,21 @@ class AdbPenEmulator:
             if code == "BTN_TOUCH":
                 self._button_transition(LEFT, down)
                 self.state.touching = down
-            elif code == "BTN_STYLUS":
+            elif code in ("BTN_STYLUS", "BTN_STYLUS2"):
                 self._button_transition(RIGHT, down)
                 self.state.button = down
-            elif code in ("BTN_DIGI", "BTN_TOOL_PEN"):
+            elif code in ("BTN_DIGI", "BTN_TOOL_PEN", "BTN_TOOL_RUBBER"):
                 self.state.in_range = down
 
     def _move(self) -> None:
-        x = int(normalize(self.state.x, self.capabilities.x) * (self.screen_width - 1))
-        y = int(normalize(self.state.y, self.capabilities.y) * (self.screen_height - 1))
-        self.backend.move_absolute(x, y)
+        raw_x = normalize(self.state.x, self.capabilities.x)
+        raw_y = normalize(self.state.y, self.capabilities.y)
+        rotation = orientation_rotation(self.orientation, self.display_rotation)
+        x, y = orient_normalized(raw_x, raw_y, rotation)
+        self.backend.move_absolute(
+            int(x * (self.screen_width - 1)),
+            int(y * (self.screen_height - 1)),
+        )
 
     def _button_transition(self, button: int, down: bool) -> None:
         if down:
@@ -525,7 +633,15 @@ def discover_device(adb: Sequence[str]) -> Tuple[str, DeviceCapabilities]:
     path = find_epen_device(output)
     if not path:
         raise RuntimeError("sec_e-pen was not found; use --device after checking --list")
-    return path, parse_capabilities(output)
+    try:
+        # Query the selected node again so another input device cannot overwrite
+        # its axis limits while the complete capability listing is parsed.
+        selected = adb_output(
+            list(adb) + ["shell", "su", "-c", f"getevent -lp {path}"]
+        )
+    except (OSError, RuntimeError, subprocess.TimeoutExpired):
+        selected = output
+    return path, parse_capabilities(selected)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -537,6 +653,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-x", type=int, help="Override ABS_X maximum")
     parser.add_argument("--max-y", type=int, help="Override ABS_Y maximum")
     parser.add_argument("--max-pressure", type=int, help="Override ABS_PRESSURE maximum")
+    parser.add_argument(
+        "--orientation",
+        choices=(ORIENTATION_AUTO, ORIENTATION_PORTRAIT, ORIENTATION_LANDSCAPE, ORIENTATION_LANDSCAPE_INVERTED),
+        default=ORIENTATION_AUTO,
+        help="Map natural pen axes to the display (default: auto)",
+    )
     parser.add_argument("--list", action="store_true", help="Print rooted input devices and exit")
     parser.add_argument("--debug", action="store_true", help="Enable verbose logging")
     parser.add_argument("--tcp", action="store_true", help="Use the optional TCP tablet protocol")
@@ -553,19 +675,45 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         format="[%(asctime)s] %(levelname)s: %(message)s",
         datefmt="%H:%M:%S",
     )
-    width, height = args.screen_w, args.screen_h
-    if not width or not height:
-        detected_w, detected_h = screen_size()
-        width = width or detected_w
-        height = height or detected_h
     adb = adb_command(args.serial)
+    device_resolution: Optional[Tuple[int, int]] = None
+    device_rotation: Optional[int] = None
+    if not args.tcp:
+        device_resolution = query_device_resolution(adb)
+        device_rotation = query_device_rotation(adb)
+        if device_resolution:
+            print(f"Phone display resolution: {device_resolution[0]}x{device_resolution[1]}")
+        else:
+            LOG.warning("Could not read the phone resolution; using the local Windows display")
+
+    local_width, local_height = screen_size()
+    width = args.screen_w or (device_resolution[0] if device_resolution else local_width)
+    height = args.screen_h or (device_resolution[1] if device_resolution else local_height)
+    if width <= 0 or height <= 0:
+        parser.error("screen dimensions must be positive")
     if args.list and not args.tcp:
+        if device_rotation is not None:
+            print(f"Phone display rotation: {device_rotation * 90} degrees")
         try:
             print(adb_output(list(adb) + ["shell", "su", "-c", "getevent -lp"]))
             return 0
         except (OSError, RuntimeError) as error:
             LOG.error("%s", error)
             return 1
+
+    if args.device and not re.fullmatch(r"/dev/input/event\d+", args.device):
+        parser.error("--device must match /dev/input/eventN")
+    auto_rotation = device_rotation if device_rotation in (0, 1, 2, 3) else (
+        ROTATION_90 if width > height else ROTATION_0
+    )
+    resolved_rotation = orientation_rotation(args.orientation, auto_rotation)
+    LOG.info(
+        "Input mapping: %s (rotation %d); Windows target: %dx%d",
+        args.orientation,
+        resolved_rotation * 90,
+        width,
+        height,
+    )
 
     backend = create_backend(width, height)
     worker = None
@@ -578,7 +726,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             device, capabilities = discover_device(adb) if not args.device else (args.device, DeviceCapabilities())
             if args.device:
                 try:
-                    capabilities = parse_capabilities(adb_output(list(adb) + ["shell", "su", "-c", "getevent -lp"]))
+                    capabilities = parse_capabilities(
+                        adb_output(
+                            list(adb)
+                            + ["shell", "su", "-c", f"getevent -lp {args.device}"]
+                        )
+                    )
                 except Exception as error:
                     LOG.warning("Could not read device capabilities: %s", error)
             if args.max_x:
@@ -593,7 +746,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 capabilities = DeviceCapabilities(
                     capabilities.x, capabilities.y, AxisRange(capabilities.pressure.minimum, args.max_pressure)
                 )
-            worker = AdbPenEmulator(adb, device, capabilities, backend, width, height)
+            worker = AdbPenEmulator(
+                adb,
+                device,
+                capabilities,
+                backend,
+                width,
+                height,
+                orientation=args.orientation,
+                display_rotation=auto_rotation,
+            )
         worker.run()
         return 0
     except KeyboardInterrupt:

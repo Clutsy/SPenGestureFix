@@ -1,5 +1,6 @@
-package com.denis.spenfix
+package com.spengesturefix
 
+import android.view.Surface
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -76,6 +77,29 @@ class InputPipelineTest {
             PenPresenceDecoder.decode("EV_SW", "001a", "OK")
         )
         assertNull(PenPresenceDecoder.decode("EV_KEY", "BTN_TOUCH", "DOWN"))
+    }
+
+    @Test
+    fun normalizesScreenResolutionToLandscape() {
+        assertEquals(1920 to 1080, TabletConfig.normalizeScreenResolution(1080, 1920))
+        assertEquals(2560 to 1440, TabletConfig.normalizeScreenResolution(2560, 1440))
+        assertEquals(null, TabletConfig.normalizeScreenResolution(0, 1080))
+    }
+
+    @Test
+    fun mapsNaturalPenAxesToLandscapeDisplay() {
+        assertEquals(.75f, TabletConfig.mapCoordinates(.25f, .75f, Surface.ROTATION_90).first, .0001f)
+        assertEquals(.75f, TabletConfig.mapCoordinates(.25f, .75f, Surface.ROTATION_90).second, .0001f)
+        assertEquals(.25f, TabletConfig.mapCoordinates(.25f, .75f, Surface.ROTATION_270).first, .0001f)
+        assertEquals(.25f, TabletConfig.mapCoordinates(.25f, .75f, Surface.ROTATION_270).second, .0001f)
+    }
+
+    @Test
+    fun marksPenInsertedOnlyAfterMoreThanFiveSecondsWithoutInput() {
+        assertEquals(false, SPenGestureService.isPenIdle(5_000L, 1L))
+        assertEquals(false, SPenGestureService.isPenIdle(6_000L, 1_000L))
+        assertEquals(true, SPenGestureService.isPenIdle(6_001L, 1_000L))
+        assertEquals(false, SPenGestureService.isPenIdle(5_001L, 0L))
     }
 
     @Test

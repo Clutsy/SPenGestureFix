@@ -1,4 +1,4 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.content.Context
 import android.content.Intent
@@ -18,6 +18,9 @@ object ActionExecutor {
     private var bluetoothAssumedOn = true
 
     fun execute(context: Context, action: PenAction, wheelOverlay: WheelOverlay) {
+        // Tablet Mode owns the digitizer stream and must not trigger normal
+        // shortcut side effects, including actions already queued by a press.
+        if (TabletModeState.isActive) return
         when (action.type) {
             ActionType.NONE -> {}
             ActionType.LAUNCH_APP -> launchApp(context, action.target)

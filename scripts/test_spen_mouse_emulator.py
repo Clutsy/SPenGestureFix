@@ -10,9 +10,12 @@ from spen_mouse_emulator import (  # noqa: E402
     DeviceCapabilities,
     PenState,
     find_epen_device,
+    orient_normalized,
     parse_capabilities,
+    parse_display_rotation,
     parse_event_line,
     parse_value,
+    parse_wm_size,
 )
 
 
@@ -51,9 +54,29 @@ class EmulatorTests(unittest.TestCase):
     def test_discovers_device_when_getevent_prefixes_the_path(self):
         output = """
         add device 3: /dev/input/event7
-          name:     \"sec_e-pen\"
+          name:     "sec_e-pen"
         """
         self.assertEqual(find_epen_device(output), "/dev/input/event7")
+
+    def test_parses_physical_resolution_before_override(self):
+        output = "Override size: 720x1280" + chr(10) + "Physical size: 1080x1920"
+        self.assertEqual(parse_wm_size(output), (1920, 1080))
+        self.assertEqual(parse_wm_size("Physical size: 2560x1440"), (2560, 1440))
+        self.assertIsNone(parse_wm_size("Physical density: 480"))
+
+    def test_parses_display_rotation(self):
+        self.assertEqual(
+            parse_display_rotation("mViewports=[DisplayViewport{orientation=1} ]"),
+            1,
+        )
+        self.assertEqual(parse_display_rotation("rotation=3"), 3)
+        self.assertEqual(parse_display_rotation("mCurrentRotation=ROTATION_90"), 1)
+        self.assertEqual(parse_display_rotation("rotation=270"), 3)
+        self.assertIsNone(parse_display_rotation("no rotation"))
+
+    def test_rotates_natural_pen_axes_for_landscape(self):
+        self.assertEqual(orient_normalized(0.25, 0.75, 1), (0.75, 0.75))
+        self.assertEqual(orient_normalized(0.25, 0.75, 3), (0.25, 0.25))
 
     def test_parse_capabilities(self):
         capabilities = parse_capabilities(
@@ -87,6 +110,23 @@ class EmulatorTests(unittest.TestCase):
         self.assertEqual(backend.pressed, [0, 1])
         emulator.release_buttons()
         self.assertEqual(backend.released, [0, 1])
+
+    def test_absolute_mapping_rotates_landscape_axes(self):
+        backend = FakeBackend()
+        emulator = AdbPenEmulator(
+            adb=["adb"],
+            device_path="/dev/input/event3",
+            capabilities=DeviceCapabilities(
+                x=AxisRange(0, 100), y=AxisRange(0, 200), pressure=AxisRange(0, 1024)
+            ),
+            backend=backend,
+            screen_width=1000,
+            screen_height=500,
+            orientation="landscape",
+        )
+        emulator.handle_event(("EV_ABS", "ABS_X", "00000019"))
+        emulator.handle_event(("EV_ABS", "ABS_Y", "00000096"))
+        self.assertEqual(backend.moves[-1], (749, 374))
 
 
 if __name__ == "__main__":

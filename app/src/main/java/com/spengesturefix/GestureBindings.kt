@@ -1,4 +1,4 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.content.Context
 import org.json.JSONObject

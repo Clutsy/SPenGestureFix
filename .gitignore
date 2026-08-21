@@ -2,39 +2,50 @@
 .gradle/
 **/build/
 
-# Android SDK locale
+# Local SDK / tooling (kept on disk, not in the repository)
 .android-sdk/
+.tools/
 local.properties
 
-# Android Studio / IntelliJ
-*.iml
+# Android Studio / IntelliJ IDEA
 .idea/
-.idea/caches/
-.idea/libraries/
-.idea/modules.xml
-.idea/workspace.xml
-.idea/navEditor.xml
-.idea/assetWizardSettings.xml
+*.iml
+captures/
 
 # VS Code
 .vscode/
 
-# Sistema operativo
+# Operating system files
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Build artifacts Android
-captures/
+# Python
+__pycache__/
+*.py[cod]
+
+# Build artifacts
 *.apk
 *.aab
 *.ap_
 *.dex
+*.log
+build_output.txt
 
-# Native build
+# Native builds
 .externalNativeBuild/
 .cxx/
+*.class
 
-# Chiavi di firma (NON committare mai)
+# Local reports and temporary files
+reports/
+out/
+*.hprof
+*.tmp
+*.temp
+*.orig
+
+# Signing keys (never commit)
 *.jks
 *.keystore
 *keystore.properties

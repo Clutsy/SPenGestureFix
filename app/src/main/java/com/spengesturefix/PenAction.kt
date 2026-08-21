@@ -1,4 +1,4 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 /**
  * A concrete action: the type (see ActionType), the label shown in the

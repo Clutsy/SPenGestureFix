@@ -1,28 +1,27 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.net.Uri
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Wheel configuration: how many and which actions are in the slots,
- * and the custom background image (if chosen by the user via the system
- * picker in MainActivity — the URI is made persistent with
- * takePersistableUriPermission, so it remains valid even after a reboot,
- * not just for the session in which it was chosen).
+ * Persistent configuration for the six Air Command actions and its accent.
+ * The wheel intentionally has no background-photo setting: a compact,
+ * consistent surface is faster and keeps the pen input path unobstructed.
  */
 object WheelConfig {
     const val SLOT_COUNT = 6
     private const val PREFS = "spen_wheel"
     private const val KEY_SLOTS = "slots_json"
-    private const val KEY_BG_URI = "background_uri"
+    private const val KEY_WHEEL_COLOR = "wheel_color"
+    private val DEFAULT_WHEEL_COLOR = Color(0xFF29B6F6)
 
     fun loadSlots(context: Context): List<PenAction> {
         val fallback = defaultSlots(context)
-        val json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_SLOTS, null)
+        val json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_SLOTS, null)
             ?: return fallback
         return try {
             val array = JSONArray(json)
@@ -47,19 +46,26 @@ object WheelConfig {
         }
     }
 
-    private fun defaultSlots(context: Context): List<PenAction> =
-        List(SLOT_COUNT) { PenAction(ActionType.NONE, ActionType.NONE.label(context)) }
+    /** Defaults should be immediately useful; empty slots made the first wheel look broken. */
+    private fun defaultSlots(context: Context): List<PenAction> = listOf(
+        ActionType.QUICK_NOTE,
+        ActionType.SCREENSHOT,
+        ActionType.SCREEN_WRITE,
+        ActionType.SMART_SELECT,
+        ActionType.APP_SEARCH,
+        ActionType.TOGGLE_FLASHLIGHT
+    ).map { type -> PenAction(type, type.label(context)) }
 
     fun saveSlot(context: Context, index: Int, action: PenAction) {
+        if (index !in 0 until SLOT_COUNT) return
         val slots = loadSlots(context).toMutableList()
-        while (slots.size <= index) slots.add(PenAction(ActionType.NONE, ActionType.NONE.label(context)))
         slots[index] = action
         saveSlots(context, slots)
     }
 
     private fun saveSlots(context: Context, slots: List<PenAction>) {
         val array = JSONArray()
-        slots.forEach {
+        slots.take(SLOT_COUNT).forEach {
             array.put(JSONObject().apply {
                 put("type", it.type.name)
                 put("label", it.label)
@@ -71,26 +77,15 @@ object WheelConfig {
             .apply()
     }
 
-    fun saveBackgroundUri(context: Context, uri: Uri) {
+    fun getWheelColor(context: Context): Color {
+        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_WHEEL_COLOR, DEFAULT_WHEEL_COLOR.toArgb())
+        return Color(stored)
+    }
+
+    fun setWheelColor(context: Context, color: Color) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString(KEY_BG_URI, uri.toString())
+            .putInt(KEY_WHEEL_COLOR, color.toArgb())
             .apply()
-    }
-
-    fun clearBackground(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY_BG_URI).apply()
-    }
-
-    fun hasBackground(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).contains(KEY_BG_URI)
-
-    fun loadBackgroundBitmap(context: Context): Bitmap? {
-        val uriString = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_BG_URI, null)
-            ?: return null
-        return try {
-            context.contentResolver.openInputStream(Uri.parse(uriString))?.use { BitmapFactory.decodeStream(it) }
-        } catch (e: Exception) {
-            null
-        }
     }
 }

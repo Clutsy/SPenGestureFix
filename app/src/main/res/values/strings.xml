@@ -12,7 +12,7 @@
     <string name="settings_amoled">AMOLED Black Mode</string>
     <string name="settings_amoled_desc">Pure black background to save battery on OLED screens</string>
     <string name="settings_autostart_pen">Open wheel on S Pen extraction</string>
-    <string name="settings_autostart_pen_desc">Show the wheel when the running listener detects that the pen is removed</string>
+    <string name="settings_autostart_pen_desc">Show the wheel when pen input is detected (pen extracted). After 5 seconds without input the pen counts as inserted</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_it">Italiano</string>
     <string name="settings_language_system">System default</string>
@@ -25,12 +25,11 @@
     <string name="gesture_long_press">Long press</string>
     <!-- Wheel section -->
     <string name="section_wheel">S Pen Wheel</string>
-    <string name="btn_pick_background">Choose background</string>
-    <string name="btn_clear_background">Remove</string>
+    <string name="wheel_color_title">Wheel color</string>
+    <string name="wheel_color_subtitle">Accent color of the Air Command wheel</string>
     <string name="wheel_slots_label">Wheel slots</string>
     <string name="wheel_slot_label">Slot %d</string>
     <string name="wheel_no_slots">No slots configured</string>
-    <string name="wheel_bg_updated">Wheel background updated</string>
     <!-- Quick Notes section -->
     <string name="section_notes">Quick Notes (Action Memo)</string>
     <string name="btn_view_notes">View saved notes</string>
@@ -150,7 +149,7 @@
     <string name="home_subtitle">Low-latency Wacom input, programmable gestures, and a focused tablet workflow.</string>
     <string name="settings_subtitle">Personalize the experience without touching the input pipeline.</string>
     <string name="status_subtitle">Live health of the service and the Note 3 digitizer.</string>
-    <string name="wheel_slots_subtitle">Configure the six radial actions and an optional background.</string>
+    <string name="wheel_slots_subtitle">Configure the six radial actions and the wheel accent color.</string>
     <string name="notes_card_subtitle">Capture ideas instantly and keep them available offline.</string>
     <string name="status_service_active">Service active</string>
     <string name="status_service_stopped">Service stopped</string>
@@ -164,6 +163,20 @@
     <string name="overlay_ready">Overlay ready</string>
     <string name="notification_missing">Notification permission is still required for the foreground service.</string>
     <string name="settings_language_es">Español</string>
+    <string name="settings_language_fr">Français</string>
+    <string name="settings_language_de">Deutsch</string>
+    <string name="settings_language_pt">Português</string>
+    <string name="settings_language_nl">Nederlands</string>
+    <string name="settings_language_pl">Polski</string>
+    <string name="settings_language_tr">Türkçe</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_uk">Українська</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_ja">日本語</string>
+    <string name="settings_language_ko">한국어</string>
+    <string name="settings_language_ar">العربية</string>
+    <string name="settings_language_hi">हिन्दी</string>
+    <string name="settings_language_in">Bahasa Indonesia</string>
     <string name="dialog_back">Back</string>
     <string name="notif_starting">Starting S Pen readers…</string>
     <string name="notif_pen_extracted">S Pen extracted · digitizer active</string>
@@ -184,4 +197,8 @@
     <string name="tablet_connect_to">PC: %1$s:%2$d</string>
     <string name="tablet_stop">Stop tablet mode</string>
     <string name="tablet_options">Options</string>
+    <string name="notes_search">Search notes</string>
+    <string name="notes_no_match">No notes match your search.</string>
+    <string name="notes_character_count">%1$d characters</string>
+    <string name="tablet_auto_detect_resolution">Detect device resolution</string>
 </resources>

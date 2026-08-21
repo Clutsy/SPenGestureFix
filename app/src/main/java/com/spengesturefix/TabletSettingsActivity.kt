@@ -1,4 +1,4 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -7,6 +7,9 @@ import androidx.activity.compose.setContent
 class TabletSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (!TabletConfig.isMonitorManuallyConfigured(this)) {
+            TabletConfig.detectAndStoreScreenResolution(this)
+        }
         setContent {
             SpenFixTheme {
                 TabletSettingsComposeScreen(
@@ -18,6 +21,7 @@ class TabletSettingsActivity : ComponentActivity() {
                     invertX = TabletConfig.getInvertX(this),
                     invertY = TabletConfig.getInvertY(this),
                     aspectLock = TabletConfig.getAspectRatioLock(this),
+                    mappingMode = TabletConfig.getMappingMode(this),
                     monitorWidth = TabletConfig.getMonitorWidth(this),
                     monitorHeight = TabletConfig.getMonitorHeight(this),
                     sendRate = TabletConfig.getSendRateHz(this),
@@ -34,14 +38,16 @@ class TabletSettingsActivity : ComponentActivity() {
                     onInvertXChanged = { TabletConfig.setInvertX(this, it) },
                     onInvertYChanged = { TabletConfig.setInvertY(this, it) },
                     onAspectLockChanged = { TabletConfig.setAspectRatioLock(this, it) },
-                    onMonitorWidthChanged = { TabletConfig.setMonitorWidth(this, it.coerceAtLeast(1)) },
-                    onMonitorHeightChanged = { TabletConfig.setMonitorHeight(this, it.coerceAtLeast(1)) },
+                    onMappingModeChanged = { TabletConfig.setMappingMode(this, it) },
+                    onMonitorWidthChanged = { TabletConfig.setMonitorWidth(this, it.coerceAtLeast(1)); TabletConfig.markMonitorConfigured(this) },
+                    onMonitorHeightChanged = { TabletConfig.setMonitorHeight(this, it.coerceAtLeast(1)); TabletConfig.markMonitorConfigured(this) },
                     onSendRateChanged = { TabletConfig.setSendRateHz(this, it.coerceIn(30, 200)) },
                     onSmoothingChanged = { TabletConfig.setSmoothing(this, it.coerceIn(0f, .9f)) },
                     onButtonActionChanged = { TabletConfig.setPenButtonAction(this, it) },
                     onHapticChanged = { TabletConfig.setHapticFeedback(this, it) },
                     onShowGridChanged = { TabletConfig.setShowGrid(this, it) },
                     onAutoRestoreChanged = { TabletConfig.setAutoRestoreUsb(this, it) },
+                    onAutoDetectResolution = { TabletConfig.detectAndStoreScreenResolution(this) },
                     onClose = ::finish
                 )
             }

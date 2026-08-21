@@ -1,4 +1,4 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.graphics.Bitmap
 import android.graphics.Canvas as AndroidCanvas
@@ -119,7 +119,16 @@ fun SelectionSurface(
                         onDragEnd = {
                             val a = start
                             val b = current
-                            if (a != null && b != null) onSelectionChanged(Rect(a, b))
+                            if (a != null && b != null) {
+                                onSelectionChanged(
+                                    Rect(
+                                        minOf(a.x, b.x),
+                                        minOf(a.y, b.y),
+                                        maxOf(a.x, b.x),
+                                        maxOf(a.y, b.y)
+                                    )
+                                )
+                            }
                             start = null
                             current = null
                         },
@@ -128,7 +137,12 @@ fun SelectionSurface(
                 }
         ) {
             val rect = selection ?: if (start != null && current != null) {
-                Rect(start!!, current!!)
+                Rect(
+                    minOf(start!!.x, current!!.x),
+                    minOf(start!!.y, current!!.y),
+                    maxOf(start!!.x, current!!.x),
+                    maxOf(start!!.y, current!!.y)
+                )
             } else null
             rect?.let {
                 drawRect(Color(0x4429B6F6), topLeft = it.topLeft, size = it.size)
@@ -298,9 +312,13 @@ fun mapSelectionToBitmap(
     if (scale <= 0f) return null
     val offsetX = (viewportWidth - source.width * scale) / 2f
     val offsetY = (viewportHeight - source.height * scale) / 2f
-    val left = ((selection.left - offsetX) / scale).toInt().coerceIn(0, source.width)
-    val top = ((selection.top - offsetY) / scale).toInt().coerceIn(0, source.height)
-    val right = ((selection.right - offsetX) / scale).toInt().coerceIn(0, source.width)
-    val bottom = ((selection.bottom - offsetY) / scale).toInt().coerceIn(0, source.height)
+    val left = ((minOf(selection.left, selection.right) - offsetX) / scale)
+        .toInt().coerceIn(0, source.width)
+    val top = ((minOf(selection.top, selection.bottom) - offsetY) / scale)
+        .toInt().coerceIn(0, source.height)
+    val right = ((maxOf(selection.left, selection.right) - offsetX) / scale)
+        .toInt().coerceIn(0, source.width)
+    val bottom = ((maxOf(selection.top, selection.bottom) - offsetY) / scale)
+        .toInt().coerceIn(0, source.height)
     return android.graphics.Rect(left, top, right, bottom).takeIf { it.width() > 1 && it.height() > 1 }
 }

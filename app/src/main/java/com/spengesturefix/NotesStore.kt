@@ -1,88 +1,77 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 
-/**
- * Data class representing a quick note.
- * @property text the note content
- * @property timestamp the creation/last modification time in milliseconds
- */
+/** A quick note with a stable timestamp identifier. */
 data class QuickNote(val text: String, val timestamp: Long)
 
 /**
- * Singleton for persisting quick notes using SharedPreferences and JSON.
- * Notes are stored as a JSON array of objects: { "text": "...", "ts": ... }.
- *
- * The list is maintained in **reverse chronological order** (newest first)
- * when using [save] – a new note is prepended.
+ * Small offline note repository backed by SharedPreferences and JSON.
+ * The newest note is kept first. Storage is intentionally local and requires
+ * no account, database, or network permission.
  */
 object NotesStore {
     private const val PREFS = "spen_notes"
     private const val KEY = "notes_json"
+    private const val MAX_NOTE_LENGTH = 4_000
+    private const val MAX_NOTES = 200
 
-    /**
-     * Saves a new note from plain text.
-     * The note is prepended to the list (newest first).
-     * @param text the note content; empty/blank notes are ignored
-     */
     fun save(context: Context, text: String) {
-        if (text.isBlank()) return
+        val safeText = text.take(MAX_NOTE_LENGTH)
+        if (safeText.isBlank()) return
         val notes = loadAll(context).toMutableList()
-        notes.add(0, QuickNote(text, System.currentTimeMillis()))
+        notes.add(0, QuickNote(safeText, nextTimestamp(notes)))
         writeAll(context, notes)
     }
 
-    /**
-     * Saves a new note from a [QuickNote] object.
-     * The note is prepended (newest first).
-     * @param note the complete note to save (text and timestamp are used)
-     */
     fun save(context: Context, note: QuickNote) {
+        val safeText = note.text.take(MAX_NOTE_LENGTH)
+        if (safeText.isBlank()) return
         val notes = loadAll(context).toMutableList()
-        notes.add(0, note)
+        val requestedTimestamp = note.timestamp.takeIf { it > 0L }
+        val timestamp = if (requestedTimestamp != null &&
+            notes.none { it.timestamp == requestedTimestamp }
+        ) requestedTimestamp else nextTimestamp(notes)
+        notes.add(0, QuickNote(safeText, timestamp))
         writeAll(context, notes)
     }
 
-    /**
-     * Loads all stored notes.
-     * @return a list of [QuickNote] in storage order (newest first)
-     */
     fun loadAll(context: Context): List<QuickNote> {
-        val json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
-            ?: return emptyList()
+        val json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY, null) ?: return emptyList()
         return try {
             val array = JSONArray(json)
-            (0 until array.length()).map {
-                val obj = array.getJSONObject(it)
-                QuickNote(obj.getString("text"), obj.getLong("ts"))
-            }
-        } catch (e: Exception) {
+            val seenTimestamps = HashSet<Long>()
+            (0 until array.length()).mapNotNull { index ->
+                runCatching {
+                    val obj = array.getJSONObject(index)
+                    val text = obj.optString("text", "").take(MAX_NOTE_LENGTH)
+                    val timestamp = obj.optLong("ts", 0L)
+                    if (text.isBlank() || timestamp <= 0L || !seenTimestamps.add(timestamp)) null
+                    else QuickNote(text, timestamp)
+                }.getOrNull()
+            }.sortedByDescending { it.timestamp }
+        } catch (_: Exception) {
+            // A corrupt preference must not make the notes screen crash.
             emptyList()
         }
     }
 
-    /**
-     * Updates the note at the given index with new text.
-     * The timestamp is updated to the current time.
-     * The note stays at the same position in the list.
-     * @param index the position of the note to update (0‑based)
-     * @param newText the new text content
-     */
     fun update(context: Context, index: Int, newText: String) {
-        if (newText.isBlank()) return
+        val safeText = newText.take(MAX_NOTE_LENGTH)
+        if (safeText.isBlank()) return
         val notes = loadAll(context).toMutableList()
         if (index !in notes.indices) return
         val old = notes[index]
-        notes[index] = old.copy(text = newText, timestamp = System.currentTimeMillis())
+        notes[index] = old.copy(
+            text = safeText,
+            timestamp = nextTimestamp(notes, excluding = old.timestamp)
+        )
         writeAll(context, notes)
     }
 
-    /**
-     * Deletes the note at the specified index.
-     * @param index the position of the note to remove
-     */
     fun delete(context: Context, index: Int) {
         val notes = loadAll(context).toMutableList()
         if (index !in notes.indices) return
@@ -90,25 +79,46 @@ object NotesStore {
         writeAll(context, notes)
     }
 
-    /**
-     * Removes all stored notes completely.
-     */
-    fun clear(context: Context) {
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().remove(KEY).apply()
+    /** Updates a note by its stable timestamp, safe after filtering or sorting. */
+    fun updateByTimestamp(context: Context, timestamp: Long, newText: String) {
+        val index = loadAll(context).indexOfFirst { it.timestamp == timestamp }
+        if (index >= 0) update(context, index, newText)
     }
 
-    /**
-     * Internal helper: writes the entire list to SharedPreferences as a JSON array.
-     */
+    /** Deletes a note by its stable timestamp, safe after filtering or sorting. */
+    fun deleteByTimestamp(context: Context, timestamp: Long) {
+        val notes = loadAll(context).toMutableList()
+        val index = notes.indexOfFirst { it.timestamp == timestamp }
+        if (index < 0) return
+        notes.removeAt(index)
+        writeAll(context, notes)
+    }
+
+    fun clear(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .remove(KEY)
+            .apply()
+    }
+
+    private fun nextTimestamp(notes: List<QuickNote>, excluding: Long? = null): Long {
+        var candidate = System.currentTimeMillis()
+        while (notes.any { it.timestamp == candidate && it.timestamp != excluding }) {
+            candidate++
+        }
+        return candidate
+    }
+
     private fun writeAll(context: Context, notes: List<QuickNote>) {
         val array = JSONArray()
-        notes.forEach {
+        notes.sortedByDescending { it.timestamp }.take(MAX_NOTES).forEach { note ->
             array.put(JSONObject().apply {
-                put("text", it.text)
-                put("ts", it.timestamp)
+                put("text", note.text)
+                put("ts", note.timestamp)
             })
         }
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
             .putString(KEY, array.toString())
             .apply()
     }

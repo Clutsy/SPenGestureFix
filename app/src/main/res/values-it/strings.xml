@@ -11,26 +11,25 @@
     <string name="settings_language">Lingua</string>
     <string name="settings_amoled">Modalità Nero AMOLED</string>
     <string name="settings_amoled_desc">Sfondo nero puro per risparmiare batteria su schermi OLED</string>
-    <string name="settings_autostart_pen">Apri la ruota all\'estrazione S Pen</string>
-    <string name="settings_autostart_pen_desc">Mostra la ruota quando il listener attivo rileva l\'estrazione della penna</string>
+    <string name="settings_autostart_pen">Apri la ruota all’estrazione S Pen</string>
+    <string name="settings_autostart_pen_desc">Mostra la ruota quando viene rilevato input dalla penna (estratta). Dopo 5 secondi senza input la penna è considerata inserita</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_it">Italiano</string>
     <string name="settings_language_system">Predefinito di sistema</string>
     <!-- S Pen Button section -->
     <string name="section_spen_button">Tasto S Pen — riprogrammabile</string>
-    <string name="hint_tap_row">Tocca una riga per cambiare l\'azione</string>
+    <string name="hint_tap_row">Tocca una riga per cambiare l’azione</string>
     <!-- Gesture labels -->
     <string name="gesture_click">Clic singolo</string>
     <string name="gesture_double_click">Doppio clic</string>
     <string name="gesture_long_press">Pressione lunga</string>
     <!-- Wheel section -->
     <string name="section_wheel">Ruota S Pen</string>
-    <string name="btn_pick_background">Scegli foto sfondo</string>
-    <string name="btn_clear_background">Rimuovi</string>
+    <string name="wheel_color_title">Colore ruota</string>
+    <string name="wheel_color_subtitle">Colore di accento della ruota Air Command</string>
     <string name="wheel_slots_label">Spicchi della ruota</string>
     <string name="wheel_slot_label">Spicchio %d</string>
     <string name="wheel_no_slots">Nessuno spicchio configurato</string>
-    <string name="wheel_bg_updated">Sfondo ruota aggiornato</string>
     <!-- Quick Notes section -->
     <string name="section_notes">Note rapide (Action Memo)</string>
     <string name="btn_view_notes">Vedi note salvate</string>
@@ -60,7 +59,7 @@
     <string name="perm_title">Permessi Necessari</string>
     <string name="perm_overlay">Il permesso overlay è necessario per mostrare la ruota S Pen e i gesti sopra altre app.</string>
     <string name="perm_notification">Il permesso notifiche è necessario per mantenere il servizio in esecuzione in background.</string>
-    <string name="perm_root">L\'accesso root è consigliato per la funzionalità completa (rilevamento penna, blocco schermo).</string>
+    <string name="perm_root">L’accesso root è consigliato per la funzionalità completa (rilevamento penna, blocco schermo).</string>
     <string name="perm_grant_all">Concedi tutti</string>
     <string name="perm_grant_overlay">Concedi overlay</string>
     <string name="perm_grant_notification">Concedi notifiche</string>
@@ -85,10 +84,10 @@
     <string name="action_lock_screen">Blocca schermo</string>
     <string name="action_custom_shell">Comando root personalizzato</string>
     <!-- Dialogs -->
-    <string name="dialog_choose_action">Scegli un\'azione</string>
+    <string name="dialog_choose_action">Scegli un’azione</string>
     <string name="dialog_cancel">Annulla</string>
     <string name="dialog_ok">OK</string>
-    <string name="dialog_choose_app">Scegli un\'app</string>
+    <string name="dialog_choose_app">Scegli un’app</string>
     <string name="dialog_search_app">Cerca app…</string>
     <string name="dialog_shell_title">Comando eseguito come root (su -c \"…\")</string>
     <string name="dialog_shell_hint">es. settings put system screen_brightness 255</string>
@@ -99,7 +98,7 @@
     <string name="toast_overlay_granted">Permesso overlay già concesso</string>
     <string name="toast_service_started">Servizio avviato</string>
     <string name="toast_service_stopped">Servizio fermato</string>
-    <string name="toast_language_changed">Lingua cambiata. Riavvia l\'app per applicare.</string>
+    <string name="toast_language_changed">Lingua cambiata. Riavvia l’app per applicare.</string>
     <string name="toast_pen_extracted">S Pen estratta — ruota aperta</string>
     <string name="toast_pen_inserted">S Pen inserita — ruota chiusa</string>
     <!-- Service notifications -->
@@ -150,7 +149,7 @@
     <string name="home_subtitle">Input Wacom a bassa latenza, gesti programmabili e un flusso tavoletta essenziale.</string>
     <string name="settings_subtitle">Personalizza l’esperienza senza toccare la pipeline di input.</string>
     <string name="status_subtitle">Stato in tempo reale del servizio e del digitizer del Note 3.</string>
-    <string name="wheel_slots_subtitle">Configura le sei azioni radiali e uno sfondo opzionale.</string>
+    <string name="wheel_slots_subtitle">Configura le sei azioni radiali e il colore di accento della ruota.</string>
     <string name="notes_card_subtitle">Cattura le idee al volo e ritrovale offline.</string>
     <string name="status_service_active">Servizio attivo</string>
     <string name="status_service_stopped">Servizio fermo</string>
@@ -164,6 +163,20 @@
     <string name="overlay_ready">Overlay pronto</string>
     <string name="notification_missing">Il permesso notifiche è ancora necessario per il servizio in primo piano.</string>
     <string name="settings_language_es">Español</string>
+    <string name="settings_language_fr">Français</string>
+    <string name="settings_language_de">Deutsch</string>
+    <string name="settings_language_pt">Português</string>
+    <string name="settings_language_nl">Nederlands</string>
+    <string name="settings_language_pl">Polski</string>
+    <string name="settings_language_tr">Türkçe</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_language_uk">Українська</string>
+    <string name="settings_language_zh">中文</string>
+    <string name="settings_language_ja">日本語</string>
+    <string name="settings_language_ko">한국어</string>
+    <string name="settings_language_ar">العربية</string>
+    <string name="settings_language_hi">हिन्दी</string>
+    <string name="settings_language_in">Bahasa Indonesia</string>
     <string name="dialog_back">Indietro</string>
     <string name="notif_starting">Avvio dei reader S Pen…</string>
     <string name="notif_pen_extracted">S Pen estratta · digitizer attivo</string>
@@ -184,4 +197,8 @@
     <string name="tablet_connect_to">PC: %1$s:%2$d</string>
     <string name="tablet_stop">Ferma modalità tavoletta</string>
     <string name="tablet_options">Opzioni</string>
+    <string name="notes_search">Cerca nelle note</string>
+    <string name="notes_no_match">Nessuna nota corrisponde alla ricerca.</string>
+    <string name="notes_character_count">%1$d caratteri</string>
+    <string name="tablet_auto_detect_resolution">Rileva risoluzione dispositivo</string>
 </resources>

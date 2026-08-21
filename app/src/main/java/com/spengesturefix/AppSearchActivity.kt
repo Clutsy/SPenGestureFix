@@ -1,6 +1,6 @@
 @file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.content.Intent
 import android.os.Bundle

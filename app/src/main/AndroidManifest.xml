@@ -53,10 +53,11 @@
         <activity
             android:name=".TabletModeActivity"
             android:exported="false"
-            android:screenOrientation="sensorLandscape" />
+            android:screenOrientation="landscape" />
         <activity
             android:name=".TabletSettingsActivity"
-            android:exported="false" />
+            android:exported="false"
+            android:screenOrientation="landscape" />
 
         <service
             android:name=".SPenGestureService"

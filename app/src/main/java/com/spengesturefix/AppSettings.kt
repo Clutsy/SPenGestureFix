@@ -1,4 +1,4 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.content.Context
 import androidx.core.content.edit
@@ -26,7 +26,12 @@ object AppSettings {
         prefs(context).edit { putBoolean(KEY_AUTO_START_PEN, value) }
     }
 
-    fun language(context: Context): String? = prefs(context).getString(KEY_LANGUAGE, null)
+    fun language(context: Context): String? = when (val value = prefs(context).getString(KEY_LANGUAGE, null)) {
+        // Migrate the legacy resource-qualifier spellings to BCP-47 tags.
+        "zh-rCN" -> "zh-CN"
+        "in" -> "id"
+        else -> value
+    }
 
     fun setLanguage(context: Context, value: String?) {
         prefs(context).edit {

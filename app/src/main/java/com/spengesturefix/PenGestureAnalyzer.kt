@@ -1,4 +1,4 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.os.Handler
 import android.os.Looper
@@ -16,6 +16,8 @@ class PenGestureAnalyzer(
     companion object {
         private const val DOUBLE_CLICK_WINDOW_MS = 350L
         private const val LONG_PRESS_THRESHOLD_MS = 500L
+        private val STYLUS_BUTTON_CODES = setOf("BTN_STYLUS", "BTN_STYLUS2")
+        private val TOOL_CODES = setOf("BTN_DIGI", "BTN_TOOL_PEN", "BTN_TOOL_RUBBER")
     }
 
     private val scheduler = ScheduledThreadPoolExecutor(1) { runnable ->
@@ -27,22 +29,27 @@ class PenGestureAnalyzer(
     private var pendingSingleClick: ScheduledFuture<*>? = null
     private var longPressFuture: ScheduledFuture<*>? = null
     private var awaitingSecondClick = false
+    private var stylusButtonDown = false
     private var longPressFired = false
-    private var toolInRange = false
+    private var penToolInRange = false
+    private var rubberToolInRange = false
     private var touching = false
     private var isHovering = false
 
     fun onEvent(type: String, code: String, value: String) {
         if (type != "EV_KEY") return
-        val down = value.equals("DOWN", true) || value == "00000001" || value == "1"
-        when (code) {
-            "BTN_STYLUS" -> handleStylusButton(down)
-            "BTN_DIGI", "BTN_TOOL_PEN" -> {
-                synchronized(lock) { toolInRange = down }
+        val action = keyAction(value) ?: return
+        when {
+            code in STYLUS_BUTTON_CODES -> handleStylusButton(action)
+            code in TOOL_CODES -> {
+                synchronized(lock) {
+                    if (code == "BTN_TOOL_RUBBER") rubberToolInRange = action
+                    else penToolInRange = action
+                }
                 updateHoverState()
             }
-            "BTN_TOUCH" -> {
-                synchronized(lock) { touching = down }
+            code == "BTN_TOUCH" -> {
+                synchronized(lock) { touching = action }
                 updateHoverState()
             }
         }
@@ -51,24 +58,37 @@ class PenGestureAnalyzer(
     private fun updateHoverState() {
         val hovering: Boolean
         synchronized(lock) {
-            hovering = toolInRange && !touching
+            hovering = (penToolInRange || rubberToolInRange) && !touching
             if (hovering == isHovering) return
             isHovering = hovering
         }
-        // A state change is rare; do not run app callbacks on the reader thread.
+        // A state change is rare; never run app callbacks on the reader thread.
         mainHandler.post { onHoverChanged(hovering) }
     }
 
     private fun handleStylusButton(down: Boolean) {
         if (down) {
             synchronized(lock) {
+                // Linux may emit value 2 (repeat) while the button is held.
+                // It is not a second press and must not restart the timer.
+                if (stylusButtonDown) return
+                stylusButtonDown = true
                 longPressFired = false
                 longPressFuture?.cancel(false)
+                // A second press starts before the first-click timer expires on
+                // some hardware. Cancel the pending single, but keep the
+                // awaiting flag until the second release.
+                if (awaitingSecondClick) {
+                    pendingSingleClick?.cancel(false)
+                    pendingSingleClick = null
+                }
                 longPressFuture = scheduler.schedule({
                     synchronized(lock) {
+                        if (!stylusButtonDown) return@schedule
                         longPressFired = true
                         awaitingSecondClick = false
                         pendingSingleClick?.cancel(false)
+                        pendingSingleClick = null
                     }
                     mainHandler.post(onLongPress)
                 }, LONG_PRESS_THRESHOLD_MS, TimeUnit.MILLISECONDS)
@@ -76,31 +96,58 @@ class PenGestureAnalyzer(
             return
         }
 
-        val shouldIgnoreRelease: Boolean
         synchronized(lock) {
+            if (!stylusButtonDown) return
+            stylusButtonDown = false
             longPressFuture?.cancel(false)
-            shouldIgnoreRelease = longPressFired
-        }
-        if (shouldIgnoreRelease) return
+            longPressFuture = null
+            if (longPressFired) {
+                // The long-press callback has already been delivered.
+                longPressFired = false
+                return
+            }
 
-        synchronized(lock) {
             if (awaitingSecondClick) {
                 pendingSingleClick?.cancel(false)
+                pendingSingleClick = null
                 awaitingSecondClick = false
                 mainHandler.post(onDoubleClick)
             } else {
                 awaitingSecondClick = true
-                pendingSingleClick?.cancel(false)
                 pendingSingleClick = scheduler.schedule({
-                    synchronized(lock) { awaitingSecondClick = false }
+                    synchronized(lock) {
+                        if (!awaitingSecondClick) return@schedule
+                        awaitingSecondClick = false
+                        pendingSingleClick = null
+                    }
                     mainHandler.post(onSingleClick)
                 }, DOUBLE_CLICK_WINDOW_MS, TimeUnit.MILLISECONDS)
             }
         }
     }
 
+    private fun keyAction(value: String): Boolean? = when (value.trim().uppercase()) {
+        "DOWN", "1", "00000001", "REPEAT", "2", "00000002" -> true
+        "UP", "0", "00000000" -> false
+        else -> null
+    }
+
+    /** Cancels a partially completed gesture without shutting down the reader. */
+    fun cancelPendingGesture() {
+        synchronized(lock) {
+            stylusButtonDown = false
+            awaitingSecondClick = false
+            longPressFired = false
+            pendingSingleClick?.cancel(false)
+            longPressFuture?.cancel(false)
+            pendingSingleClick = null
+            longPressFuture = null
+        }
+    }
+
     fun close() {
         synchronized(lock) {
+            stylusButtonDown = false
             pendingSingleClick?.cancel(false)
             longPressFuture?.cancel(false)
             pendingSingleClick = null

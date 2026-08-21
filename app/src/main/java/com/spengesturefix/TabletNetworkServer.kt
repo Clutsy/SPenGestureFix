@@ -1,10 +1,12 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.util.Log
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
 import java.net.ServerSocket
 import java.net.Socket
+import java.net.SocketTimeoutException
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 
 /** Streams normalized tablet frames over TCP without blocking digitizer capture. */
@@ -13,28 +15,44 @@ object TabletNetworkServer {
     const val PORT = 7654
 
     private data class Frame(
-        val x: Float, val y: Float, val pressure: Float,
-        val touching: Boolean, val button: Boolean, val eraser: Boolean, val inRange: Boolean
+        val x: Float,
+        val y: Float,
+        val pressure: Float,
+        val touching: Boolean,
+        val button: Boolean,
+        val eraser: Boolean,
+        val inRange: Boolean
     )
 
     @Volatile private var running = false
     @Volatile private var serverSocket: ServerSocket? = null
     @Volatile private var client: Socket? = null
+    @Volatile private var frameIntervalNanos = 1_000_000_000L / 133L
     private val latestFrame = AtomicReference<Frame?>(null)
     private var serverThread: Thread? = null
 
-    fun start(onStatusChange: (connected: Boolean) -> Unit) {
+    fun start(onStatusChange: (connected: Boolean) -> Unit, reportRateHz: Int = 133) {
         if (running) return
         running = true
+        val safeRate = reportRateHz.coerceIn(30, 200)
+        frameIntervalNanos = 1_000_000_000L / safeRate.toLong()
+        latestFrame.set(null)
         serverThread = Thread({
             try {
                 ServerSocket(PORT).also { serverSocket = it }.use { server ->
                     while (running) {
-                        val socket = try { server.accept() } catch (_: Exception) { break }
-                        if (!running) { socket.close(); break }
+                        val socket = try {
+                            server.accept()
+                        } catch (_: Exception) {
+                            break
+                        }
+                        if (!running) {
+                            socket.close()
+                            break
+                        }
                         socket.tcpNoDelay = true
                         client = socket
-                        onStatusChange(true)
+                        notifyStatus(onStatusChange, true)
                         streamClient(socket, onStatusChange)
                     }
                 }
@@ -43,49 +61,90 @@ object TabletNetworkServer {
             } finally {
                 running = false
                 client = null
-                onStatusChange(false)
+                notifyStatus(onStatusChange, false)
             }
-        }, "TabletNetworkServer").apply { isDaemon = true; start() }
+        }, "TabletNetworkServer").apply {
+            isDaemon = true
+            start()
+        }
     }
 
     private fun streamClient(socket: Socket, onStatusChange: (connected: Boolean) -> Unit) {
         try {
-            // The writer owns the output stream; the server thread only waits for
-            // disconnects. Frames are replaced atomically, never queued unboundedly.
-            val writer = BufferedWriter(OutputStreamWriter(socket.getOutputStream(), Charsets.US_ASCII))
+            // The app only sends frames. A short read timeout lets us notice a
+            // peer that closed the connection while still bounding this loop.
+            socket.soTimeout = 2
+            val writer = BufferedWriter(
+                OutputStreamWriter(socket.getOutputStream(), Charsets.US_ASCII)
+            )
+            val input = socket.getInputStream()
             while (running && !socket.isClosed) {
-                val frame = latestFrame.getAndSet(null)
-                if (frame != null) {
+                val tick = System.nanoTime()
+                latestFrame.getAndSet(null)?.let { frame ->
                     val flags = (if (frame.touching) 1 else 0) or
                         (if (frame.button) 2 else 0) or
                         (if (frame.eraser) 4 else 0) or
                         (if (frame.inRange) 8 else 0)
-                    writer.write("%.5f,%.5f,%.5f,%d\\n".format(
-                        frame.x, frame.y, frame.pressure, flags
+                    // Keep this as an actual line feed: the PC client consumes
+                    // one complete frame per line.
+                    writer.write(String.format(
+                        Locale.US,
+                        "%.5f,%.5f,%.5f,%d\n",
+                        frame.x,
+                        frame.y,
+                        frame.pressure,
+                        flags
                     ))
                     writer.flush()
-                } else {
-                    try { Thread.sleep(4L) } catch (_: InterruptedException) { break }
                 }
-                // A read with a short timeout detects a disconnected client.
-                socket.soTimeout = 20
-                try { socket.getInputStream().read() } catch (_: java.net.SocketTimeoutException) { }
+
+                try {
+                    if (input.read() < 0) break
+                } catch (_: SocketTimeoutException) {
+                    // No inbound protocol is required; this is only a liveness poll.
+                }
+
+                val remaining = frameIntervalNanos - (System.nanoTime() - tick)
+                if (remaining > 0L) {
+                    try {
+                        val millis = remaining / 1_000_000L
+                        val nanos = (remaining % 1_000_000L).toInt()
+                        Thread.sleep(millis, nanos)
+                    } catch (_: InterruptedException) {
+                        break
+                    }
+                }
             }
         } catch (error: Exception) {
             if (running) Log.w(TAG, "Client disconnected: ${error.message}")
         } finally {
             try { socket.close() } catch (_: Exception) { }
-            client = null
-            onStatusChange(false)
+            if (client === socket) client = null
+            notifyStatus(onStatusChange, false)
         }
     }
 
     fun sendFrame(
-        x: Float, y: Float, pressure: Float,
-        touching: Boolean, button: Boolean, eraser: Boolean, inRange: Boolean
+        x: Float,
+        y: Float,
+        pressure: Float,
+        touching: Boolean,
+        button: Boolean,
+        eraser: Boolean,
+        inRange: Boolean
     ): Boolean {
         if (!running || client == null) return false
-        latestFrame.set(Frame(x, y, pressure, touching, button, eraser, inRange))
+        latestFrame.set(
+            Frame(
+                x.coerceIn(0f, 1f),
+                y.coerceIn(0f, 1f),
+                pressure.coerceIn(0f, 1f),
+                touching,
+                button,
+                eraser,
+                inRange
+            )
+        )
         return true
     }
 
@@ -102,4 +161,12 @@ object TabletNetworkServer {
 
     val isClientConnected: Boolean
         get() = client != null
+
+    private fun notifyStatus(callback: (Boolean) -> Unit, connected: Boolean) {
+        try {
+            callback(connected)
+        } catch (error: Exception) {
+            Log.w(TAG, "Status callback failed", error)
+        }
+    }
 }

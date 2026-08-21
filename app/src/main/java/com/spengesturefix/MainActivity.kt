@@ -1,12 +1,12 @@
-package com.denis.spenfix
+package com.spengesturefix
 
 import android.Manifest
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.net.Uri
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -33,26 +33,13 @@ class MainActivity : AppCompatActivity() {
     private var languageCode by mutableStateOf<String?>(null)
     private var gestures by mutableStateOf<Map<GestureKind, PenAction>>(emptyMap())
     private var wheelSlots by mutableStateOf<List<PenAction>>(emptyList())
-    private var hasBackground by mutableStateOf(false)
+    private var wheelColor by mutableStateOf(androidx.compose.ui.graphics.Color(0xFF29B6F6))
     private val startPending = AtomicBoolean(false)
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             notificationGranted = granted
             if (granted && startPending.compareAndSet(true, false)) startGestureService()
-        }
-
-    private val pickBackgroundLauncher =
-        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-            if (uri == null) return@registerForActivityResult
-            try {
-                contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            } catch (_: Exception) {
-                // Some providers do not offer persistable permissions; the URI
-                // is still useful for the current session.
-            }
-            WheelConfig.saveBackgroundUri(this, uri)
-            hasBackground = true
         }
 
     private val statusReceiver = object : BroadcastReceiver() {
@@ -93,7 +80,7 @@ class MainActivity : AppCompatActivity() {
                     languageCode = languageCode,
                     gestures = gestures,
                     wheelSlots = wheelSlots,
-                    hasBackground = hasBackground,
+                    wheelColor = wheelColor,
                     onCheckRoot = ::checkRoot,
                     onRequestOverlay = ::requestOverlayPermission,
                     onStartService = ::requestPermissionsAndStart,
@@ -112,10 +99,9 @@ class MainActivity : AppCompatActivity() {
                     },
                     onLanguageChanged = ::setLanguage,
                     onActionPicked = ::saveBinding,
-                    onPickBackground = { pickBackgroundLauncher.launch(arrayOf("image/*")) },
-                    onClearBackground = {
-                        WheelConfig.clearBackground(this)
-                        hasBackground = false
+                    onWheelColorChanged = {
+                        wheelColor = it
+                        WheelConfig.setWheelColor(this, it)
                     },
                     onOpenNotes = {
                         startActivity(Intent(this, NotesListActivity::class.java))
@@ -163,7 +149,7 @@ class MainActivity : AppCompatActivity() {
         digitizerActive = PenRuntimeState.digitizerActive
         gestures = GestureKind.values().associateWith { GestureBindings.load(this, it) }
         wheelSlots = WheelConfig.loadSlots(this)
-        hasBackground = WheelConfig.hasBackground(this)
+        wheelColor = WheelConfig.getWheelColor(this)
     }
 
     private fun saveBinding(target: BindingTarget, action: PenAction) {
