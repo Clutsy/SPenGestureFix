@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">Автор: clutsy</string>
     <string name="section_status">Статус</string>
     <string name="btn_check_root">Проверить права root</string>
     <string name="btn_overlay_permission">Разрешить наложение</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">Заметка удалена</string>
     <string name="notes_empty_list">Ваши заметки появятся здесь. Создайте одну из колеса.</string>
     <string name="section_tablet_mode">Режим планшета Wacom</string>
-    <string name="tablet_mode_subtitle">Используйте Note 3 как графический планшет Wacom для ПК</string>
+    <string name="tablet_mode_subtitle">Используйте телефон как графический планшет Wacom для ПК</string>
     <string name="btn_start_tablet">Запустить режим планшета</string>
     <string name="btn_tablet_settings">Настройки</string>
     <string name="footer_experimental">Pen Window и определение извлечения пера — экспериментальные. См. README.</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · дигитайзер sec_e-pen</string>
+    <string name="subtitle_device">дигитайзер S Pen · sec_e-pen</string>
     <string name="perm_title">Требуются разрешения</string>
     <string name="perm_overlay">Разрешение на наложение необходимо для показа колеса S Pen и жестов поверх других приложений.</string>
     <string name="perm_notification">Разрешение на уведомления необходимо для работы службы в фоне.</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">Командный центр для вашего S Pen</string>
     <string name="home_subtitle">Низколатентный ввод Wacom, программируемые жесты и целенаправленный планшетный процесс.</string>
     <string name="settings_subtitle">Настройте интерфейс, не затрагивая конвейер ввода.</string>
-    <string name="status_subtitle">Живое состояние службы и дигитайзера Note 3.</string>
+    <string name="status_subtitle">Живое состояние службы и дигитайзера пера.</string>
     <string name="wheel_slots_subtitle">Настройте шесть радиальных действий и акцентный цвет колеса.</string>
     <string name="notes_card_subtitle">Записывайте идеи мгновенно и держите их офлайн.</string>
     <string name="status_service_active">Служба активна</string>

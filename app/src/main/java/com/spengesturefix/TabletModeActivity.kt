@@ -2,6 +2,7 @@ package com.spengesturefix
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -11,14 +12,16 @@ import android.os.Vibrator
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import java.net.NetworkInterface
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -31,6 +34,8 @@ class TabletModeActivity : ComponentActivity() {
     private val tabletSessionId = AtomicInteger(0)
     private val sessionRunning = AtomicBoolean(false)
     private val activityAlive = AtomicBoolean(false)
+    private val modeReleased = AtomicBoolean(false)
+    private val captureStopping = AtomicBoolean(false)
     private val sessionLock = Any()
     private var frame by mutableStateOf(emptyFrame)
     private var running by mutableStateOf(false)
@@ -55,13 +60,26 @@ class TabletModeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         activityAlive.set(true)
-        // Tablet Mode owns pen behavior while this Activity is alive.
-        // The background service keeps reading only for presence/status.
+        // Tablet Mode owns pen behavior while this Activity is alive. The
+        // service can keep presence monitoring, but normal actions are gated.
         TabletModeState.enter()
-        // Keep the tablet target in sync with the physical display unless the
-        // user explicitly entered a custom monitor size in Settings.
+        // Older ROMs can surface the physical pen key as BACK. Only the
+        // explicit on-screen Exit control may leave this Activity.
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = Unit
+        })
+
         if (!TabletConfig.isMonitorManuallyConfigured(this)) {
             TabletConfig.detectAndStoreScreenResolution(this)
+        }
+        // The default target is a horizontal monitor. A manually configured
+        // portrait target is still supported without changing the mapping API.
+        requestedOrientation = if (
+            TabletConfig.getMonitorWidth(this) >= TabletConfig.getMonitorHeight(this)
+        ) {
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         hideSystemUi()
@@ -90,8 +108,9 @@ class TabletModeActivity : ComponentActivity() {
 
     override fun onDestroy() {
         activityAlive.set(false)
+        // stopTabletMode releases TabletModeState synchronously when no reader
+        // exists, or after the background reader handoff has completed.
         stopTabletMode()
-        TabletModeState.exit()
         mainHandler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
@@ -105,13 +124,29 @@ class TabletModeActivity : ComponentActivity() {
     }
 
     private fun startTabletMode() {
-        if (running) return
+        if (running || captureStopping.get()) return
+        // The same Activity can stop and start a session more than once. If
+        // the previous session released ownership, acquire it again before
+        // creating a new capture reader.
+        if (modeReleased.compareAndSet(true, false)) TabletModeState.enter()
         running = true
         sessionRunning.set(true)
         val session = tabletSessionId.incrementAndGet()
         status = getString(R.string.tablet_status_starting)
         val config = TabletRunConfig.from(this)
         Thread {
+            if (PenRuntimeState.serviceActive && !TabletModeState.awaitNormalInputReleased(2_000L)) {
+                if (isSessionActive(session)) {
+                    runOnUiThread {
+                        if (isSessionActive(session)) {
+                            running = false
+                            sessionRunning.set(false)
+                            status = getString(R.string.tablet_status_waiting)
+                        }
+                    }
+                }
+                return@Thread
+            }
             val devicePath = EventDeviceFinder.findDevicePath(SPenGestureService.DIGITIZER_DEVICE_NAME)
             if (devicePath == null) {
                 if (!isSessionActive(session)) return@Thread
@@ -134,99 +169,117 @@ class TabletModeActivity : ComponentActivity() {
             synchronized(sessionLock) {
                 if (!isSessionActive(session)) return@Thread
                 TabletNetworkServer.start(
-                onStatusChange = { connected ->
-                    if (isSessionActive(session)) {
-                        runOnUiThread {
-                            if (isSessionActive(session)) {
-                                status = if (connected) getString(R.string.tablet_status_active)
-                                else getString(R.string.tablet_status_waiting)
+                    onStatusChange = { connected ->
+                        if (isSessionActive(session)) {
+                            runOnUiThread {
+                                if (isSessionActive(session)) {
+                                    status = if (connected) {
+                                        getString(R.string.tablet_status_active)
+                                    } else {
+                                        getString(R.string.tablet_status_waiting)
+                                    }
+                                }
                             }
                         }
-                    }
-                },
-                reportRateHz = config.sendRateHz
-            )
-            if (!isSessionActive(session)) {
-                TabletNetworkServer.stop()
-                return@Thread
-            }
-
-            inputCapture = TabletInputCapture(devicePath, capabilities) callback@{ rawFrame ->
-                if (!isSessionActive(session)) return@callback
-                var x = rawFrame.x
-                var y = rawFrame.y
-                val oriented = TabletConfig.mapCoordinates(x, y, config.axisRotation)
-                x = oriented.first
-                y = oriented.second
-                if (config.invertX) x = 1f - x
-                if (config.invertY) y = 1f - y
-
-                if (config.mappingMode == MappingMode.CUSTOM_AREA) {
-                    val area = config.customArea
-                    x = area[0] + x * (area[2] - area[0])
-                    y = area[1] + y * (area[3] - area[1])
+                    },
+                    reportRateHz = config.sendRateHz,
+                    sourceWidth = config.sourceWidth,
+                    sourceHeight = config.sourceHeight,
+                    sourceRotation = config.axisRotation,
+                    orientation = config.orientation.name.lowercase(Locale.US)
+                )
+                if (!isSessionActive(session)) {
+                    TabletNetworkServer.stop()
+                    return@Thread
                 }
 
-                if (config.aspectLock && config.monitorHeight > 0 && config.monitorWidth > 0 &&
-                    config.orientation != OrientationType.PORTRAIT
-                ) {
-                    val monitorAspect = config.monitorWidth.toFloat() / config.monitorHeight
-                    val sourceAspect = config.sourceWidth.toFloat() / config.sourceHeight
-                    if (sourceAspect > monitorAspect) {
-                        x = 0.5f + (x - 0.5f) * (monitorAspect / sourceAspect)
-                    } else if (sourceAspect < monitorAspect) {
-                        y = 0.5f + (y - 0.5f) * (sourceAspect / monitorAspect)
+                inputCapture = TabletInputCapture(devicePath, capabilities) callback@{ rawFrame ->
+                    if (!isSessionActive(session)) return@callback
+                    PenInputActivity.mark()
+                    var x = rawFrame.x
+                    var y = rawFrame.y
+                    val oriented = TabletConfig.mapCoordinates(x, y, config.axisRotation)
+                    x = oriented.first
+                    y = oriented.second
+                    if (config.invertX) x = 1f - x
+                    if (config.invertY) y = 1f - y
+
+                    if (config.mappingMode == MappingMode.CUSTOM_AREA) {
+                        val area = config.customArea
+                        x = area[0] + x * (area[2] - area[0])
+                        y = area[1] + y * (area[3] - area[1])
                     }
-                }
 
-                smoothedX += (1f - config.smoothing) * (x - smoothedX)
-                smoothedY += (1f - config.smoothing) * (y - smoothedY)
-                val pressure = PressureCurve.applyWithClamp(
-                    rawFrame.pressure,
-                    config.pressureCurve,
-                    config.pressureMin,
-                    config.pressureMax,
-                    config.customPoints
-                )
-                val mapped = rawFrame.copy(
-                    x = smoothedX.coerceIn(0f, 1f),
-                    y = smoothedY.coerceIn(0f, 1f),
-                    pressure = pressure
-                )
-
-                if (config.haptic && mapped.touching && !lastTouching) {
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            vibrator.vibrate(VibrationEffect.createOneShot(18, VibrationEffect.DEFAULT_AMPLITUDE))
-                        } else {
-                            @Suppress("DEPRECATION")
-                            vibrator.vibrate(18)
+                    if (config.aspectLock && config.monitorHeight > 0 && config.monitorWidth > 0 &&
+                        config.orientation != OrientationType.PORTRAIT
+                    ) {
+                        val monitorAspect = config.monitorWidth.toFloat() / config.monitorHeight
+                        val sourceAspect = config.sourceWidth.toFloat() / config.sourceHeight
+                        if (sourceAspect > monitorAspect) {
+                            x = 0.5f + (x - 0.5f) * (monitorAspect / sourceAspect)
+                        } else if (sourceAspect < monitorAspect) {
+                            y = 0.5f + (y - 0.5f) * (sourceAspect / monitorAspect)
                         }
-                    } catch (_: Exception) { }
+                    }
+
+                    smoothedX += (1f - config.smoothing) * (x - smoothedX)
+                    smoothedY += (1f - config.smoothing) * (y - smoothedY)
+                    val pressure = PressureCurve.applyWithClamp(
+                        rawFrame.pressure,
+                        config.pressureCurve,
+                        config.pressureMin,
+                        config.pressureMax,
+                        config.customPoints
+                    )
+                    val mapped = rawFrame.copy(
+                        x = smoothedX.coerceIn(0f, 1f),
+                        y = smoothedY.coerceIn(0f, 1f),
+                        pressure = pressure
+                    )
+
+                    if (config.haptic && mapped.touching && !lastTouching) {
+                        try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                vibrator.vibrate(
+                                    VibrationEffect.createOneShot(
+                                        18,
+                                        VibrationEffect.DEFAULT_AMPLITUDE
+                                    )
+                                )
+                            } else {
+                                @Suppress("DEPRECATION")
+                                vibrator.vibrate(18)
+                            }
+                        } catch (_: Exception) { }
+                    }
+                    lastTouching = mapped.touching
+                    val buttonFlags = mapPenButtonAction(config.buttonAction, mapped.button)
+                    TabletNetworkServer.sendFrame(
+                        mapped.x,
+                        mapped.y,
+                        mapped.pressure,
+                        mapped.touching,
+                        buttonFlags.rightButton,
+                        buttonFlags.eraser,
+                        mapped.inRange,
+                        buttonFlags.middleButton
+                    )
+                    pendingFrame.set(mapped)
+                    publishFrameToUi()
                 }
-                lastTouching = mapped.touching
-                val sendButton = mapped.button && config.buttonAction != PenButtonAction.DISABLED
-                val eraser = mapped.button && config.buttonAction == PenButtonAction.ERASER
-                TabletNetworkServer.sendFrame(
-                    mapped.x, mapped.y, mapped.pressure, mapped.touching,
-                    sendButton, eraser, mapped.inRange
-                )
-                pendingFrame.set(mapped)
-                publishFrameToUi()
-            }
-            if (!isSessionActive(session)) {
-                inputCapture?.stop()
-                inputCapture = null
-                TabletNetworkServer.stop()
-                return@Thread
-            }
-            inputCapture?.start()
-            if (!isSessionActive(session)) {
-                inputCapture?.stop()
-                inputCapture = null
-                TabletNetworkServer.stop()
-                return@Thread
-            }
+                if (!isSessionActive(session)) {
+                    inputCapture?.stop()
+                    inputCapture = null
+                    TabletNetworkServer.stop()
+                    return@Thread
+                }
+                inputCapture?.start()
+                if (!isSessionActive(session)) {
+                    inputCapture?.stop()
+                    inputCapture = null
+                    TabletNetworkServer.stop()
+                    return@Thread
+                }
             }
             runOnUiThread {
                 if (isSessionActive(session)) {
@@ -234,7 +287,10 @@ class TabletModeActivity : ComponentActivity() {
                     ipAddress = getLocalIp()
                 }
             }
-        }.apply { isDaemon = true; start() }
+        }.apply {
+            isDaemon = true
+            start()
+        }
     }
 
     private fun isSessionActive(session: Int): Boolean =
@@ -247,18 +303,43 @@ class TabletModeActivity : ComponentActivity() {
     }
 
     private fun stopTabletMode() {
+        val capture: TabletInputCapture?
         synchronized(sessionLock) {
             sessionRunning.set(false)
             tabletSessionId.incrementAndGet()
             running = false
-            inputCapture?.stop()
+            capture = inputCapture
             inputCapture = null
             TabletNetworkServer.stop()
         }
-        pendingFrame.set(TabletFrame(0f, 0f, 0f, false, false, false))
-        frame = pendingFrame.get() ?: emptyFrame
+        pendingFrame.set(emptyFrame)
+        frame = emptyFrame
         ipAddress = getLocalIp()
         status = getString(R.string.tablet_status_ready)
+
+        if (capture == null) {
+            if (!captureStopping.get()) releaseTabletModeState()
+            return
+        }
+        if (!captureStopping.compareAndSet(false, true)) return
+        Thread {
+            try {
+                capture.stopAndWait(750L)
+            } finally {
+                captureStopping.set(false)
+                releaseTabletModeState()
+            }
+        }.apply {
+            name = "TabletCaptureStop"
+            isDaemon = true
+            start()
+        }
+    }
+
+    private fun releaseTabletModeState() {
+        if (modeReleased.compareAndSet(false, true)) {
+            TabletModeState.exit()
+        }
     }
 
     private fun getLocalIp(): String? = try {
@@ -293,8 +374,11 @@ class TabletModeActivity : ComponentActivity() {
             fun from(context: Context): TabletRunConfig {
                 val source = TabletConfig.detectScreenResolution(context) ?: (1920 to 1080)
                 val selectedOrientation = TabletConfig.getOrientation(context)
+                val monitorWidth = TabletConfig.getMonitorWidth(context)
+                val monitorHeight = TabletConfig.getMonitorHeight(context)
+                val targetLandscape = monitorWidth >= monitorHeight
                 val resolvedOrientation = if (selectedOrientation == OrientationType.AUTO) {
-                    OrientationType.LANDSCAPE
+                    if (targetLandscape) OrientationType.LANDSCAPE else OrientationType.PORTRAIT
                 } else {
                     selectedOrientation
                 }
@@ -305,12 +389,16 @@ class TabletModeActivity : ComponentActivity() {
                     pressureMax = TabletConfig.getPressureMax(context),
                     smoothing = TabletConfig.getSmoothing(context),
                     orientation = resolvedOrientation,
-                    axisRotation = TabletConfig.coordinateRotation(context, selectedOrientation),
+                    axisRotation = TabletConfig.coordinateRotation(
+                        context,
+                        selectedOrientation,
+                        targetLandscape
+                    ),
                     invertX = TabletConfig.getInvertX(context),
                     invertY = TabletConfig.getInvertY(context),
                     aspectLock = TabletConfig.getAspectRatioLock(context),
-                    monitorWidth = TabletConfig.getMonitorWidth(context),
-                    monitorHeight = TabletConfig.getMonitorHeight(context),
+                    monitorWidth = monitorWidth,
+                    monitorHeight = monitorHeight,
                     mappingMode = TabletConfig.getMappingMode(context),
                     customArea = TabletConfig.getCustomArea(context),
                     sourceWidth = source.first.coerceAtLeast(1),

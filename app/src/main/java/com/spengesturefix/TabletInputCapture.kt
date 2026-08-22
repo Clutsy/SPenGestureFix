@@ -72,6 +72,12 @@ class TabletInputCapture(
         reader = null
     }
 
+    /** Background-only variant used when handing the digitizer back to the service. */
+    fun stopAndWait(timeoutMs: Long = 750L) {
+        reader?.stopAndWait(timeoutMs)
+        reader = null
+    }
+
     companion object {
         fun normalize(value: Int, min: Int, max: Int): Float {
             if (max <= min) return 0f

@@ -1,6 +1,6 @@
 # Translation and Documentation Guide
 
-This project uses English as the source language and ships 17 Android locales: `en`, `it`, `es`, `fr`, `de`, `pt`, `nl`, `pl`, `tr`, `ru`, `uk`, `zh-rCN`, `ja`, `ko`, `ar`, `hi`, and `in`. The goal is concise, commercial product language rather than literal word-for-word translation.
+This project uses English as the source language and ships 17 Android locales: `en`, `it`, `es`, `fr`, `de`, `pt`, `nl`, `pl`, `tr`, `ru`, `uk`, `zh-CN`, `ja`, `ko`, `ar`, `hi`, and `id`. The goal is concise, commercial product language rather than literal word-for-word translation.
 
 ## Source of truth
 
@@ -26,6 +26,8 @@ Every localized catalog must contain the same string names as the English catalo
 | Root | Keep `root` in code and UI; explain it where necessary. |
 | Wheel color | Describe the accent palette; never refer to the removed background-photo feature. |
 | Auto-detect resolution | Explain that the phone’s physical display bounds are detected in landscape order and can be manually overridden for a Windows monitor. |
+| Tablet button behavior | Explain that right click, middle click, eraser, and disabled are tablet-only settings and do not change normal S Pen gestures. |
+| Made by | Keep the author name `clutsy` and the GitHub URL unchanged. |
 
 ## Tone
 
@@ -33,7 +35,7 @@ Every localized catalog must contain the same string names as the English catalo
 - Describe outcomes, not implementation details, in the dashboard.
 - Use sentence case for buttons and headings.
 - Keep technical explanations precise and neutral.
-- Do not claim Samsung SDK support on the Note 3 AOSP backend.
+- Do not claim Samsung SDK support on the AOSP backend.
 
 ## Documentation map
 
@@ -57,4 +59,4 @@ Future documents should use the same structure: purpose, requirements, workflow,
 5. Run resource compilation and the i18n parity check before review.
 6. Update the README glossary if a new hardware or product term is introduced.
 
-The repository intentionally keeps machine-generated or protocol terms (`getevent`, `sec_e-pen`, `w1`, `BTN_STYLUS`, `ABS_X`, `ABS_Y`, and file paths) unchanged. Tablet Mode also suspends normal wheel and side-button actions while it owns the digitizer.
+The repository intentionally keeps machine-generated or protocol terms (`getevent`, `sec_e-pen`, `w1`, `BTN_STYLUS`, `ABS_X`, `ABS_Y`, `#SPEN_TABLET`, and file paths) unchanged. Tablet Mode also suspends normal wheel and side-button actions while it owns the digitizer; the tested hardware is documented separately from unverified targets.

@@ -1,5 +1,6 @@
 package com.spengesturefix
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,6 +10,13 @@ class TabletSettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         if (!TabletConfig.isMonitorManuallyConfigured(this)) {
             TabletConfig.detectAndStoreScreenResolution(this)
+        }
+        requestedOrientation = if (
+            TabletConfig.getMonitorWidth(this) >= TabletConfig.getMonitorHeight(this)
+        ) {
+            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
         setContent {
             SpenFixTheme {

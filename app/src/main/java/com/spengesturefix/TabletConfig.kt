@@ -12,6 +12,22 @@ enum class OrientationType { AUTO, PORTRAIT, LANDSCAPE, LANDSCAPE_INV }
 enum class MappingMode { FULL_SCREEN, CUSTOM_AREA }
 enum class PenButtonAction { RIGHT_CLICK, MIDDLE_CLICK, ERASER, DISABLED }
 
+data class TabletButtonFlags(
+    val rightButton: Boolean,
+    val middleButton: Boolean,
+    val eraser: Boolean
+)
+
+fun mapPenButtonAction(action: PenButtonAction, pressed: Boolean): TabletButtonFlags {
+    if (!pressed) return TabletButtonFlags(false, false, false)
+    return when (action) {
+        PenButtonAction.RIGHT_CLICK -> TabletButtonFlags(true, false, false)
+        PenButtonAction.MIDDLE_CLICK -> TabletButtonFlags(false, true, false)
+        PenButtonAction.ERASER -> TabletButtonFlags(false, false, true)
+        PenButtonAction.DISABLED -> TabletButtonFlags(false, false, false)
+    }
+}
+
 object TabletConfig {
     private const val PREFS = "spen_tablet"
     private const val KEY_MONITOR_DETECTED = "monitorDetected"
@@ -20,7 +36,7 @@ object TabletConfig {
     fun getPressureCurve(context: Context): PressureCurveType {
         val name = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString("pressureCurve", PressureCurveType.LINEAR.name)
-        return try { PressureCurveType.valueOf(name!!) } catch (e: Exception) { PressureCurveType.LINEAR }
+        return try { PressureCurveType.valueOf(name!!) } catch (_: Exception) { PressureCurveType.LINEAR }
     }
 
     fun setPressureCurve(context: Context, value: PressureCurveType) {
@@ -30,18 +46,19 @@ object TabletConfig {
 
     fun getCustomCurvePoints(context: Context): List<Float> {
         val json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString("customCurvePoints", null) ?: return listOf(0f, 0f, 0.5f, 0.5f, 1f, 1f)
+            .getString("customCurvePoints", null) ?: return defaultCurvePoints()
         return try {
             val array = JSONArray(json)
             val points = (0 until array.length()).mapNotNull {
                 array.getDouble(it).takeIf { value -> value.isFinite() }?.toFloat()
             }.map { it.coerceIn(0f, 1f) }
-            if (points.size >= 4 && points.size % 2 == 0) points
-            else listOf(0f, 0f, 0.5f, 0.5f, 1f, 1f)
+            if (points.size >= 4 && points.size % 2 == 0) points else defaultCurvePoints()
         } catch (_: Exception) {
-            listOf(0f, 0f, 0.5f, 0.5f, 1f, 1f)
+            defaultCurvePoints()
         }
     }
+
+    private fun defaultCurvePoints(): List<Float> = listOf(0f, 0f, 0.5f, 0.5f, 1f, 1f)
 
     fun setCustomCurvePoints(context: Context, value: List<Float>) {
         val array = JSONArray()
@@ -78,8 +95,8 @@ object TabletConfig {
 
     fun getOrientation(context: Context): OrientationType {
         val name = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString("orientation", OrientationType.LANDSCAPE.name)
-        return try { OrientationType.valueOf(name!!) } catch (_: Exception) { OrientationType.LANDSCAPE }
+            .getString("orientation", OrientationType.AUTO.name)
+        return try { OrientationType.valueOf(name!!) } catch (_: Exception) { OrientationType.AUTO }
     }
 
     fun setOrientation(context: Context, value: OrientationType) {
@@ -93,9 +110,8 @@ object TabletConfig {
         else if (height > width) height to width else width to height
 
     /**
-     * Maps raw portrait-oriented Wacom coordinates into the selected display
-     * orientation. The Note 3 digitizer reports X/Y in its natural portrait
-     * axes even when Android is rendered landscape.
+     * Maps normalized Wacom coordinates into the selected display rotation.
+     * Tablet Mode is landscape-first for the normal horizontal PC monitor.
      */
     fun mapCoordinates(
         x: Float,
@@ -108,7 +124,7 @@ object TabletConfig {
         else -> x to y
     }
 
-    /** Returns the current physical display rotation, with a safe portrait fallback. */
+    /** Returns the display rotation without using hidden or API-specific methods. */
     fun displayRotation(context: Context): Int {
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
             ?: return Surface.ROTATION_0
@@ -120,48 +136,82 @@ object TabletConfig {
         }
     }
 
-    /** Resolves the axis transform used by the active tablet session. */
-    fun coordinateRotation(context: Context, orientation: OrientationType): Int {
-        val current = displayRotation(context)
-        val isReverseLandscape = current == Surface.ROTATION_270
-        return when (orientation) {
-            OrientationType.PORTRAIT -> Surface.ROTATION_0
-            OrientationType.LANDSCAPE_INV -> if (isReverseLandscape) {
-                Surface.ROTATION_90
-            } else {
-                Surface.ROTATION_270
-            }
-            OrientationType.LANDSCAPE -> if (isReverseLandscape) {
-                Surface.ROTATION_270
-            } else {
-                Surface.ROTATION_90
-            }
-            OrientationType.AUTO -> current
-        }
-    }
-
     /**
-     * Returns the physical display bounds in landscape order. On Android 11+
-     * maximumWindowMetrics is used instead of the current app window, so an
-     * edge-to-edge Activity or navigation bar cannot shrink the detected size.
+     * Returns the current display bounds before landscape normalization. This
+     * distinguishes a naturally-landscape device from a portrait panel that
+     * is currently rotated into landscape.
      */
-    fun detectScreenResolution(context: Context): Pair<Int, Int>? {
+    fun currentDisplayBounds(context: Context): Pair<Int, Int>? {
         val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
             ?: return null
         return try {
-            val (w, h) = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val bounds = windowManager.maximumWindowMetrics.bounds
-            bounds.width() to bounds.height()
-        } else {
-            @Suppress("DEPRECATION")
-            val metrics = DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
-            metrics.widthPixels to metrics.heightPixels
-        }
-            normalizeScreenResolution(w, h)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val bounds = windowManager.maximumWindowMetrics.bounds
+                bounds.width() to bounds.height()
+            } else {
+                @Suppress("DEPRECATION")
+                val metrics = DisplayMetrics().also { windowManager.defaultDisplay.getRealMetrics(it) }
+                metrics.widthPixels to metrics.heightPixels
+            }
         } catch (_: Exception) {
             null
         }
     }
+
+    /**
+     * Finds the quarter-turn that produces ordinary landscape coordinates.
+     * A 90/270 display rotation is authoritative; with rotation 0/180 the
+     * current bounds tell us whether the panel is naturally landscape.
+     */
+    fun landscapeRotation(
+        displayRotation: Int,
+        displayWidth: Int?,
+        displayHeight: Int?
+    ): Int {
+        if (displayRotation == Surface.ROTATION_90 || displayRotation == Surface.ROTATION_270) {
+            return displayRotation
+        }
+        val currentIsLandscape = displayWidth != null && displayHeight != null &&
+            displayWidth > 0 && displayHeight > 0 && displayWidth >= displayHeight
+        return if (currentIsLandscape) displayRotation else Surface.ROTATION_90
+    }
+
+    /**
+     * Resolves the axis transform used by an active tablet session. AUTO uses
+     * the monitor target orientation supplied by the caller; landscape remains
+     * the safe default when no dimensions are available.
+     */
+    fun coordinateRotation(
+        context: Context,
+        orientation: OrientationType,
+        targetLandscape: Boolean = orientation != OrientationType.PORTRAIT
+    ): Int {
+        val current = displayRotation(context)
+        val bounds = currentDisplayBounds(context)
+        val normalLandscape = landscapeRotation(current, bounds?.first, bounds?.second)
+        val wantsLandscape = when (orientation) {
+            OrientationType.PORTRAIT -> false
+            OrientationType.LANDSCAPE, OrientationType.LANDSCAPE_INV -> true
+            OrientationType.AUTO -> targetLandscape
+        }
+        if (!wantsLandscape) {
+            // Portrait is the digitizer's natural orientation on many phones.
+            return if (current == Surface.ROTATION_180) Surface.ROTATION_180 else Surface.ROTATION_0
+        }
+        if (orientation == OrientationType.LANDSCAPE_INV) {
+            return when (normalLandscape) {
+                Surface.ROTATION_90 -> Surface.ROTATION_270
+                Surface.ROTATION_270 -> Surface.ROTATION_90
+                Surface.ROTATION_180 -> Surface.ROTATION_0
+                else -> Surface.ROTATION_180
+            }
+        }
+        return normalLandscape
+    }
+
+    /** Returns the physical display bounds in landscape order. */
+    fun detectScreenResolution(context: Context): Pair<Int, Int>? =
+        currentDisplayBounds(context)?.let { normalizeScreenResolution(it.first, it.second) }
 
     /** Detects and persists the current display size unless the user overrides it. */
     fun detectAndStoreScreenResolution(context: Context): Pair<Int, Int>? =
@@ -181,7 +231,8 @@ object TabletConfig {
     }
 
     fun isMonitorManuallyConfigured(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_MONITOR_MANUAL, false)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_MONITOR_MANUAL, false)
 
     /** Marks values entered in Tablet Settings as an intentional user override. */
     fun markMonitorConfigured(context: Context, manual: Boolean = true) {
@@ -194,7 +245,7 @@ object TabletConfig {
     fun getMappingMode(context: Context): MappingMode {
         val name = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString("mappingMode", MappingMode.FULL_SCREEN.name)
-        return try { MappingMode.valueOf(name!!) } catch (e: Exception) { MappingMode.FULL_SCREEN }
+        return try { MappingMode.valueOf(name!!) } catch (_: Exception) { MappingMode.FULL_SCREEN }
     }
 
     fun setMappingMode(context: Context, value: MappingMode) {
@@ -232,7 +283,7 @@ object TabletConfig {
     fun getPenButtonAction(context: Context): PenButtonAction {
         val name = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString("penButtonAction", PenButtonAction.RIGHT_CLICK.name)
-        return try { PenButtonAction.valueOf(name!!) } catch (e: Exception) { PenButtonAction.RIGHT_CLICK }
+        return try { PenButtonAction.valueOf(name!!) } catch (_: Exception) { PenButtonAction.RIGHT_CLICK }
     }
 
     fun setPenButtonAction(context: Context, value: PenButtonAction) {
@@ -285,11 +336,12 @@ object TabletConfig {
 
     fun setSendRateHz(context: Context, value: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putInt("sendRateHz", value).apply()
+            .putInt("sendRateHz", value.coerceIn(30, 200)).apply()
     }
 
     fun getHapticFeedback(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("hapticFeedback", true)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean("hapticFeedback", true)
 
     fun setHapticFeedback(context: Context, value: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
@@ -305,7 +357,8 @@ object TabletConfig {
     }
 
     fun getAutoRestoreUsb(context: Context): Boolean =
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean("autoRestoreUsb", true)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean("autoRestoreUsb", true)
 
     fun setAutoRestoreUsb(context: Context, value: Boolean) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()

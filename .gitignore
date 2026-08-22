@@ -49,3 +49,7 @@ out/
 *.jks
 *.keystore
 *keystore.properties
+
+# Local agent and editor metadata
+.local-agent/
+.codex/

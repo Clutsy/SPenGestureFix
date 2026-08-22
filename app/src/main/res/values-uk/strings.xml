@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">Автор: clutsy</string>
     <string name="section_status">Статус</string>
     <string name="btn_check_root">Перевірити права root</string>
     <string name="btn_overlay_permission">Надати дозвіл на накладання</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">Нотатку видалено</string>
     <string name="notes_empty_list">Ваші нотатки з’являться тут. Створіть одну з колеса.</string>
     <string name="section_tablet_mode">Режим планшета Wacom</string>
-    <string name="tablet_mode_subtitle">Використовуйте Note 3 як графічний планшет Wacom для ПК</string>
+    <string name="tablet_mode_subtitle">Використовуйте телефон як графічний планшет Wacom для ПК</string>
     <string name="btn_start_tablet">Запустити режим планшета</string>
     <string name="btn_tablet_settings">Налаштування</string>
     <string name="footer_experimental">Pen Window і визначення виймання пера — експериментальні. Див. README.</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · дигітайзер sec_e-pen</string>
+    <string name="subtitle_device">дигітайзер S Pen · sec_e-pen</string>
     <string name="perm_title">Потрібні дозволи</string>
     <string name="perm_overlay">Дозвіл на накладання потрібен для показу колеса S Pen і жестів поверх інших застосунків.</string>
     <string name="perm_notification">Дозвіл на сповіщення потрібен для роботи служби у фоні.</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">Командний центр для вашого S Pen</string>
     <string name="home_subtitle">Введення Wacom із низькою затримкою, програмовані жести та зосереджений планшетний процес.</string>
     <string name="settings_subtitle">Налаштуйте інтерфейс, не торкаючись конвеєра введення.</string>
-    <string name="status_subtitle">Живий стан служби та дигітайзера Note 3.</string>
+    <string name="status_subtitle">Живий стан служби та дигітайзера пера.</string>
     <string name="wheel_slots_subtitle">Налаштуйте шість радіальних дій та акцентний колір колеса.</string>
     <string name="notes_card_subtitle">Записуйте ідеї миттєво та тримайте їх офлайн.</string>
     <string name="status_service_active">Служба активна</string>

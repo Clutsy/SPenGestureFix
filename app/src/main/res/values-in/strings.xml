@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">Dibuat oleh clutsy</string>
     <string name="section_status">Status</string>
     <string name="btn_check_root">Periksa izin root</string>
     <string name="btn_overlay_permission">Beri izin overlay</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">Catatan dihapus</string>
     <string name="notes_empty_list">Catatan Anda akan muncul di sini. Buat satu dari roda.</string>
     <string name="section_tablet_mode">Mode Tablet Wacom</string>
-    <string name="tablet_mode_subtitle">Gunakan Note 3 Anda sebagai tablet gambar Wacom untuk PC</string>
+    <string name="tablet_mode_subtitle">Gunakan ponsel Anda sebagai tablet gambar Wacom untuk PC</string>
     <string name="btn_start_tablet">Mulai Mode Tablet</string>
     <string name="btn_tablet_settings">Pengaturan</string>
     <string name="footer_experimental">Pen Window dan deteksi pelepasan pena bersifat eksperimental. Lihat README.</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · digitizer sec_e-pen</string>
+    <string name="subtitle_device">digitizer S Pen · sec_e-pen</string>
     <string name="perm_title">Izin Diperlukan</string>
     <string name="perm_overlay">Izin overlay diperlukan untuk menampilkan roda S Pen dan isyarat di atas aplikasi lain.</string>
     <string name="perm_notification">Izin notifikasi diperlukan untuk menjaga layanan tetap berjalan di latar belakang.</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">Pusat komando untuk S Pen Anda</string>
     <string name="home_subtitle">Input Wacom berlatensi rendah, isyarat yang dapat diprogram, dan alur kerja tablet yang fokus.</string>
     <string name="settings_subtitle">Personalisasikan pengalaman tanpa menyentuh jalur input.</string>
-    <string name="status_subtitle">Kesehatan layanan dan digitizer Note 3 secara langsung.</string>
+    <string name="status_subtitle">Kesehatan layanan dan digitizer pena secara langsung.</string>
     <string name="wheel_slots_subtitle">Konfigurasikan enam aksi radial dan warna aksen roda.</string>
     <string name="notes_card_subtitle">Tangkap ide dengan instan dan simpan secara offline.</string>
     <string name="status_service_active">Layanan aktif</string>

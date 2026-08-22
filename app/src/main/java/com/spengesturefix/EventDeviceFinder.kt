@@ -25,8 +25,8 @@ object EventDeviceFinder {
     fun findDevicePath(deviceName: String): String? {
         if (!isSafeName(deviceName)) return null
 
-        // On this Note 3 ROM /proc/bus/input/devices is denied even to the
-        // Magisk shell context. Keep it as the first, cheap path for ROMs that
+        // Some ROMs deny /proc/bus/input/devices even to the Magisk shell
+        // context. Keep it as the first, cheap path for ROMs that
         // expose it, then use getevent -lp, which is already required to read
         // the input devices and is available on the target device.
         val procOutput = runRoot("cat /proc/bus/input/devices")
@@ -85,8 +85,8 @@ object EventDeviceFinder {
         val paths = buildList {
             add("/sys/class/switch/$switchName/state")
             add("/sys/devices/virtual/switch/$switchName/state")
-            // The Note 3 w1 driver exposes the live slot state through the
-            // sec_e-pen sysfs node instead of /sys/class/switch. Its values
+            // Some w1 drivers expose the live slot state through the sec_e-pen
+            // sysfs node instead of /sys/class/switch. Its values
             // are OK (inserted) and NG (removed) on the target ROM.
             if (switchName == "w1") add("/sys/class/sec/sec_epen/epen_connection")
         }

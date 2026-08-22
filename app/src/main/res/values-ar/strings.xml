@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">صنعه clutsy</string>
     <string name="section_status">الحالة</string>
     <string name="btn_check_root">التحقق من صلاحيات الجذر</string>
     <string name="btn_overlay_permission">منح إذن الطبقة العائمة</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">تم حذف الملاحظة</string>
     <string name="notes_empty_list">ستظهر ملاحظاتك هنا. أنشئ واحدة من العجلة.</string>
     <string name="section_tablet_mode">وضع جهاز لوحي Wacom</string>
-    <string name="tablet_mode_subtitle">استخدم Note 3 كلوح رسم Wacom للكمبيوتر</string>
+    <string name="tablet_mode_subtitle">استخدم هاتفك كلوح رسم Wacom للكمبيوتر</string>
     <string name="btn_start_tablet">بدء وضع الجهاز اللوحي</string>
     <string name="btn_tablet_settings">الإعدادات</string>
     <string name="footer_experimental">Pen Window وكشف إخراج القلم ميزتان تجريبيتان. راجع README.</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · جهاز الترقيم sec_e-pen</string>
+    <string name="subtitle_device">جهاز ترقيم S Pen · sec_e-pen</string>
     <string name="perm_title">الأذونات المطلوبة</string>
     <string name="perm_overlay">إذن الطبقة العائمة مطلوب لعرض عجلة S Pen والإيماءات فوق التطبيقات الأخرى.</string>
     <string name="perm_notification">إذن الإشعارات مطلوب لإبقاء الخدمة تعمل في الخلفية.</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">مركز قيادة لقلم S Pen الخاص بك</string>
     <string name="home_subtitle">إدخال Wacom منخفض التأخير وإيماءات قابلة للبرمجة وسير عمل لوحي مركّز.</string>
     <string name="settings_subtitle">خصّص التجربة دون لمس خط الإدخال.</string>
-    <string name="status_subtitle">الحالة المباشرة للخدمة وجهاز ترقيم Note 3.</string>
+    <string name="status_subtitle">الحالة المباشرة للخدمة وجهاز ترقيم القلم.</string>
     <string name="wheel_slots_subtitle">اضبط الإجراءات الشعاعية الستة واللون المميز للعجلة.</string>
     <string name="notes_card_subtitle">التقط الأفكار فورًا واحتفظ بها دون اتصال.</string>
     <string name="status_service_active">الخدمة نشطة</string>

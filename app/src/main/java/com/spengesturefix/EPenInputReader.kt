@@ -3,6 +3,7 @@ package com.spengesturefix
 import android.util.Log
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -46,6 +47,12 @@ class EPenInputReader(
         }
     }
 
+    private data class StopState(
+        val pid: Int?,
+        val process: Process?,
+        val worker: Thread?
+    )
+
     private val running = AtomicBoolean(false)
     @Volatile private var process: Process? = null
     @Volatile private var childPid: Int? = null
@@ -74,6 +81,10 @@ class EPenInputReader(
                 .redirectErrorStream(true)
                 .start()
             process = started
+            if (!running.get()) {
+                started.destroy()
+                return
+            }
             var pidLineRead = false
 
             BufferedReader(InputStreamReader(started.inputStream)).use { reader ->
@@ -108,35 +119,112 @@ class EPenInputReader(
         } finally {
             process = null
             childPid = null
+            worker = null
             running.set(false)
         }
     }
 
-    /** Stops only this reader and returns immediately. */
+    /**
+     * Signals this reader to stop and returns immediately. This is safe from
+     * Activity and Service lifecycle callbacks on the main thread.
+     */
     fun stop() {
-        if (!running.getAndSet(false)) return
-        val pid = childPid
+        stopInternal(waitForTermination = false, joinMs = 0L)
+    }
+
+    /**
+     * Stops this reader and waits briefly for the owned process/thread. Use
+     * only from a background handoff thread, never from UI input callbacks.
+     */
+    fun stopAndWait(timeoutMs: Long = 500L) {
+        stopInternal(waitForTermination = true, joinMs = timeoutMs.coerceAtLeast(0L))
+    }
+
+    private fun stopInternal(waitForTermination: Boolean, joinMs: Long): StopState? {
+        if (!running.getAndSet(false)) return null
+        val state = StopState(childPid, process, worker)
+
         try {
-            process?.inputStream?.close()
+            state.process?.inputStream?.close()
         } catch (_: Exception) {
         }
         try {
-            process?.destroy()
+            state.process?.destroy()
         } catch (_: Exception) {
-        }
-        if (pid != null && pid > 1) {
-            // This is scoped to the pid printed by this reader; it cannot
-            // terminate the other sec_e-pen/w1 pipeline.
-            try {
-                ProcessBuilder("su", "-c", "kill -TERM -$pid")
-                    .redirectErrorStream(true)
-                    .start()
-            } catch (_: Exception) {
-            }
         }
         process = null
         childPid = null
-        worker = null
+
+        val terminator = state.pid?.takeIf { it > 1 }?.let(::launchPidTermination)
+        if (waitForTermination) {
+            try {
+                // Android 5-7 do not expose Process.waitFor(timeout), so use
+                // a small polling loop to keep even a broken su implementation
+                // from holding the handoff worker forever.
+                awaitProcess(terminator, 750L)
+            } finally {
+                try { terminator?.destroy() } catch (_: Exception) { }
+            }
+            joinWorker(state.worker, joinMs)
+        } else if (terminator != null) {
+            // Keep all potentially blocking process waits away from the main
+            // looper while still reaping the exact-PID helper process.
+            Thread {
+                awaitProcess(terminator, 750L)
+                try { terminator.destroy() } catch (_: Exception) { }
+            }.apply {
+                name = "SpenInputStop-${devicePath.substringAfterLast('/')}"
+                isDaemon = true
+                start()
+            }
+        }
+        return state
+    }
+
+    private fun launchPidTermination(pid: Int): Process? {
+        if (pid <= 1) return null
+        return try {
+            ProcessBuilder(
+                "su",
+                "-c",
+                "kill -TERM $pid 2>/dev/null; kill -KILL $pid 2>/dev/null"
+            ).redirectErrorStream(true).start()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun awaitProcess(process: Process?, timeoutMs: Long) {
+        if (process == null) return
+        val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs.coerceAtLeast(0L))
+        while (true) {
+            try {
+                process.exitValue()
+                return
+            } catch (_: IllegalThreadStateException) {
+                if (System.nanoTime() >= deadline) {
+                    try { process.destroy() } catch (_: Exception) { }
+                    return
+                }
+                try {
+                    Thread.sleep(10L)
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    return
+                }
+            } catch (_: Exception) {
+                return
+            }
+        }
+    }
+
+    private fun joinWorker(thread: Thread?, timeoutMs: Long) {
+        if (thread == null || thread === Thread.currentThread()) return
+        try {
+            thread.join(timeoutMs)
+        } catch (_: InterruptedException) {
+            Thread.currentThread().interrupt()
+        }
     }
 
     val isRunning: Boolean

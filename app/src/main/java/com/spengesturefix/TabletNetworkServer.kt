@@ -5,7 +5,6 @@ import java.io.BufferedWriter
 import java.io.OutputStreamWriter
 import java.net.ServerSocket
 import java.net.Socket
-import java.net.SocketTimeoutException
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicReference
 
@@ -14,6 +13,13 @@ object TabletNetworkServer {
     private const val TAG = "TabletNetworkServer"
     const val PORT = 7654
 
+    /** Protocol flags shared with scripts/spen_mouse_emulator.py. */
+    const val FLAG_TOUCH = 1
+    const val FLAG_RIGHT_BUTTON = 2
+    const val FLAG_ERASER = 4
+    const val FLAG_IN_RANGE = 8
+    const val FLAG_MIDDLE_BUTTON = 16
+
     private data class Frame(
         val x: Float,
         val y: Float,
@@ -21,21 +27,43 @@ object TabletNetworkServer {
         val touching: Boolean,
         val button: Boolean,
         val eraser: Boolean,
+        val middleButton: Boolean,
         val inRange: Boolean
+    )
+
+    private data class StreamMetadata(
+        val sourceWidth: Int,
+        val sourceHeight: Int,
+        val sourceRotation: Int,
+        val orientation: String
     )
 
     @Volatile private var running = false
     @Volatile private var serverSocket: ServerSocket? = null
     @Volatile private var client: Socket? = null
     @Volatile private var frameIntervalNanos = 1_000_000_000L / 133L
+    @Volatile private var metadata = StreamMetadata(0, 0, 0, "landscape")
     private val latestFrame = AtomicReference<Frame?>(null)
     private var serverThread: Thread? = null
 
-    fun start(onStatusChange: (connected: Boolean) -> Unit, reportRateHz: Int = 133) {
+    fun start(
+        onStatusChange: (connected: Boolean) -> Unit,
+        reportRateHz: Int = 133,
+        sourceWidth: Int = 0,
+        sourceHeight: Int = 0,
+        sourceRotation: Int = 0,
+        orientation: String = "landscape"
+    ) {
         if (running) return
         running = true
         val safeRate = reportRateHz.coerceIn(30, 200)
         frameIntervalNanos = 1_000_000_000L / safeRate.toLong()
+        metadata = StreamMetadata(
+            sourceWidth.coerceAtLeast(0),
+            sourceHeight.coerceAtLeast(0),
+            sourceRotation.coerceIn(0, 3),
+            orientation.ifBlank { "landscape" }
+        )
         latestFrame.set(null)
         serverThread = Thread({
             try {
@@ -71,22 +99,28 @@ object TabletNetworkServer {
 
     private fun streamClient(socket: Socket, onStatusChange: (connected: Boolean) -> Unit) {
         try {
-            // The app only sends frames. A short read timeout lets us notice a
-            // peer that closed the connection while still bounding this loop.
-            socket.soTimeout = 2
+            // The app only sends frames. A write failure is sufficient to
+            // detect a disconnected peer; polling the input stream every few
+            // milliseconds only burns CPU on older phones.
             val writer = BufferedWriter(
                 OutputStreamWriter(socket.getOutputStream(), Charsets.US_ASCII)
             )
-            val input = socket.getInputStream()
+            writer.write(metadataLine(metadata))
+            writer.flush()
+
             while (running && !socket.isClosed) {
                 val tick = System.nanoTime()
                 latestFrame.getAndSet(null)?.let { frame ->
-                    val flags = (if (frame.touching) 1 else 0) or
-                        (if (frame.button) 2 else 0) or
-                        (if (frame.eraser) 4 else 0) or
-                        (if (frame.inRange) 8 else 0)
+                    var flags = 0
+                    if (frame.touching) flags = flags or FLAG_TOUCH
+                    if (frame.button) flags = flags or FLAG_RIGHT_BUTTON
+                    if (frame.eraser) flags = flags or FLAG_ERASER
+                    if (frame.inRange) flags = flags or FLAG_IN_RANGE
+                    if (frame.middleButton) flags = flags or FLAG_MIDDLE_BUTTON
+
                     // Keep this as an actual line feed: the PC client consumes
-                    // one complete frame per line.
+                    // one complete frame per line. A legacy client ignores the
+                    // preceding metadata line as an invalid frame.
                     writer.write(String.format(
                         Locale.US,
                         "%.5f,%.5f,%.5f,%d\n",
@@ -96,12 +130,6 @@ object TabletNetworkServer {
                         flags
                     ))
                     writer.flush()
-                }
-
-                try {
-                    if (input.read() < 0) break
-                } catch (_: SocketTimeoutException) {
-                    // No inbound protocol is required; this is only a liveness poll.
                 }
 
                 val remaining = frameIntervalNanos - (System.nanoTime() - tick)
@@ -124,6 +152,17 @@ object TabletNetworkServer {
         }
     }
 
+    /** Human-readable, comment-prefixed metadata that old clients can ignore. */
+    fun metadataLine(
+        sourceWidth: Int,
+        sourceHeight: Int,
+        sourceRotation: Int,
+        orientation: String
+    ): String = "#SPEN_TABLET 1 $sourceWidth $sourceHeight $sourceRotation ${orientation.ifBlank { "landscape" }}\n"
+
+    private fun metadataLine(value: StreamMetadata): String =
+        metadataLine(value.sourceWidth, value.sourceHeight, value.sourceRotation, value.orientation)
+
     fun sendFrame(
         x: Float,
         y: Float,
@@ -131,7 +170,8 @@ object TabletNetworkServer {
         touching: Boolean,
         button: Boolean,
         eraser: Boolean,
-        inRange: Boolean
+        inRange: Boolean,
+        middleButton: Boolean = false
     ): Boolean {
         if (!running || client == null) return false
         latestFrame.set(
@@ -142,6 +182,7 @@ object TabletNetworkServer {
                 touching,
                 button,
                 eraser,
+                middleButton,
                 inRange
             )
         )

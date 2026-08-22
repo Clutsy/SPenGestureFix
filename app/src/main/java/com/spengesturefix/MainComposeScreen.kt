@@ -4,6 +4,7 @@ package com.spengesturefix
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
@@ -75,6 +76,27 @@ private val WHEEL_COLOR_PRESETS = listOf(
     Color(0xFF29B6F6), Color(0xFF26C6DA), Color(0xFF66BB6A), Color(0xFF9CCC65),
     Color(0xFFFFEE58), Color(0xFFFFA726), Color(0xFFEF5350), Color(0xFFEC407A),
     Color(0xFFAB47BC), Color(0xFF7E57C2), Color(0xFF8D6E63), Color.White
+)
+
+private val LANGUAGE_CHOICES = listOf(
+    null to R.string.settings_language_system,
+    "en" to R.string.settings_language_en,
+    "it" to R.string.settings_language_it,
+    "es" to R.string.settings_language_es,
+    "fr" to R.string.settings_language_fr,
+    "de" to R.string.settings_language_de,
+    "pt" to R.string.settings_language_pt,
+    "nl" to R.string.settings_language_nl,
+    "pl" to R.string.settings_language_pl,
+    "tr" to R.string.settings_language_tr,
+    "ru" to R.string.settings_language_ru,
+    "uk" to R.string.settings_language_uk,
+    "zh-CN" to R.string.settings_language_zh,
+    "ja" to R.string.settings_language_ja,
+    "ko" to R.string.settings_language_ko,
+    "ar" to R.string.settings_language_ar,
+    "hi" to R.string.settings_language_hi,
+    "id" to R.string.settings_language_in
 )
 
 @Composable
@@ -268,14 +290,27 @@ fun MainComposeScreen(
             }
 
             item(key = "footer", contentType = "footer") {
-                Text(
-                    text = stringResource(R.string.footer_experimental),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                )
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = stringResource(R.string.footer_experimental),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(
+                        onClick = {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/clutsy"))
+                            )
+                        }
+                    ) {
+                        Text(stringResource(R.string.made_by))
+                    }
+                }
             }
         }
     }
@@ -492,31 +527,12 @@ private fun LanguageDialog(
     onDismiss: () -> Unit,
     onSelected: (String?) -> Unit
 ) {
-    val choices = listOf(
-        null to stringResource(R.string.settings_language_system),
-        "en" to stringResource(R.string.settings_language_en),
-        "it" to stringResource(R.string.settings_language_it),
-        "es" to stringResource(R.string.settings_language_es),
-        "fr" to stringResource(R.string.settings_language_fr),
-        "de" to stringResource(R.string.settings_language_de),
-        "pt" to stringResource(R.string.settings_language_pt),
-        "nl" to stringResource(R.string.settings_language_nl),
-        "pl" to stringResource(R.string.settings_language_pl),
-        "tr" to stringResource(R.string.settings_language_tr),
-        "ru" to stringResource(R.string.settings_language_ru),
-        "uk" to stringResource(R.string.settings_language_uk),
-        "zh-CN" to stringResource(R.string.settings_language_zh),
-        "ja" to stringResource(R.string.settings_language_ja),
-        "ko" to stringResource(R.string.settings_language_ko),
-        "ar" to stringResource(R.string.settings_language_ar),
-        "hi" to stringResource(R.string.settings_language_hi),
-        "id" to stringResource(R.string.settings_language_in)
-    )
+    val choices = LANGUAGE_CHOICES
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.settings_language)) },
         text = {
-            // Keep the dialog bounded on the Note 3 while allowing every
+            // Keep the dialog bounded on compact phone displays while allowing every
             // locale to be reached with ordinary touch scrolling.
             LazyColumn(
                 modifier = Modifier.heightIn(min = 56.dp, max = 420.dp),
@@ -525,7 +541,8 @@ private fun LanguageDialog(
                 items(
                     items = choices,
                     key = { (code, _) -> code ?: "system" }
-                ) { (code, label) ->
+                ) { (code, labelRes) ->
+                    val label = stringResource(labelRes)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

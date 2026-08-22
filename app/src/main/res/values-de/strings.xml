@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">Erstellt von clutsy</string>
     <string name="section_status">Status</string>
     <string name="btn_check_root">Root-Berechtigungen prüfen</string>
     <string name="btn_overlay_permission">Overlay-Berechtigung erteilen</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">Notiz gelöscht</string>
     <string name="notes_empty_list">Ihre Notizen erscheinen hier. Erstellen Sie eine über das Rad.</string>
     <string name="section_tablet_mode">Wacom-Tablet-Modus</string>
-    <string name="tablet_mode_subtitle">Nutzen Sie Ihr Note 3 als Wacom-Zeichentablett für den PC</string>
+    <string name="tablet_mode_subtitle">Nutzen Sie Ihr Telefon als Wacom-Zeichentablett für den PC</string>
     <string name="btn_start_tablet">Tablet-Modus starten</string>
     <string name="btn_tablet_settings">Einstellungen</string>
     <string name="footer_experimental">Pen Window und die Erkennung des Herausziehens sind experimentell. Siehe README.</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · Digitizer sec_e-pen</string>
+    <string name="subtitle_device">S Pen-Digitizer · sec_e-pen</string>
     <string name="perm_title">Erforderliche Berechtigungen</string>
     <string name="perm_overlay">Für das S-Pen-Rad und Gesten über anderen Apps ist die Overlay-Berechtigung erforderlich.</string>
     <string name="perm_notification">Für den Hintergrunddienst ist die Benachrichtigungs-Berechtigung erforderlich.</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">Ein Kommandozentrum für Ihren S Pen</string>
     <string name="home_subtitle">Wacom-Eingabe mit geringer Latenz, programmierbare Gesten und ein fokussierter Tablet-Workflow.</string>
     <string name="settings_subtitle">Passen Sie die Erfahrung an, ohne die Eingabepipeline anzufassen.</string>
-    <string name="status_subtitle">Live-Status des Dienstes und des Note-3-Digitizers.</string>
+    <string name="status_subtitle">Live-Status des Dienstes und des Pen-Digitizers.</string>
     <string name="wheel_slots_subtitle">Konfigurieren Sie die sechs radialen Aktionen und die Akzentfarbe des Rads.</string>
     <string name="notes_card_subtitle">Halten Sie Ideen sofort fest und behalten Sie sie offline.</string>
     <string name="status_service_active">Dienst aktiv</string>

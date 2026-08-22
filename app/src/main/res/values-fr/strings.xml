@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">Créé par clutsy</string>
     <string name="section_status">Statut</string>
     <string name="btn_check_root">Vérifier les droits root</string>
     <string name="btn_overlay_permission">Autoriser la superposition</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">Note supprimée</string>
     <string name="notes_empty_list">Vos notes apparaîtront ici. Créez-en une depuis la roue.</string>
     <string name="section_tablet_mode">Mode tablette Wacom</string>
-    <string name="tablet_mode_subtitle">Utilisez votre Note 3 comme tablette graphique Wacom pour PC</string>
+    <string name="tablet_mode_subtitle">Utilisez votre téléphone comme tablette graphique Wacom pour PC</string>
     <string name="btn_start_tablet">Démarrer le mode tablette</string>
     <string name="btn_tablet_settings">Réglages</string>
     <string name="footer_experimental">La fenêtre S Pen et la détection du retrait sont expérimentales. Voir le README.</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · numériseur sec_e-pen</string>
+    <string name="subtitle_device">numériseur S Pen · sec_e-pen</string>
     <string name="perm_title">Autorisations requises</string>
     <string name="perm_overlay">L’autorisation de superposition est requise pour afficher la roue et les gestes au-dessus des autres applications.</string>
     <string name="perm_notification">L’autorisation de notification est requise pour maintenir le service en arrière-plan.</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">Un centre de commande pour votre S Pen</string>
     <string name="home_subtitle">Saisie Wacom à faible latence, gestes programmables et flux de travail tablette dédié.</string>
     <string name="settings_subtitle">Personnalisez l’expérience sans toucher à la chaîne d’entrée.</string>
-    <string name="status_subtitle">Santé en direct du service et du numériseur de la Note 3.</string>
+    <string name="status_subtitle">Santé en direct du service et du numériseur du stylet.</string>
     <string name="wheel_slots_subtitle">Configurez les six actions radiales et la couleur d’accent de la roue.</string>
     <string name="notes_card_subtitle">Capturez vos idées instantanément et gardez-les hors ligne.</string>
     <string name="status_service_active">Service actif</string>

@@ -2,10 +2,15 @@ package com.spengesturefix
 
 import android.content.Context
 import android.content.Intent
+import android.os.SystemClock
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 
-/** Physical S Pen state reported by the Note 3 presence switch. */
+/** Physical S Pen state reported by the presence switch. */
 enum class PenPresenceState {
     UNKNOWN,
     INSERTED,
@@ -43,9 +48,20 @@ object PenRuntimeState {
     }
 }
 
+/** Shared pen activity clock used by both the normal and tablet readers. */
+object PenInputActivity {
+    private val lastInputAt = AtomicLong(0L)
+
+    fun mark() {
+        lastInputAt.set(SystemClock.elapsedRealtime())
+    }
+
+    fun lastInputAt(): Long = lastInputAt.get()
+}
+
 /**
  * Process-local mode coordinator. Tablet Mode owns the Wacom stream and must
- * be invisible to the normal side-button/air-command behavior.
+ * be invisible to the normal side-button/Air Command behavior.
  */
 object TabletModeState {
     @Volatile
@@ -54,20 +70,52 @@ object TabletModeState {
 
     private val activeOwners = AtomicInteger(0)
     private val listeners = CopyOnWriteArrayList<(Boolean) -> Unit>()
+    private val normalInputRelease = AtomicReference<CountDownLatch?>(null)
+    private val normalInputOwner = AtomicBoolean(false)
 
     fun enter() {
-        if (activeOwners.incrementAndGet() == 1) update(true)
+        if (activeOwners.incrementAndGet() == 1) {
+            normalInputRelease.set(CountDownLatch(1))
+            update(true)
+        }
     }
 
     fun exit() {
         val owners = activeOwners.updateAndGet { (it - 1).coerceAtLeast(0) }
-        if (owners == 0) update(false)
+        if (owners == 0) {
+            normalInputRelease.set(null)
+            update(false)
+        }
     }
 
     /** Explicit setter retained for tests and callers that own the full mode lifecycle. */
     fun setActive(active: Boolean) {
         activeOwners.set(if (active) 1 else 0)
+        if (active) normalInputRelease.set(CountDownLatch(1))
+        else normalInputRelease.set(null)
         update(active)
+    }
+
+    /** Called by the service when it owns the normal reader lifecycle. */
+    fun setNormalInputOwner(owned: Boolean) {
+        normalInputOwner.set(owned)
+        if (!owned) normalInputRelease.get()?.countDown()
+    }
+
+    /** Called by the service after its normal digitizer reader has stopped. */
+    fun markNormalInputReleased() {
+        normalInputRelease.get()?.countDown()
+    }
+
+    /**
+     * Tablet capture is started from a worker thread. Waiting here prevents a
+     * second getevent process from opening the shared Wacom node during handoff.
+     */
+    fun awaitNormalInputReleased(timeoutMs: Long): Boolean {
+        if (!normalInputOwner.get()) return true
+        return normalInputRelease.get()
+            ?.await(timeoutMs.coerceAtLeast(0L), java.util.concurrent.TimeUnit.MILLISECONDS)
+            ?: true
     }
 
     fun addListener(listener: (Boolean) -> Unit): () -> Unit {

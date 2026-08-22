@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">Criado por clutsy</string>
     <string name="section_status">Status</string>
     <string name="btn_check_root">Verificar permissões de root</string>
     <string name="btn_overlay_permission">Conceder permissão de sobreposição</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">Nota excluída</string>
     <string name="notes_empty_list">Suas notas aparecerão aqui. Crie uma pela roda.</string>
     <string name="section_tablet_mode">Modo tablet Wacom</string>
-    <string name="tablet_mode_subtitle">Use seu Note 3 como tablet gráfico Wacom para PC</string>
+    <string name="tablet_mode_subtitle">Use seu telefone como tablet gráfico Wacom para PC</string>
     <string name="btn_start_tablet">Iniciar modo tablet</string>
     <string name="btn_tablet_settings">Configurações</string>
     <string name="footer_experimental">Pen Window e detecção de remoção da caneta são experimentais. Consulte o README.</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · digitalizador sec_e-pen</string>
+    <string name="subtitle_device">digitalizador S Pen · sec_e-pen</string>
     <string name="perm_title">Permissões necessárias</string>
     <string name="perm_overlay">A permissão de sobreposição é necessária para mostrar a roda e os gestos sobre outros apps.</string>
     <string name="perm_notification">A permissão de notificação é necessária para manter o serviço em segundo plano.</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">Um centro de comando para sua S Pen</string>
     <string name="home_subtitle">Entrada Wacom de baixa latência, gestos programáveis e um fluxo de tablet focado.</string>
     <string name="settings_subtitle">Personalize a experiência sem tocar na pipeline de entrada.</string>
-    <string name="status_subtitle">Saúde em tempo real do serviço e do digitalizador do Note 3.</string>
+    <string name="status_subtitle">Saúde em tempo real do serviço e do digitalizador da caneta.</string>
     <string name="wheel_slots_subtitle">Configure as seis ações radiais e a cor de destaque da roda.</string>
     <string name="notes_card_subtitle">Capture ideias instantaneamente e mantenha-as offline.</string>
     <string name="status_service_active">Serviço ativo</string>

@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
 import sys
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import spen_mouse_emulator as emulator_module  # noqa: E402
 from spen_mouse_emulator import (  # noqa: E402
+    ASCII_LOGO,
     AdbPenEmulator,
     AxisRange,
     DeviceCapabilities,
     PenState,
     find_epen_device,
+    map_frame_orientation,
     orient_normalized,
     parse_capabilities,
     parse_display_rotation,
     parse_event_line,
+    parse_tablet_metadata,
     parse_value,
     parse_wm_size,
+    resolve_auto_rotation,
 )
 
 
@@ -39,6 +46,14 @@ class FakeBackend:
 
 
 class EmulatorTests(unittest.TestCase):
+    def test_startup_logo_is_ascii_and_printable(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            emulator_module.print_ascii_logo()
+        self.assertEqual(output.getvalue().rstrip("\n"), ASCII_LOGO)
+        self.assertIn("S", ASCII_LOGO)
+        self.assertTrue(all(ord(character) < 128 for character in ASCII_LOGO))
+
     def test_parse_event_path_with_colon(self):
         self.assertEqual(
             parse_event_line("/dev/input/event3: EV_ABS ABS_X 00001000"),
@@ -62,7 +77,29 @@ class EmulatorTests(unittest.TestCase):
         output = "Override size: 720x1280" + chr(10) + "Physical size: 1080x1920"
         self.assertEqual(parse_wm_size(output), (1920, 1080))
         self.assertEqual(parse_wm_size("Physical size: 2560x1440"), (2560, 1440))
+        self.assertEqual(parse_wm_size("size: 1600x900"), (1600, 900))
         self.assertIsNone(parse_wm_size("Physical density: 480"))
+
+    def test_parses_tablet_metadata_and_legacy_lines(self):
+        metadata = parse_tablet_metadata("#SPEN_TABLET 1 1920 1080 1 landscape")
+        self.assertEqual(metadata["source_width"], 1920)
+        self.assertEqual(metadata["source_rotation"], 1)
+        self.assertIsNone(parse_tablet_metadata("0.1,0.2,0.3,1"))
+
+    def test_resolves_auto_rotation_for_natural_portrait_panel(self):
+        self.assertEqual(resolve_auto_rotation((1920, 1080), 0), 1)
+        self.assertEqual(resolve_auto_rotation((1920, 1080), 3), 3)
+        self.assertEqual(resolve_auto_rotation(None, None), 0)
+
+    def test_maps_tcp_frame_to_monitor_orientation_once(self):
+        self.assertEqual(
+            map_frame_orientation(0.25, 0.75, "landscape", 1080, 1920),
+            (0.25, 0.25),
+        )
+        self.assertEqual(
+            map_frame_orientation(0.25, 0.75, "portrait", 1920, 1080),
+            (0.75, 0.75),
+        )
 
     def test_parses_display_rotation(self):
         self.assertEqual(
@@ -110,6 +147,26 @@ class EmulatorTests(unittest.TestCase):
         self.assertEqual(backend.pressed, [0, 1])
         emulator.release_buttons()
         self.assertEqual(backend.released, [0, 1])
+
+    def test_tcp_flags_keep_middle_button_separate(self):
+        backend = FakeBackend()
+        from spen_mouse_emulator import TcpPenEmulator
+        emulator = TcpPenEmulator("127.0.0.1", 7654, backend, 1000, 500)
+        emulator.handle_frame("0.5,0.5,0.5,16")
+        self.assertEqual(backend.pressed, [2])
+        emulator.handle_frame("0.5,0.5,0.5,0")
+        self.assertEqual(backend.released, [2])
+
+    def test_tcp_eraser_does_not_release_right_button_while_pressed(self):
+        backend = FakeBackend()
+        from spen_mouse_emulator import TcpPenEmulator
+        emulator = TcpPenEmulator("127.0.0.1", 7654, backend, 1000, 500)
+        emulator.handle_frame("0.5,0.5,0.5,4")
+        emulator.handle_frame("0.5,0.5,0.5,6")
+        emulator.handle_frame("0.5,0.5,0.5,2")
+        emulator.handle_frame("0.5,0.5,0.5,0")
+        self.assertEqual(backend.pressed, [1])
+        self.assertEqual(backend.released, [1])
 
     def test_absolute_mapping_rotates_landscape_axes(self):
         backend = FakeBackend()

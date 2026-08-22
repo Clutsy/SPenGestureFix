@@ -20,11 +20,11 @@ import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Foreground service for the rooted Note 3 Wacom digitizer.
+ * Foreground service for a rooted Wacom digitizer.
  *
- * The sec_e-pen reader and the w1 presence reader are independent processes.
- * Presence changes update state/UI only; they never stop or gate the digitizer
- * stream. This prevents an insertion event from killing the input pipeline.
+ * Presence and digitizer readers are independent. Tablet Mode temporarily owns
+ * the digitizer device exclusively, preventing two getevent readers from
+ * splitting the same input stream. The presence switch continues separately.
  */
 class SPenGestureService : Service() {
     companion object {
@@ -52,23 +52,23 @@ class SPenGestureService : Service() {
     @Volatile private var presenceReader: EPenInputReader? = null
     @Volatile private var lastPresence = PenPresenceState.UNKNOWN
     private val presenceState = AtomicReference(PenPresenceState.UNKNOWN)
-    private val lastPenInputAt = AtomicLong(0L)
+    private val digitizerLock = Any()
+    @Volatile private var serviceRunning = false
     private lateinit var gestureAnalyzer: PenGestureAnalyzer
     private lateinit var wheelOverlay: WheelOverlay
     private var wakeLock: PowerManager.WakeLock? = null
     private var removeTabletModeListener: (() -> Unit)? = null
 
     /**
-     * Presence fallback: the Note 3 w1 switch does not always fire live, so a
-     * pen is treated as extracted while input events keep arriving and as
-     * inserted after PEN_IDLE_INSERTED_MS without any pen input. This never
-     * touches the digitizer pipeline; it only updates state/UI.
+     * Presence fallback: a pen is treated as extracted while input events keep
+     * arriving and as inserted after five seconds without pen input. This only
+     * updates state; it never blocks or gates the active reader.
      */
     private val presenceWatchdog = object : Runnable {
         override fun run() {
             val now = SystemClock.elapsedRealtime()
             if (presenceState.get() != PenPresenceState.INSERTED &&
-                isPenIdle(now, lastPenInputAt.get())
+                isPenIdle(now, PenInputActivity.lastInputAt())
             ) {
                 handlePresenceChanged(PenPresenceState.INSERTED)
             }
@@ -85,14 +85,19 @@ class SPenGestureService : Service() {
         removeTabletModeListener = TabletModeState.addListener { active ->
             if (active) {
                 wheelOverlay.dismiss()
-                if (::gestureAnalyzer.isInitialized) {
-                    gestureAnalyzer.cancelPendingGesture()
-                }
+                if (::gestureAnalyzer.isInitialized) gestureAnalyzer.cancelPendingGesture()
+                // The reader owns a root process and may need a short wait
+                // during shutdown. Keep that handoff off the main/UI looper;
+                // Tablet Mode waits for the release latch before opening the
+                // same kernel device.
+                setupExecutor.execute { stopNormalDigitizerReader() }
+            } else {
+                // Tablet capture has released the shared input device. Restore
+                // normal gesture handling after any queued stop has completed.
+                if (serviceRunning) setupExecutor.execute { startDigitizerReader() }
             }
         }
-        // Start the inactivity window at service startup. Using zero here would
-        // make elapsedRealtime() look older than five seconds immediately.
-        lastPenInputAt.set(SystemClock.elapsedRealtime())
+        PenInputActivity.mark()
 
         gestureAnalyzer = PenGestureAnalyzer(
             onSingleClick = { runBinding(GestureKind.CLICK) },
@@ -105,6 +110,8 @@ class SPenGestureService : Service() {
             }
         )
 
+        serviceRunning = true
+        TabletModeState.setNormalInputOwner(true)
         PenRuntimeState.publish(this, serviceActive = true, digitizerActive = false)
         mainHandler.post(presenceWatchdog)
         setupExecutor.execute { startReaders() }
@@ -115,55 +122,75 @@ class SPenGestureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun startReaders() {
+        startDigitizerReader()
+        startPresenceReader()
+    }
+
+    private fun startDigitizerReader() {
+        if (TabletModeState.isActive || digitizerReader?.isRunning == true) return
         val digitizerPath = EventDeviceFinder.findDevicePath(DIGITIZER_DEVICE_NAME)
         if (digitizerPath == null) {
             updateNotification(getString(R.string.notif_not_found, DIGITIZER_DEVICE_NAME))
-        } else {
-            Log.i(TAG, "Starting digitizer reader on $digitizerPath")
-            digitizerReader = EPenInputReader(digitizerPath) { type, code, value ->
-                // This callback stays on the reader thread. The analyzer only
-                // posts low-frequency gesture results to the main looper.
-                if (!TabletModeState.isActive) {
-                    gestureAnalyzer.onEvent(type, code, value)
-                }
-                // Physical pen activity means the pen is out of the slot and
-                // in use: drive the presence state from real input.
-                lastPenInputAt.set(SystemClock.elapsedRealtime())
-                if (presenceState.get() != PenPresenceState.REMOVED) {
-                    handlePresenceChanged(PenPresenceState.REMOVED)
-                }
-            }.also { it.start() }
-            PenRuntimeState.publish(this, digitizerActive = true)
-            updateNotification(getString(R.string.notif_active, digitizerPath))
+            PenRuntimeState.publish(this, digitizerActive = false)
+            return
         }
 
+        Log.i(TAG, "Starting digitizer reader on $digitizerPath")
+        val reader = EPenInputReader(digitizerPath) { type, code, value ->
+            // This callback stays on the reader thread. The analyzer posts only
+            // low-frequency gesture results to the main looper.
+            if (!TabletModeState.isActive) gestureAnalyzer.onEvent(type, code, value)
+
+            PenInputActivity.mark()
+            if (presenceState.get() != PenPresenceState.REMOVED) {
+                handlePresenceChanged(PenPresenceState.REMOVED)
+            }
+        }
+        synchronized(digitizerLock) {
+            if (TabletModeState.isActive || digitizerReader?.isRunning == true) return
+            digitizerReader = reader
+            reader.start()
+        }
+        PenRuntimeState.publish(this, digitizerActive = true)
+        updateNotification(getString(R.string.notif_active, digitizerPath))
+    }
+
+    private fun startPresenceReader() {
+        if (presenceReader?.isRunning == true) return
         val presencePath = EventDeviceFinder.findDevicePath(PRESENCE_DEVICE_NAME)
         if (presencePath == null) {
             Log.w(TAG, "Presence switch $PRESENCE_DEVICE_NAME not found; continuing digitizer-only")
-            if (digitizerPath == null) {
-                updateNotification(getString(R.string.notif_not_found, DIGITIZER_DEVICE_NAME))
-            }
             return
         }
 
         EventDeviceFinder.readSwitchState(PRESENCE_DEVICE_NAME)?.let { rawState ->
             Log.i(TAG, "Initial presence raw state: $rawState")
-            PenPresenceDecoder.decode("EV_SW", PRESENCE_SWITCH_CODE, rawState)?.let(::handlePresenceChanged)
+            PenPresenceDecoder.decode("EV_SW", PRESENCE_SWITCH_CODE, rawState)
+                ?.let(::handlePresenceChanged)
         }
         Log.i(TAG, "Starting presence reader on $presencePath")
         presenceReader = EPenInputReader(presencePath) { type, code, value ->
-            val state = PenPresenceDecoder.decode(type, code, value)
-            if (state != null) handlePresenceChanged(state)
+            PenPresenceDecoder.decode(type, code, value)?.let(::handlePresenceChanged)
         }.also { it.start() }
     }
 
+    private fun stopNormalDigitizerReader(waitForTermination: Boolean = true) {
+        val reader = synchronized(digitizerLock) {
+            val current = digitizerReader
+            digitizerReader = null
+            current
+        }
+        if (reader != null) {
+            if (waitForTermination) reader.stopAndWait(750L) else reader.stop()
+        }
+        PenRuntimeState.publish(this, digitizerActive = false)
+        TabletModeState.markNormalInputReleased()
+    }
+
     private fun handlePresenceChanged(state: PenPresenceState) {
-        // Presence callbacks come from the root reader threads. Deduplicate
-        // before posting: a pen movement can generate hundreds of events and
-        // must never flood the main queue with identical state updates.
+        // Presence callbacks come from root reader threads. Deduplicate before
+        // posting so a switch event cannot flood the main queue.
         if (presenceState.getAndSet(state) == state) return
-        // Keep publication, broadcasts, and overlay work on the main looper so
-        // a switch event can never delay or consume the digitizer stream.
         mainHandler.post { applyPresenceChanged(state) }
     }
 
@@ -171,14 +198,16 @@ class SPenGestureService : Service() {
         if (state == lastPresence) return
         lastPresence = state
         Log.i(TAG, "Presence changed: $state")
-        PenRuntimeState.publish(this, presence = state, digitizerActive = digitizerReader?.isRunning == true)
+        PenRuntimeState.publish(
+            this,
+            presence = state,
+            digitizerActive = digitizerReader?.isRunning == true
+        )
         sendGestureBroadcast(if (state == PenPresenceState.REMOVED) "PEN_REMOVED" else "PEN_INSERTED")
 
         when (state) {
             PenPresenceState.REMOVED -> {
-                if (!TabletModeState.isActive &&
-                    AppSettings.isAutoStartOnPen(applicationContext)
-                ) {
+                if (!TabletModeState.isActive && AppSettings.isAutoStartOnPen(applicationContext)) {
                     wheelOverlay.show()
                 }
                 updateNotification(getString(R.string.notif_pen_extracted))
@@ -192,14 +221,10 @@ class SPenGestureService : Service() {
     }
 
     private fun runBinding(gesture: GestureKind) {
-        // A gesture can already be queued on the main handler when Tablet Mode
-        // starts. Check again here so it can never execute in tablet mode.
         if (TabletModeState.isActive) return
         val action = GestureBindings.load(applicationContext, gesture)
         Log.i(TAG, "Gesture recognized: ${gesture.name} -> ${action.type}")
         sendGestureBroadcast(gesture.name)
-        // Called on the main handler by PenGestureAnalyzer; expensive branches
-        // in ActionExecutor already move shell/screenshot work to a worker.
         ActionExecutor.execute(applicationContext, action, wheelOverlay)
     }
 
@@ -232,11 +257,11 @@ class SPenGestureService : Service() {
     }
 
     override fun onDestroy() {
+        serviceRunning = false
+        TabletModeState.setNormalInputOwner(false)
         mainHandler.removeCallbacks(presenceWatchdog)
-        // Stop only owned processes. No global process killing is allowed.
-        digitizerReader?.stop()
+        stopNormalDigitizerReader(waitForTermination = false)
         presenceReader?.stop()
-        digitizerReader = null
         presenceReader = null
         gestureAnalyzer.close()
         setupExecutor.shutdownNow()

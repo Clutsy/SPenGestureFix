@@ -29,7 +29,7 @@ class InputPipelineTest {
     }
 
     @Test
-    fun findsNote3DevicesFromProcInputFormat() {
+    fun findsDigitizerDevicesFromProcInputFormat() {
         val proc = """
             I: Bus=0018 Vendor=0000 Product=0000 Version=0000
             N: Name="sec_e-pen"
@@ -43,7 +43,7 @@ class InputPipelineTest {
     }
 
     @Test
-    fun findsNote3DevicesFromGeteventCapabilitiesFormat() {
+    fun findsDigitizerDevicesFromGeteventCapabilitiesFormat() {
         val getevent = """
             add device 1: /dev/input/event16
               name:     "w1"
@@ -92,6 +92,30 @@ class InputPipelineTest {
         assertEquals(.75f, TabletConfig.mapCoordinates(.25f, .75f, Surface.ROTATION_90).second, .0001f)
         assertEquals(.25f, TabletConfig.mapCoordinates(.25f, .75f, Surface.ROTATION_270).first, .0001f)
         assertEquals(.25f, TabletConfig.mapCoordinates(.25f, .75f, Surface.ROTATION_270).second, .0001f)
+    }
+
+    @Test
+    fun tabletButtonActionIsIndependentFromNormalGestureBindings() {
+        assertEquals(TabletButtonFlags(true, false, false), mapPenButtonAction(PenButtonAction.RIGHT_CLICK, true))
+        assertEquals(TabletButtonFlags(false, true, false), mapPenButtonAction(PenButtonAction.MIDDLE_CLICK, true))
+        assertEquals(TabletButtonFlags(false, false, true), mapPenButtonAction(PenButtonAction.ERASER, true))
+        assertEquals(TabletButtonFlags(false, false, false), mapPenButtonAction(PenButtonAction.DISABLED, true))
+        assertEquals(TabletButtonFlags(false, false, false), mapPenButtonAction(PenButtonAction.RIGHT_CLICK, false))
+    }
+
+    @Test
+    fun landscapeRotationUsesDisplayBoundsWhenRotationIsZero() {
+        assertEquals(Surface.ROTATION_90, TabletConfig.landscapeRotation(Surface.ROTATION_0, 1080, 1920))
+        assertEquals(Surface.ROTATION_0, TabletConfig.landscapeRotation(Surface.ROTATION_0, 1920, 1080))
+        assertEquals(Surface.ROTATION_270, TabletConfig.landscapeRotation(Surface.ROTATION_270, 1080, 1920))
+    }
+
+    @Test
+    fun tabletMetadataIsLineDelimitedAndExplicit() {
+        assertEquals(
+            "#SPEN_TABLET 1 1920 1080 1 landscape\n",
+            TabletNetworkServer.metadataLine(1920, 1080, Surface.ROTATION_90, "landscape")
+        )
     }
 
     @Test

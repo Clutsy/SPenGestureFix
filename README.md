@@ -1,38 +1,39 @@
 # S Pen Gesture Fix
 
-A focused, local-first Android utility for the Samsung Galaxy Note 3 (SM-N9005). It restores programmable S Pen gestures and exposes the Note 3 Wacom digitizer as a low-latency tablet input source on rooted AOSP/LineageOS ROMs.
+A focused, local-first Android utility for rooted phones with a compatible S Pen/Wacom input stack. It restores programmable S Pen gestures and exposes the device digitizer as a low-latency tablet input source on rooted AOSP/LineageOS ROMs.
 
-> **Target platform:** rooted Galaxy Note 3 / Android ROMs that expose `sec_e-pen` and the `w1` presence switch through `/dev/input`. The official Samsung S Pen framework is not assumed to be present.
+> **Target platform:** rooted Android devices that expose a compatible pen input node and presence switch through `/dev/input` or sysfs. The official Samsung S Pen framework is not assumed to be present.
 
 ## Product capabilities
 
 - **Programmable side button:** single click, double click, and long press can run independent actions.
-- **Air Command wheel:** six configurable radial actions, a user-selectable accent color, and a polished lightweight single-window overlay anchored in the lower-right corner like classic Note Air Command. It uses touch isolation without a full-screen backdrop or blur.
+- **Air Command wheel:** six configurable radial actions, a user-selectable accent color, and a lightweight single-window fan anchored in the lower-right corner like classic Note Air Command. The six targets are deliberately spaced; tapping an action runs it, tapping the center closes the wheel, and tapping outside the compact window closes it without a full-screen touch blocker.
 - **Quick Notes:** offline notes with editing, search, copy, sharing, character counting, phone-number dialing, and Maps lookup.
 - **Screen tools:** annotate a screenshot or crop a rectangular region with coordinate-correct bitmap mapping.
-- **Wacom Tablet Mode:** pressure curves, orientation and aspect-ratio controls, physical display resolution detection with a landscape-first default, a manual monitor override, haptics, smoothing, and a normalized TCP stream for a PC client.
+- **Wacom Tablet Mode:** pressure curves, monitor-matched orientation, physical display resolution detection with a landscape-first default, a manual monitor override, haptics, smoothing, configurable right/middle/eraser/disabled pen-button behavior, and a normalized TCP stream for a PC client.
 - **Modern UI:** Jetpack Compose and Material 3, localized in 17 languages: English, Italian, Spanish, French, German, Portuguese, Dutch, Polish, Turkish, Russian, Ukrainian, Simplified Chinese, Japanese, Korean, Arabic, Hindi, and Indonesian.
 - **Root actions:** optional screenshot, flashlight, system toggles, lock screen, freeform window, and custom root command actions.
 
 ## Hardware architecture
 
-The Note 3 Wacom driver is exposed as Linux input devices rather than as a reliable USB HID pen gadget. The Android service therefore reads `getevent -l` through a root shell:
+Many phone Wacom drivers are exposed as Linux input devices rather than as reliable USB HID pen gadgets. The Android service therefore reads `getevent -l` through a root shell:
 
 - `sec_e-pen` carries absolute X/Y, pressure, hover, tip, and side-button events.
 - `w1` reports physical S Pen insertion/removal through a device-specific switch code.
 - Each device has its own `EPenInputReader` process. Stopping one reader never kills another process.
-- Device discovery uses `/proc/bus/input/devices` when available and falls back to `getevent -lp`; some Note 3 ROMs deny the proc file even to root.
-- Presence state is asynchronous and orthogonal to the digitizer stream. Inserting the pen updates state and the UI; it does not stop or gate Wacom input.
-- Because some Note 3 ROMs never report the `w1` switch live, presence also follows real pen activity: the first input event marks the pen as extracted, and 5 seconds without any pen input mark it as inserted again. This state machine is driven by real events and never blocks the digitizer pipeline.
-- On the Note 3, the initial slot state is also read from `sec_epen/epen_connection` (`OK`/`NG`) because `w1` does not expose a normal switch sysfs node.
+- Tablet Mode owns `sec_e-pen` exclusively. The normal gesture reader is stopped before tablet capture starts and restarted after the Activity exits, so two readers never compete for the same kernel stream.
+- Device discovery uses `/proc/bus/input/devices` when available and falls back to `getevent -lp`; some ROMs deny the proc file even to root.
+- Presence state is asynchronous and orthogonal to the normal digitizer stream. Inserting the pen updates state and the UI; outside Tablet Mode it never stops or gates Wacom input.
+- Because some ROMs never report the presence switch live, presence also follows real pen activity: the first input event marks the pen as extracted, and 5 seconds without any pen input mark it as inserted again. This state machine is driven by real events and never blocks the digitizer pipeline.
+- If the presence switch has no normal sysfs node, the initial slot state can also be read from a driver-specific connection node such as `epen_connection` (`OK`/`NG`).
 - Compose pointer input is local to a screen or to the compact wheel window. The service never intercepts Android `MotionEvent` dispatch.
-- Tablet Mode has an explicit process-local ownership state: the normal side-button analyzer, hover broadcasts, wheel, and shortcut actions are suspended until Tablet Mode exits.
+- Tablet Mode has an explicit process-local ownership state: the normal side-button analyzer, hover broadcasts, wheel, and shortcut actions are suspended until Tablet Mode exits. A back event cannot leave Tablet Mode; use its explicit Exit control.
 
 ### Why the digitizer stopped responding
 
 The previous implementation used `pkill -f 'getevent -l'` when the pen was inserted. That command was global: it could terminate the `w1` reader while it was processing the insertion event, and it could also terminate the `sec_e-pen` reader or a second diagnostic process. The service then lost both presence notifications and Wacom events. UI overlay operations were also started from a reader thread instead of the main looper.
 
-The current architecture uses `exec getevent` per reader, idempotent process ownership, background parsing, main-thread-only overlay operations, and a continuously available digitizer reader.
+The current architecture uses `exec getevent` per reader, idempotent process ownership, background parsing, main-thread-only overlay operations, and a continuously available normal digitizer reader. Tablet Mode explicitly pauses that reader before taking ownership of the device.
 
 ## Release notes
 
@@ -41,20 +42,28 @@ The current architecture uses `exec getevent` per reader, idempotent process own
 - Replaced the rough centered wheel with a compact lower-right radial fan that is easier to reach and much lighter on the GPU.
 - Removed the meaningless wheel background image and replaced it with a configurable accent palette.
 - Fixed adaptive launcher icons using an opaque artwork layer; the artwork is now visible on Android 8+ launchers instead of rendering as a black square.
-- Added physical display metrics detection, a one-tap resolution reset, and a forced landscape default for Tablet Mode.
+- Added physical display metrics detection, a one-tap resolution reset, monitor-aware orientation selection, and a forced landscape default for the normal horizontal-monitor workflow.
 - Added note search, copy-to-clipboard, stable timestamp-based editing/deletion, and a 4,000-character guard.
 - Kept presence inference independent from digitizer input: a pen with no input for strictly more than five seconds is considered inserted.
 - Added automated checks for all 17 resource locales and the Android locale configuration.
 
+## Hardware compatibility
+
+The only hardware tested end to end is the Samsung Galaxy Note 3 SM-N9005 on the connected rooted ROM used by this repository. Compatibility with another device is not implied by the presence of an S Pen alone.
+
+Potential, unverified targets include Galaxy Note 4/5 devices, Galaxy Note 8/9/10 devices, Galaxy Tab models with a Wacom digitizer, and other rooted Android hardware that exposes a compatible Linux input node with `ABS_X`, `ABS_Y`, pressure, `BTN_TOUCH`, and `BTN_STYLUS`. Each target needs its own device-name, axis-range, switch-polarity, kernel-permission, and orientation validation.
+
 ## Requirements
 
-- Samsung Galaxy Note 3 SM-N9005 or a compatible Wacom kernel device.
+- Samsung Galaxy Note 3 SM-N9005 for the tested configuration, or a compatible Wacom kernel device for experimental use.
 - Root access through Magisk, SuperSU, or an equivalent `su` implementation.
 - AOSP/LineageOS or another ROM exposing the input devices.
 - Android SDK with the project compile SDK installed.
 - Python 3.9+ on the PC for the optional emulator.
 
 The application needs overlay permission for Air Command and notification permission on Android 13+ for the foreground service. Root is required for the kernel input stream and root actions.
+
+The in-app footer links to the project author at `https://github.com/clutsy`.
 
 ## Build and install
 
@@ -99,7 +108,7 @@ python scripts\spen_mouse_emulator.py --serial R58MXXXX --device /dev/input/even
 python scripts\spen_mouse_emulator.py --debug
 ```
 
-The script automatically discovers the device named `sec_e-pen`, reads the phone’s physical display resolution with `adb shell wm size`, reads the active display rotation, reads the real `ABS_X`, `ABS_Y`, and `ABS_PRESSURE` limits from `getevent -lp`, reconnects with bounded backoff, and releases held buttons on disconnect or Ctrl-C. The phone resolution is the default target; use `--screen-w/--screen-h` when the Windows desktop has a different size.
+The script automatically discovers the device named `sec_e-pen`, reads the phone’s physical display resolution with `adb shell wm size`, reads the active display rotation, reads the real `ABS_X`, `ABS_Y`, and `ABS_PRESSURE` limits from `getevent -lp`, reconnects with bounded backoff, and releases held buttons on disconnect or Ctrl-C. The phone resolution is reported as the input source; mouse coordinates target the actual Windows desktop by default. Use `--screen-w/--screen-h` to override the desktop target explicitly.
 
 On Windows it uses `ctypes` and `SendInput`; `pynput` and `pyautogui` are not required. DPI awareness and the virtual desktop are handled by the backend. The `tools/spen_mouse_emulation.py` path remains as a compatibility wrapper.
 
@@ -111,7 +120,7 @@ Tablet Mode can stream normalized frames over port `7654`:
 python scripts\spen_mouse_emulator.py --tcp --host 192.168.1.42 --port 7654
 ```
 
-The TCP frame format is one newline-terminated `X,Y,P,FLAGS` record where flags are tip `1`, barrel button `2`, eraser `4`, and in-range `8`. Tablet Mode applies the same display-aware portrait-to-landscape mapping before sending it.
+The TCP stream starts with an optional newline-terminated metadata record, for example `#SPEN_TABLET 1 1920 1080 1 landscape`, followed by `X,Y,P,FLAGS` records. Legacy clients can ignore the comment line. Flags are tip `1`, right/barrel button `2`, eraser `4`, in-range `8`, and middle button `16`. Tablet Mode maps the source axes once; the Windows client only rotates again when its monitor aspect orientation differs from the source metadata.
 
 ## Diagnostics
 
@@ -122,7 +131,7 @@ adb shell su -c "getevent -lp"
 adb logcat -s SPenGestureService EPenInputReader SPenDebug
 ```
 
-The expected digitizer capabilities include `BTN_TOUCH`, `BTN_STYLUS`, and `BTN_DIGI`. The Note 3 presence switch is ROM-specific; the service accepts `001a`, `SW_001A`, and common pen-switch aliases. On the stock Note 3 driver, `epen_connection=NG` means extracted and `OK` means inserted. A different kernel may report the inverse polarity, in which case the diagnostic decoder should be adjusted. If the switch never fires, presence falls back to input activity: 5 seconds without pen input counts as inserted, and the next input event counts as extracted.
+The expected digitizer capabilities include `BTN_TOUCH`, `BTN_STYLUS`, and `BTN_DIGI`. Presence switch codes and polarity are ROM-specific; the service accepts `001a`, `SW_001A`, and common pen-switch aliases. If the switch never fires, presence falls back to input activity: 5 seconds without pen input counts as inserted, and the next input event counts as extracted.
 
 ## Actions
 
@@ -149,7 +158,7 @@ Custom root commands are intentionally powerful. Only assign commands you unders
 - `EPenInputReader.kt`: isolated root input reader and event parser.
 - `EventDeviceFinder.kt`: stable device discovery and capability limits.
 - `PenGestureAnalyzer.kt`: non-blocking button and hover state machine.
-- `WheelOverlay.kt`: lower-right, single-window Canvas Air Command overlay with short transitions and a configurable accent color.
+- `WheelOverlay.kt`: lower-right, single-window Canvas Air Command overlay with short transitions, spaced hit targets, outside-tap dismissal, and a configurable accent color.
 - `MainComposeScreen.kt`, `ComposeNotesEditors.kt`, `ComposeTabletUi.kt`: Material 3 screens.
 - `TabletInputCapture.kt`: capability-aware normalized frames.
 - `TabletNetworkServer.kt`: latest-frame TCP transport.
@@ -175,7 +184,7 @@ A connected phone is recommended for final acceptance testing because the exact 
 - Pen Window and root toggles depend on the ROM and are not available on every build.
 - Android overlay policy and the device kernel can limit touch passthrough or background execution.
 - The wheel is intentionally a compact lower-right overlay without a blurred backdrop: Android does not allow a generic overlay to capture and blur another application’s private pixels, and keeping the window small prevents it from blocking unrelated touches.
-- Tablet Mode defaults to landscape and maps the digitizer’s natural portrait axes to the active display rotation. If a particular ROM mounts the panel in reverse, choose Landscape (inverted) or use `--orientation landscape-inverted` in the Windows emulator.
+- Tablet Mode follows the configured monitor aspect orientation and defaults to landscape for a horizontal monitor. The app sends source orientation metadata so the Windows client can avoid a second accidental axis swap. If a particular ROM mounts the panel in reverse, choose Landscape (inverted) or use `--orientation landscape-inverted` in the Windows emulator.
 
 ## Documentation and contributions
 

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">作者：clutsy</string>
     <string name="section_status">状态</string>
     <string name="btn_check_root">检查root权限</string>
     <string name="btn_overlay_permission">授予悬浮窗权限</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">笔记已删除</string>
     <string name="notes_empty_list">您的笔记将显示在这里。可通过圆环创建。</string>
     <string name="section_tablet_mode">Wacom平板模式</string>
-    <string name="tablet_mode_subtitle">将您的Note 3用作PC的Wacom绘图板</string>
+    <string name="tablet_mode_subtitle">将您的手机用作PC的Wacom绘图板</string>
     <string name="btn_start_tablet">启动平板模式</string>
     <string name="btn_tablet_settings">设置</string>
     <string name="footer_experimental">Pen Window和拔出检测为实验性功能。参见README。</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · 数字化仪 sec_e-pen</string>
+    <string name="subtitle_device">S Pen数字化仪 · sec_e-pen</string>
     <string name="perm_title">所需权限</string>
     <string name="perm_overlay">需要悬浮窗权限才能在其它应用上方显示S Pen圆环和手势。</string>
     <string name="perm_notification">需要通知权限才能在后台运行服务。</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">您的S Pen指挥中心</string>
     <string name="home_subtitle">低延迟Wacom输入、可编程手势和专注的平板工作流。</string>
     <string name="settings_subtitle">无需触及输入管线即可个性化体验。</string>
-    <string name="status_subtitle">服务和Note 3数字化仪的实时状态。</string>
+    <string name="status_subtitle">服务和笔数字化仪的实时状态。</string>
     <string name="wheel_slots_subtitle">配置六个径向操作和圆环强调色。</string>
     <string name="notes_card_subtitle">即时捕捉想法并保持离线可用。</string>
     <string name="status_service_active">服务运行中</string>

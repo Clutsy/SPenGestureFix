@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">clutsy द्वारा निर्मित</string>
     <string name="section_status">स्थिति</string>
     <string name="btn_check_root">रूट अनुमतियाँ जाँचें</string>
     <string name="btn_overlay_permission">ओवरले अनुमति दें</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">नोट हटा दिया गया</string>
     <string name="notes_empty_list">आपके नोट यहाँ दिखाई देंगे। व्हील से एक बनाएँ।</string>
     <string name="section_tablet_mode">Wacom टैबलेट मोड</string>
-    <string name="tablet_mode_subtitle">अपने Note 3 को PC के लिए Wacom ड्रॉइंग टैबलेट के रूप में उपयोग करें</string>
+    <string name="tablet_mode_subtitle">अपने फ़ोन को PC के लिए Wacom ड्रॉइंग टैबलेट के रूप में उपयोग करें</string>
     <string name="btn_start_tablet">टैबलेट मोड शुरू करें</string>
     <string name="btn_tablet_settings">सेटिंग्स</string>
     <string name="footer_experimental">Pen Window और पेन निकालने की पहचान प्रयोगात्मक हैं। README देखें।</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · डिजिटाइज़र sec_e-pen</string>
+    <string name="subtitle_device">डिजिटाइज़र S Pen · sec_e-pen</string>
     <string name="perm_title">आवश्यक अनुमतियाँ</string>
     <string name="perm_overlay">अन्य ऐप्स के ऊपर S Pen व्हील और इशारे दिखाने के लिए ओवरले अनुमति आवश्यक है।</string>
     <string name="perm_notification">सेवा को पृष्ठभूमि में चालू रखने के लिए सूचना अनुमति आवश्यक है।</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">आपके S Pen के लिए कमांड सेंटर</string>
     <string name="home_subtitle">कम-विलंबता Wacom इनपुट, प्रोग्राम करने योग्य इशारे और एक केंद्रित टैबलेट वर्कफ़्लो।</string>
     <string name="settings_subtitle">इनपुट पाइपलाइन को छुए बिना अनुभव को अनुकूलित करें।</string>
-    <string name="status_subtitle">सेवा और Note 3 डिजिटाइज़र की लाइव स्थिति।</string>
+    <string name="status_subtitle">सेवा और पेन डिजिटाइज़र की लाइव स्थिति।</string>
     <string name="wheel_slots_subtitle">छह रेडियल क्रियाओं और व्हील एक्सेंट रंग को कॉन्फ़िगर करें।</string>
     <string name="notes_card_subtitle">विचार तुरंत कैद करें और उन्हें ऑफ़लाइन रखें।</string>
     <string name="status_service_active">सेवा सक्रिय</string>

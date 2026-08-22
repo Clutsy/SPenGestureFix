@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">제작: clutsy</string>
     <string name="section_status">상태</string>
     <string name="btn_check_root">root 권한 확인</string>
     <string name="btn_overlay_permission">오버레이 권한 부여</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">메모 삭제됨</string>
     <string name="notes_empty_list">메모가 여기에 표시됩니다. 휠에서 만드세요.</string>
     <string name="section_tablet_mode">Wacom 태블릿 모드</string>
-    <string name="tablet_mode_subtitle">Note 3를 PC용 Wacom 드로잉 태블릿으로 사용</string>
+    <string name="tablet_mode_subtitle">휴대폰을 PC용 Wacom 드로잉 태블릿으로 사용</string>
     <string name="btn_start_tablet">태블릿 모드 시작</string>
     <string name="btn_tablet_settings">설정</string>
     <string name="footer_experimental">Pen Window 및 분리 감지는 실험적입니다. README를 참조하세요.</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · 디지타이저 sec_e-pen</string>
+    <string name="subtitle_device">S Pen 디지타이저 · sec_e-pen</string>
     <string name="perm_title">필요한 권한</string>
     <string name="perm_overlay">다른 앱 위에 S Pen 휠과 제스처를 표시하려면 오버레이 권한이 필요합니다.</string>
     <string name="perm_notification">백그라운드에서 서비스를 유지하려면 알림 권한이 필요합니다.</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">S Pen을 위한 커맨드 센터</string>
     <string name="home_subtitle">저지연 Wacom 입력, 프로그래밍 가능한 제스처, 집중된 태블릿 워크플로.</string>
     <string name="settings_subtitle">입력 파이프라인을 건드리지 않고 환경을 맞춤 설정하세요.</string>
-    <string name="status_subtitle">서비스와 Note 3 디지타이저의 실시간 상태.</string>
+    <string name="status_subtitle">서비스와 펜 디지타이저의 실시간 상태.</string>
     <string name="wheel_slots_subtitle">6개의 방사형 동작과 휠 강조 색상을 구성하세요.</string>
     <string name="notes_card_subtitle">아이디어를 즉시 기록하고 오프라인으로 유지하세요.</string>
     <string name="status_service_active">서비스 활성</string>

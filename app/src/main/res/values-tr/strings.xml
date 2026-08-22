@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">S Pen Gesture Fix</string>
+    <string name="made_by">Geliştiren: clutsy</string>
     <string name="section_status">Durum</string>
     <string name="btn_check_root">Root izinlerini kontrol et</string>
     <string name="btn_overlay_permission">Kaplama izni ver</string>
@@ -43,11 +44,11 @@
     <string name="toast_note_deleted">Not silindi</string>
     <string name="notes_empty_list">Notlarınız burada görünecek. Tekerlekten bir tane oluşturun.</string>
     <string name="section_tablet_mode">Wacom Tablet Modu</string>
-    <string name="tablet_mode_subtitle">Note 3’ünüzü PC için Wacom çizim tableti olarak kullanın</string>
+    <string name="tablet_mode_subtitle">Telefonunuzu PC için Wacom çizim tableti olarak kullanın</string>
     <string name="btn_start_tablet">Tablet Modunu Başlat</string>
     <string name="btn_tablet_settings">Ayarlar</string>
     <string name="footer_experimental">Pen Window ve kalem çıkarma algılama deneyseldir. README’ye bakın.</string>
-    <string name="subtitle_device">Note 3 SM-N9005 · sayısallaştırıcı sec_e-pen</string>
+    <string name="subtitle_device">S Pen sayısallaştırıcısı · sec_e-pen</string>
     <string name="perm_title">Gerekli İzinler</string>
     <string name="perm_overlay">S Pen Tekerleğini ve hareketleri diğer uygulamaların üzerinde göstermek için kaplama izni gerekir.</string>
     <string name="perm_notification">Hizmeti arka planda tutmak için bildirim izni gerekir.</string>
@@ -134,7 +135,7 @@
     <string name="home_tagline">S Pen’iniz için bir komuta merkezi</string>
     <string name="home_subtitle">Düşük gecikmeli Wacom girişi, programlanabilir hareketler ve odaklı bir tablet iş akışı.</string>
     <string name="settings_subtitle">Giriş hattına dokunmadan deneyimi kişiselleştirin.</string>
-    <string name="status_subtitle">Hizmetin ve Note 3 sayısallaştırıcısının canlı durumu.</string>
+    <string name="status_subtitle">Hizmetin ve kalem sayısallaştırıcısının canlı durumu.</string>
     <string name="wheel_slots_subtitle">Altı radyal eylemi ve tekerlek vurgu rengini yapılandırın.</string>
     <string name="notes_card_subtitle">Fikirleri anında yakalayın ve çevrimdışı saklayın.</string>
     <string name="status_service_active">Hizmet etkin</string>
