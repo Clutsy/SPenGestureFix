@@ -1,10 +1,10 @@
-<img width="1080" height="1920" alt="spen_1787403401482" src="https://github.com/user-attachments/assets/18cd7b03-5857-4e33-9aed-1bca8537ee93" />
+<img width="270" height="480" alt="spen_1787403401482" src="https://github.com/user-attachments/assets/18cd7b03-5857-4e33-9aed-1bca8537ee93" />
 
-<img width="1080" height="1920" alt="Screenshot_20260822-145738_S Pen Gesture Fix" src="https://github.com/user-attachments/assets/796a8eca-d723-4d23-adf0-0bb53b26f33a" />
+<img width="270" height="480" alt="Screenshot_20260822-145738_S Pen Gesture Fix" src="https://github.com/user-attachments/assets/796a8eca-d723-4d23-adf0-0bb53b26f33a" />
 
-<img width="1080" height="1920" alt="spen_1787403373153" src="https://github.com/user-attachments/assets/e3c53420-9fd1-44e1-85a8-a94336f41a53" />
+<img width="270" height="480" alt="spen_1787403373153" src="https://github.com/user-attachments/assets/e3c53420-9fd1-44e1-85a8-a94336f41a53" />
 
-<img width="1920" height="1080" alt="Screenshot_20260822-150541_S Pen Gesture Fix" src="https://github.com/user-attachments/assets/fc026071-416f-4fe2-99df-0e4960987934" />
+<img width="480" height="270" alt="Screenshot_20260822-150541_S Pen Gesture Fix" src="https://github.com/user-attachments/assets/fc026071-416f-4fe2-99df-0e4960987934" />
 
 
 
