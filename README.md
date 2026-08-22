@@ -1,3 +1,7 @@
+
+# SPenGestureFix
+
+
 <img width="270" height="480" alt="spen_1787403401482" src="https://github.com/user-attachments/assets/18cd7b03-5857-4e33-9aed-1bca8537ee93" />
 
 <img width="270" height="480" alt="Screenshot_20260822-145738_S Pen Gesture Fix" src="https://github.com/user-attachments/assets/796a8eca-d723-4d23-adf0-0bb53b26f33a" />
@@ -6,10 +10,6 @@
 
 <img width="480" height="270" alt="Screenshot_20260822-150541_S Pen Gesture Fix" src="https://github.com/user-attachments/assets/fc026071-416f-4fe2-99df-0e4960987934" />
 
-
-
-
-# SPenGestureFix
 
 A focused, local-first Android utility for rooted phones with a compatible S Pen/Wacom input stack. It restores programmable S Pen gestures and exposes the device digitizer as a low-latency tablet input source on rooted AOSP/LineageOS ROMs.
 
