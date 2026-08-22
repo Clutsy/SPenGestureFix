@@ -1,4 +1,4 @@
-# S Pen Gesture Fix
+# SPenGestureFix
 
 A focused, local-first Android utility for rooted phones with a compatible S Pen/Wacom input stack. It restores programmable S Pen gestures and exposes the device digitizer as a low-latency tablet input source on rooted AOSP/LineageOS ROMs.
 
