@@ -53,3 +53,4 @@ out/
 # Local agent and editor metadata
 .local-agent/
 .codex/
+.freebuff/

@@ -18,11 +18,11 @@ A focused, local-first Android utility for rooted phones with a compatible S Pen
 ## Product capabilities
 
 - **Programmable side button:** single click, double click, and long press can run independent actions.
-- **Air Command wheel:** six configurable radial actions, a user-selectable accent color, and a lightweight single-window fan anchored in the lower-right corner like classic Note Air Command. The six targets are deliberately spaced; tapping an action runs it, tapping the center closes the wheel, and tapping outside the compact window closes it without a full-screen touch blocker.
+- **Air Command wheel:** a staggered two-ring fan anchored in the lower-right corner like classic Note Air Command. Alternating inner/outer slot radii give every target 30 degrees of separation, labels render inside each slot in the device language, and a dedicated close slot keeps every spoke a real, labeled target. Selection follows the Samsung original: press and drag across the fan with a haptic tick on each slot, release to launch. A soft radial backdrop keeps the wheel readable over any app without blocking touches outside the window.
 - **Quick Notes:** offline notes with editing, search, copy, sharing, character counting, phone-number dialing, and Maps lookup.
 - **Screen tools:** annotate a screenshot or crop a rectangular region with coordinate-correct bitmap mapping.
-- **Wacom Tablet Mode:** pressure curves, monitor-matched orientation, physical display resolution detection with a landscape-first default, a manual monitor override, haptics, smoothing, configurable right/middle/eraser/disabled pen-button behavior, and a normalized TCP stream for a PC client.
-- **Modern UI:** Jetpack Compose and Material 3, localized in 17 languages: English, Italian, Spanish, French, German, Portuguese, Dutch, Polish, Turkish, Russian, Ukrainian, Simplified Chinese, Japanese, Korean, Arabic, Hindi, and Indonesian.
+- **Wacom Tablet Mode:** pressure curves, monitor-matched orientation, physical display resolution detection with a landscape-first default, a manual monitor override, haptics, smoothing, configurable right/middle/eraser/disabled pen-button behavior, a normalized TCP stream for a PC client, live session stats (frames sent), and an optional reverse PC-screen preview channel so the phone shows the Windows desktop while drawing.
+- **Modern UI:** Jetpack Compose and Material 3 with a true AMOLED black mode, accent-tinted dashboard cards, and localization in 17 languages: English, Italian, Spanish, French, German, Portuguese, Dutch, Polish, Turkish, Russian, Ukrainian, Simplified Chinese, Japanese, Korean, Arabic, Hindi, and Indonesian.
 - **Root actions:** optional screenshot, flashlight, system toggles, lock screen, freeform window, and custom root command actions.
 
 ## Hardware architecture
@@ -47,6 +47,30 @@ The previous implementation used `pkill -f 'getevent -l'` when the pen was inser
 The current architecture uses `exec getevent` per reader, idempotent process ownership, background parsing, main-thread-only overlay operations, and a continuously available normal digitizer reader. Tablet Mode explicitly pauses that reader before taking ownership of the device.
 
 ## Release notes
+
+### 1.5 — fast fullscreen preview, clean pie wheel, battery saver
+
+- **PC preview rebuilt for motion:** the GDI capture now hands the raw BGRA buffer straight to Pillow (C-speed conversion + downscale, measured ~40 fps on 1920×1080) instead of a per-pixel Python loop, and the phone shows the stream in a **true fullscreen view** with a live FPS counter. Video on Windows is now watchable from the phone.
+- **Interactive console:** on an interactive terminal you can now type `preview` (start/resume streaming), `stop` (pause capture), `fps` (actual stream rate), `status`, and `quit` at runtime — no script restart needed.
+- **Wheel redesigned as a clean pie menu:** one even circle of uniform discs, real **vector icons** instead of emoji, short labels, and a dedicated center close disc. Adjacent targets can no longer overlap at any slot count.
+- **Fixed the phantom wheel opens:** digitizer touch events were being promoted to "pen extracted", auto-opening the wheel while writing. Presence now comes only from the physical slot switch.
+- **Battery saver (5-second rule):** with the pen stored and no input for five seconds, the root digitizer reader process is parked completely (toggleable in Settings, on by default); pulling the pen out wakes it instantly.
+- Removed the experimental Screen-off memo.
+
+### 1.4 — translate, ordered wheel, richer notes
+
+- Added the **Translate** Air Command action: sends the clipboard text to Google Translate.
+- The wheel now has **seven ordered slots** with move up/down controls in the dashboard, so actions appear in the fan exactly in the configured order.
+- Notes: **pin** (pinned notes sort first), six **accent colors** rendered as a card stripe, quick **open link** / **send email** detection alongside phone numbers, note **export all** (share every note as one text block), and **delete all** with confirmation.
+- `SPGF_Wacom.py --preview` now works **standalone** (stream the PC screen without pen streaming): `python scripts\SPGF_Wacom.py --preview --host <phone-ip>`.
+
+### 1.3 — wheel refresh, PC preview, and UI polish
+
+- Rebuilt the Air Command wheel as a staggered two-ring fan: 30 degrees of effective spacing between targets, in-slot localized labels, a dedicated close slot, press-and-drag selection with haptics, and a soft radial backdrop.
+- Added the Tablet Mode **PC screen preview**: a reverse TCP channel (port 7655) streams small JPEG frames of the Windows desktop to the phone, with a live pen-position marker. `SPGF_Wacom.py --preview` captures the desktop with GDI and requires no third-party packages (Pillow optional, higher quality).
+- Tablet Mode now shows live session stats (frames sent, connection state) and a fullscreen PC preview dialog.
+- The dashboard follows the AMOLED setting correctly (the flag previously had no effect on Compose screens) and gains accent-tinted section icons.
+- Restored the Python test suite after the script rename (`test_spen_mouse_emulator.py` now imports `SPGF_Wacom`) and added framing/pen-state tests for the preview protocol.
 
 ### 1.2 — interaction and reliability refresh
 
@@ -107,16 +131,16 @@ The service notification reports whether the digitizer reader is active. If the 
 
 ## Windows Wacom emulator
 
-The canonical script is `scripts/spen_mouse_emulator.py`. It uses ADB and root `getevent` by default and emits absolute mouse input locally.
+The canonical script is `scripts/SPGF_Wacom.py`. It uses ADB and root `getevent` by default and emits absolute mouse input locally.
 
 ### ADB mode
 
 ```powershell
-python scripts\spen_mouse_emulator.py --list
-python scripts\spen_mouse_emulator.py --screen-w 1920 --screen-h 1080
-python scripts\spen_mouse_emulator.py --serial R58MXXXX --orientation auto
-python scripts\spen_mouse_emulator.py --serial R58MXXXX --device /dev/input/event3
-python scripts\spen_mouse_emulator.py --debug
+python scripts\SPGF_Wacom.py --list
+python scripts\SPGF_Wacom.py --screen-w 1920 --screen-h 1080
+python scripts\SPGF_Wacom.py --serial R58MXXXX --orientation auto
+python scripts\SPGF_Wacom.py --serial R58MXXXX --device /dev/input/event3
+python scripts\SPGF_Wacom.py --debug
 ```
 
 The script automatically discovers the device named `sec_e-pen`, reads the phone’s physical display resolution with `adb shell wm size`, reads the active display rotation, reads the real `ABS_X`, `ABS_Y`, and `ABS_PRESSURE` limits from `getevent -lp`, reconnects with bounded backoff, and releases held buttons on disconnect or Ctrl-C. The phone resolution is reported as the input source; mouse coordinates target the actual Windows desktop by default. Use `--screen-w/--screen-h` to override the desktop target explicitly.
@@ -128,10 +152,21 @@ On Windows it uses `ctypes` and `SendInput`; `pynput` and `pyautogui` are not re
 Tablet Mode can stream normalized frames over port `7654`:
 
 ```powershell
-python scripts\spen_mouse_emulator.py --tcp --host 192.168.1.42 --port 7654
+python scripts\SPGF_Wacom.py --tcp --host 192.168.1.42 --port 7654
 ```
 
 The TCP stream starts with an optional newline-terminated metadata record, for example `#SPEN_TABLET 1 1920 1080 1 landscape`, followed by `X,Y,P,FLAGS` records. Legacy clients can ignore the comment line. Flags are tip `1`, right/barrel button `2`, eraser `4`, in-range `8`, and middle button `16`. Tablet Mode maps the source axes once; the Windows client only rotates again when its monitor aspect orientation differs from the source metadata.
+
+### PC screen preview (reverse channel)
+<arg_value><b88a6f17>While a Tablet Mode session runs, the phone listens on port `7655` for a screen preview and shows it in a true fullscreen view with a live FPS counter. Start the PC client with `--preview`:
+
+```powershell
+python scripts\SPGF_Wacom.py --tcp --host 192.168.1.42 --preview
+```
+
+The client captures the whole virtual desktop with GDI `BitBlt`, draws a live pen-position marker (blue hovering, red while touching, white ring when the barrel button is held), scales the image to `--preview-width` (default 960 px), and streams JPEG frames framed as `#PV` + 8 hex digits of payload length. Pillow produces the JPEG when installed (C-speed path, roughly 40 fps on 1080p); without it the script falls back to GDI+ encoding, so no third-party package is required. `--preview-quality` (15-95, default 55) and `--preview-port` tune the stream. In the app, tap **PC screen** in the Tablet Mode status bar to open the fullscreen preview.
+
+On an interactive terminal the client also accepts runtime commands: `preview` starts or resumes the stream, `stop` pauses capture, `fps` prints the actual stream rate, `status` reports the current state, and `quit` exits.
 
 ## Diagnostics
 
@@ -169,11 +204,12 @@ Custom root commands are intentionally powerful. Only assign commands you unders
 - `EPenInputReader.kt`: isolated root input reader and event parser.
 - `EventDeviceFinder.kt`: stable device discovery and capability limits.
 - `PenGestureAnalyzer.kt`: non-blocking button and hover state machine.
-- `WheelOverlay.kt`: lower-right, single-window Canvas Air Command overlay with short transitions, spaced hit targets, outside-tap dismissal, and a configurable accent color.
+- `WheelOverlay.kt`: lower-right staggered two-ring Air Command fan with press-drag selection, haptics, and a configurable accent color.
 - `MainComposeScreen.kt`, `ComposeNotesEditors.kt`, `ComposeTabletUi.kt`: Material 3 screens.
 - `TabletInputCapture.kt`: capability-aware normalized frames.
 - `TabletNetworkServer.kt`: latest-frame TCP transport.
-- `scripts/spen_mouse_emulator.py`: ADB-first PC emulator.
+- `TabletPreviewServer.kt`: reverse JPEG screen-preview transport (port 7655).
+- `scripts/SPGF_Wacom.py`: ADB-first PC emulator with optional screen preview.
 - `docs/TRANSLATION.md`: documentation and localization workflow.
 
 ## Testing

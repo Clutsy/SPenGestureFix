@@ -35,7 +35,7 @@ class AppSearchActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            SpenFixTheme {
+            SpenFixTheme(amoled = AppSettings.isAmoled(this)) {
                 AppSearchScreen(
                     onSelect = { packageName ->
                         packageManager.getLaunchIntentForPackage(packageName)?.let {

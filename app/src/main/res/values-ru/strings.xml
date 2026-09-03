@@ -188,4 +188,20 @@
     <string name="notes_no_match">Нет заметок, соответствующих поиску.</string>
     <string name="notes_character_count">Символов: %1$d</string>
     <string name="tablet_auto_detect_resolution">Определить разрешение устройства</string>
+    <!-- Предпросмотр экрана ПК -->
+    <string name="tablet_frames_sent">Отправлено кадров: %1$d</string>
+    <string name="tablet_preview_button">Экран ПК</string>
+    <string name="tablet_preview_title">Предпросмотр экрана ПК</string>
+    <string name="tablet_preview_hint">Запустите клиент на ПК с ключом --preview, чтобы видеть экран Windows здесь.</string>
+    <string name="tablet_preview_waiting">Ожидание потока предпросмотра с ПК…</string>
+    <string name="tablet_preview_port">Поток предпросмотра на порту %1$d</string>
+    <string name="action_translate">Перевести (буфер обмена)</string>
+    <string name="notes_pin">Закрепить</string>
+    <string name="notes_export_all">Экспортировать всё</string>
+    <string name="notes_clear_all">Удалить всё</string>
+    <string name="notes_clear_all_confirm">Удалить все заметки? Действие необратимо.</string>
+    <string name="btn_open_link">Открыть ссылку</string>
+    <string name="btn_send_email">Отправить письмо</string>
+    <string name="settings_battery_saver">Экономия батареи</string>
+    <string name="settings_battery_saver_desc">Приостанавливает считыватель дигитайзера через 5 секунд бездействия со вставленным пером; извлечение пера мгновенно его будит</string>
 </resources>

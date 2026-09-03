@@ -188,4 +188,20 @@
     <string name="notes_no_match">Aramanızla eşleşen not yok.</string>
     <string name="notes_character_count">%1$d karakter</string>
     <string name="tablet_auto_detect_resolution">Cihaz çözünürlüğünü algıla</string>
+    <!-- PC ekran önizlemesi -->
+    <string name="tablet_frames_sent">Gönderilen kare: %1$d</string>
+    <string name="tablet_preview_button">PC ekranı</string>
+    <string name="tablet_preview_title">PC ekran önizlemesi</string>
+    <string name="tablet_preview_hint">Windows ekranını burada görmek için bilgisayarda istemciyi --preview ile başlatın.</string>
+    <string name="tablet_preview_waiting">PC\'den önizleme akışı bekleniyor…</string>
+    <string name="tablet_preview_port">Önizleme akışı %1$d numaralı bağlantı noktasında</string>
+    <string name="action_translate">Çevir (pano)</string>
+    <string name="notes_pin">Sabitle</string>
+    <string name="notes_export_all">Tümünü dışa aktar</string>
+    <string name="notes_clear_all">Tümünü sil</string>
+    <string name="notes_clear_all_confirm">Tüm notlar silinsin mi? Bu işlem geri alınamaz.</string>
+    <string name="btn_open_link">Bağlantıyı aç</string>
+    <string name="btn_send_email">E-posta gönder</string>
+    <string name="settings_battery_saver">Pil tasarrufu</string>
+    <string name="settings_battery_saver_desc">Kalem takılıyken 5 saniye boşta kalınca dijitalleştirici okuyucusunu duraklatır; kalemi çıkarmak anında uyandırır</string>
 </resources>

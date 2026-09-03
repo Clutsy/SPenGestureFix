@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private var notificationGranted by mutableStateOf(true)
     private var amoled by mutableStateOf(false)
     private var autoStart by mutableStateOf(true)
+    private var batterySaver by mutableStateOf(true)
     private var languageCode by mutableStateOf<String?>(null)
     private var gestures by mutableStateOf<Map<GestureKind, PenAction>>(emptyMap())
     private var wheelSlots by mutableStateOf<List<PenAction>>(emptyList())
@@ -67,7 +68,7 @@ class MainActivity : AppCompatActivity() {
         refreshState()
 
         setContent {
-            SpenFixTheme {
+            SpenFixTheme(amoled = AppSettings.isAmoled(this)) {
                 MainComposeScreen(
                     presence = presence,
                     serviceActive = serviceActive,
@@ -77,6 +78,7 @@ class MainActivity : AppCompatActivity() {
                     notificationGranted = notificationGranted,
                     amoled = amoled,
                     autoStart = autoStart,
+                    batterySaver = batterySaver,
                     languageCode = languageCode,
                     gestures = gestures,
                     wheelSlots = wheelSlots,
@@ -97,11 +99,19 @@ class MainActivity : AppCompatActivity() {
                         // alive before the next physical extraction.
                         if (it && !serviceActive) requestPermissionsAndStart()
                     },
+                    onBatterySaverChanged = {
+                        batterySaver = it
+                        AppSettings.setBatterySaver(this, it)
+                    },
                     onLanguageChanged = ::setLanguage,
                     onActionPicked = ::saveBinding,
                     onWheelColorChanged = {
                         wheelColor = it
                         WheelConfig.setWheelColor(this, it)
+                    },
+                    onMoveWheelSlot = { from, to ->
+                        WheelConfig.moveSlot(this, from, to)
+                        wheelSlots = WheelConfig.loadSlots(this)
                     },
                     onOpenNotes = {
                         startActivity(Intent(this, NotesListActivity::class.java))
@@ -143,6 +153,7 @@ class MainActivity : AppCompatActivity() {
             checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         amoled = AppSettings.isAmoled(this)
         autoStart = AppSettings.isAutoStartOnPen(this)
+        batterySaver = AppSettings.isBatterySaver(this)
         languageCode = AppSettings.language(this)
         presence = PenRuntimeState.presence
         serviceActive = PenRuntimeState.serviceActive

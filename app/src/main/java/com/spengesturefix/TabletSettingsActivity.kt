@@ -19,7 +19,7 @@ class TabletSettingsActivity : ComponentActivity() {
             ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         }
         setContent {
-            SpenFixTheme {
+            SpenFixTheme(amoled = AppSettings.isAmoled(this)) {
                 TabletSettingsComposeScreen(
                     curve = TabletConfig.getPressureCurve(this),
                     customPoints = TabletConfig.getCustomCurvePoints(this),

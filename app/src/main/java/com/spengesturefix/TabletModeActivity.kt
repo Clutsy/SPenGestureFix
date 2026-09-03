@@ -41,6 +41,8 @@ class TabletModeActivity : ComponentActivity() {
     private var running by mutableStateOf(false)
     private var status by mutableStateOf("")
     private var ipAddress by mutableStateOf<String?>(null)
+    private var framesSent by mutableStateOf(0L)
+    private var previewConnected by mutableStateOf(false)
     @Volatile private var inputCapture: TabletInputCapture? = null
     private var lastTouching = false
     private var smoothedX = 0.5f
@@ -52,6 +54,7 @@ class TabletModeActivity : ComponentActivity() {
     private val frameRunnable = object : Runnable {
         override fun run() {
             pendingFrame.getAndSet(null)?.let { frame = it }
+            framesSent = TabletNetworkServer.framesSent()
             uiUpdateScheduled.set(false)
             if (pendingFrame.get() != null) publishFrameToUi()
         }
@@ -86,13 +89,16 @@ class TabletModeActivity : ComponentActivity() {
         ipAddress = getLocalIp()
         status = getString(R.string.tablet_status_ready)
         setContent {
-            SpenFixTheme {
+            SpenFixTheme(amoled = AppSettings.isAmoled(this)) {
                 TabletModeComposeScreen(
                     frame = frame,
                     running = running,
                     status = status,
                     ip = ipAddress,
                     showGrid = TabletConfig.getShowGrid(this),
+                    framesSent = framesSent,
+                    pcConnected = TabletNetworkServer.isClientConnected,
+                    previewConnected = previewConnected,
                     onToggle = { if (running) stopTabletMode() else startTabletMode() },
                     onSettings = { startActivity(Intent(this, TabletSettingsActivity::class.java)) },
                     onExit = ::finish
@@ -104,6 +110,7 @@ class TabletModeActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         hideSystemUi()
+        previewConnected = TabletPreviewServer.isClientConnected
     }
 
     override fun onDestroy() {
@@ -131,6 +138,8 @@ class TabletModeActivity : ComponentActivity() {
         if (modeReleased.compareAndSet(true, false)) TabletModeState.enter()
         running = true
         sessionRunning.set(true)
+        mainHandler.removeCallbacks(previewPollRunnable)
+        mainHandler.postDelayed(previewPollRunnable, 500L)
         val session = tabletSessionId.incrementAndGet()
         status = getString(R.string.tablet_status_starting)
         val config = TabletRunConfig.from(this)
@@ -178,6 +187,7 @@ class TabletModeActivity : ComponentActivity() {
                                     } else {
                                         getString(R.string.tablet_status_waiting)
                                     }
+                                    framesSent = TabletNetworkServer.framesSent()
                                 }
                             }
                         }
@@ -280,6 +290,7 @@ class TabletModeActivity : ComponentActivity() {
                     TabletNetworkServer.stop()
                     return@Thread
                 }
+                TabletPreviewServer.start()
             }
             runOnUiThread {
                 if (isSessionActive(session)) {
@@ -295,6 +306,20 @@ class TabletModeActivity : ComponentActivity() {
 
     private fun isSessionActive(session: Int): Boolean =
         activityAlive.get() && sessionRunning.get() && tabletSessionId.get() == session
+
+    /**
+     * Keeps the preview connection badge and live frame counts fresh while a
+     * session runs. The poll is cheap (volatile reads) and only touches
+     * Compose state when the value actually changes.
+     */
+    private val previewPollRunnable = object : Runnable {
+        override fun run() {
+            if (!sessionRunning.get()) return
+            previewConnected = TabletPreviewServer.isClientConnected
+            framesSent = TabletNetworkServer.framesSent()
+            mainHandler.postDelayed(this, 500L)
+        }
+    }
 
     private fun publishFrameToUi() {
         if (uiUpdateScheduled.compareAndSet(false, true)) {
@@ -312,10 +337,12 @@ class TabletModeActivity : ComponentActivity() {
             inputCapture = null
             TabletNetworkServer.stop()
         }
+        TabletPreviewServer.stop()
         pendingFrame.set(emptyFrame)
         frame = emptyFrame
         ipAddress = getLocalIp()
         status = getString(R.string.tablet_status_ready)
+        previewConnected = false
 
         if (capture == null) {
             if (!captureStopping.get()) releaseTabletModeState()

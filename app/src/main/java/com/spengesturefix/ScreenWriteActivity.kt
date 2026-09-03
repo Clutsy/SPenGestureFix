@@ -23,7 +23,7 @@ class ScreenWriteActivity : ComponentActivity() {
         }
         sourceBitmap = bitmap
         setContent {
-            SpenFixTheme {
+            SpenFixTheme(amoled = AppSettings.isAmoled(this)) {
                 ScreenWriteComposeScreen(
                     bitmap = sourceBitmap,
                     onSave = ::saveResult,

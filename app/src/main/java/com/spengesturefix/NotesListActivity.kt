@@ -17,7 +17,7 @@ class NotesListActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         loadNotes()
         setContent {
-            SpenFixTheme {
+            SpenFixTheme(amoled = AppSettings.isAmoled(this)) {
                 NotesListComposeScreen(
                     notes = notes,
                     onNew = { startActivity(Intent(this, QuickNoteActivity::class.java)) },
@@ -32,6 +32,15 @@ class NotesListActivity : ComponentActivity() {
                     },
                     onShare = ::shareNote,
                     onCopy = ::copyNote,
+                    onTogglePin = { note, pinned ->
+                        NotesStore.setPinned(this, note.timestamp, pinned)
+                        loadNotes()
+                    },
+                    onExportAll = ::exportAllNotes,
+                    onClearAll = {
+                        NotesStore.clear(this)
+                        loadNotes()
+                    },
                     onClose = ::finish
                 )
             }
@@ -58,5 +67,14 @@ class NotesListActivity : ComponentActivity() {
         val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
             ?: return
         clipboard.setPrimaryClip(ClipData.newPlainText(getString(R.string.section_notes), note.text))
+    }
+
+    private fun exportAllNotes() {
+        val body = NotesStore.exportAllText(NotesStore.loadAll(this))
+        if (body.isBlank()) return
+        startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, body)
+        }, getString(R.string.notes_export_all)))
     }
 }

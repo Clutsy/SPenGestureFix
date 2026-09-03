@@ -36,12 +36,72 @@ class SPenGestureService : Service() {
         const val PRESENCE_SWITCH_CODE = "001a"
         /** No pen input for this long => the pen is considered inserted. */
         const val PEN_IDLE_INSERTED_MS = 5_000L
+        /**
+         * The pen never left the slot but the user stopped using it for this
+         * long: the digitizer reader is parked until the next pen event to
+         * save battery (no root getevent polling the stream). The presence
+         * reader and gesture logic stay fully alive.
+         */
+        const val DIGITIZER_SLEEP_AFTER_MS = 5_000L
         private const val WATCHDOG_INTERVAL_MS = 1_000L
 
         /** Strictly greater than five seconds, matching the user-facing rule. */
         @JvmStatic
         fun isPenIdle(now: Long, lastInputAt: Long): Boolean =
             lastInputAt > 0L && now - lastInputAt > PEN_IDLE_INSERTED_MS
+
+        /**
+         * Pure battery-saver decision: with the pen inserted (or idle long
+         * enough to count as inserted) and no digitizer input for
+         * [DIGITIZER_SLEEP_AFTER_MS], the reader is parked. Injectable for
+         * tests.
+         */
+        @JvmStatic
+        fun shouldSleepDigitizer(
+            now: Long,
+            lastInputAt: Long,
+            penPresent: Boolean
+        ): Boolean =
+            isPenIdle(now, lastInputAt) &&
+                (penPresent || now - lastInputAt > DIGITIZER_SLEEP_AFTER_MS)
+
+        /**
+         * Only a real slot-switch event may flip presence. The old presence
+         * fallback promoted ANY digitizer event to "pen extracted", which
+         * auto-opened the wheel on ordinary writing. It now only feeds the
+         * idle clock.
+         */
+        @JvmStatic
+        fun isPresenceEvent(type: String, code: String): Boolean {
+            val normalized = code.trim().uppercase()
+            val isSwitch = type.trim().uppercase() == "EV_SW" &&
+                (normalized in PenPresenceDecoder.SUPPORTED_CODES ||
+                    normalized.endsWith("001A"))
+            return isSwitch && type != "EV_SYN"
+        }
+    }
+
+    /**
+     * Battery saver: after five seconds with the pen idle in its slot the
+     * digitizer reader process is parked entirely. The presence reader keeps
+     * listening, so pulling the pen out instantly wakes everything again.
+     */
+    private val digitizerSleepWatchdog = object : Runnable {
+        override fun run() {
+            val now = SystemClock.elapsedRealtime()
+            val presence = presenceState.get()
+            val present = presence == PenPresenceState.INSERTED ||
+                presence == PenPresenceState.UNKNOWN
+            if (AppSettings.isBatterySaver(applicationContext) &&
+                shouldSleepDigitizer(now, PenInputActivity.lastInputAt(), present) &&
+                digitizerReader?.isRunning == true &&
+                !TabletModeState.isActive
+            ) {
+                Log.i(TAG, "Pen idle; parking digitizer reader until the next pen event")
+                setupExecutor.execute { stopNormalDigitizerReader(waitForTermination = true) }
+            }
+            mainHandler.postDelayed(this, WATCHDOG_INTERVAL_MS)
+        }
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -114,6 +174,7 @@ class SPenGestureService : Service() {
         TabletModeState.setNormalInputOwner(true)
         PenRuntimeState.publish(this, serviceActive = true, digitizerActive = false)
         mainHandler.post(presenceWatchdog)
+        mainHandler.postDelayed(digitizerSleepWatchdog, DIGITIZER_SLEEP_AFTER_MS)
         setupExecutor.execute { startReaders() }
     }
 
@@ -126,6 +187,11 @@ class SPenGestureService : Service() {
         startPresenceReader()
     }
 
+    /**
+     * Presence state comes ONLY from the physical slot switch now. Digitizer
+     * events just mark pen activity (and wake the parked reader); treating
+     * them as extraction opened the wheel on every ordinary pen touch.
+     */
     private fun startDigitizerReader() {
         if (TabletModeState.isActive || digitizerReader?.isRunning == true) return
         val digitizerPath = EventDeviceFinder.findDevicePath(DIGITIZER_DEVICE_NAME)
@@ -140,10 +206,8 @@ class SPenGestureService : Service() {
             // This callback stays on the reader thread. The analyzer posts only
             // low-frequency gesture results to the main looper.
             if (!TabletModeState.isActive) gestureAnalyzer.onEvent(type, code, value)
-
-            PenInputActivity.mark()
-            if (presenceState.get() != PenPresenceState.REMOVED) {
-                handlePresenceChanged(PenPresenceState.REMOVED)
+            if (isPresenceEvent(type, code)) {
+                PenInputActivity.mark()
             }
         }
         synchronized(digitizerLock) {
@@ -207,6 +271,11 @@ class SPenGestureService : Service() {
 
         when (state) {
             PenPresenceState.REMOVED -> {
+                // A real extraction must first interrupt any parked reader so
+                // gestures and the wheel work the moment the pen appears.
+                if (digitizerReader?.isRunning != true && !TabletModeState.isActive) {
+                    setupExecutor.execute { startDigitizerReader() }
+                }
                 if (!TabletModeState.isActive && AppSettings.isAutoStartOnPen(applicationContext)) {
                     wheelOverlay.show()
                 }
@@ -260,6 +329,7 @@ class SPenGestureService : Service() {
         serviceRunning = false
         TabletModeState.setNormalInputOwner(false)
         mainHandler.removeCallbacks(presenceWatchdog)
+        mainHandler.removeCallbacks(digitizerSleepWatchdog)
         stopNormalDigitizerReader(waitForTermination = false)
         presenceReader?.stop()
         presenceReader = null

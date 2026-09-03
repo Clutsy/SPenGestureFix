@@ -1,9 +1,11 @@
 package com.spengesturefix
 
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.net.Uri
 
 /**
  * Single point where each ActionType becomes a real effect.
@@ -30,6 +32,7 @@ object ActionExecutor {
             ActionType.SMART_SELECT -> smartSelect(context)
             ActionType.QUICK_NOTE -> openQuickNote(context)
             ActionType.APP_SEARCH -> openAppSearch(context)
+            ActionType.TRANSLATE -> translate(context)
             ActionType.PEN_WINDOW -> openPenWindow(context, action.target)
             ActionType.TOGGLE_FLASHLIGHT -> toggleFlashlight(context)
             ActionType.TOGGLE_WIFI -> toggleWifi()
@@ -93,6 +96,26 @@ object ActionExecutor {
         context.startActivity(Intent(context, AppSearchActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         })
+    }
+
+    /**
+     * Samsung-style Translate: sends the current clipboard text to Google
+     * Translate. Missing clipboard content still opens the translator so the
+     * action never feels dead.
+     */
+    private fun translate(context: Context) {
+        try {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+            val text = clipboard?.primaryClip?.getItemAt(0)
+                ?.coerceToText(context)?.toString().orEmpty().trim()
+            val query = Uri.encode(text.take(500))
+            val intent = Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse("https://translate.google.com/?text=$query&op=translate")
+            ).apply { addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
+            context.startActivity(intent)
+        } catch (_: Exception) {
+        }
     }
 
     private fun openPenWindow(context: Context, packageName: String) {

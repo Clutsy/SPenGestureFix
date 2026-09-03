@@ -134,14 +134,15 @@ object TabletModeState {
 }
 
 object PenPresenceDecoder {
-    private val supportedCodes = setOf(
+    /** Codes that represent the physical pen slot switch. */
+    val SUPPORTED_CODES = setOf(
         "001A", "SW_001A", "SW_PEN_INSERTED", "SW_PEN_IN_SLOT", "SW_PEN"
     )
 
     fun decode(type: String, code: String, value: String): PenPresenceState? {
         if (type != "EV_SW") return null
         val normalizedCode = code.trim().uppercase()
-        if (normalizedCode !in supportedCodes && !normalizedCode.endsWith("001A")) return null
+        if (normalizedCode !in SUPPORTED_CODES && !normalizedCode.endsWith("001A")) return null
 
         return when (value.trim().uppercase()) {
             "00000000", "0", "UP", "OK", "CONNECTED", "ATTACHED", "INSERTED", "IN" ->

@@ -188,4 +188,20 @@
     <string name="notes_no_match">没有匹配搜索的笔记。</string>
     <string name="notes_character_count">%1$d 个字符</string>
     <string name="tablet_auto_detect_resolution">检测设备分辨率</string>
+    <!-- 电脑屏幕预览 -->
+    <string name="tablet_frames_sent">已发送帧数：%1$d</string>
+    <string name="tablet_preview_button">电脑屏幕</string>
+    <string name="tablet_preview_title">电脑屏幕预览</string>
+    <string name="tablet_preview_hint">在电脑上使用 --preview 启动客户端，即可在此查看 Windows 屏幕。</string>
+    <string name="tablet_preview_waiting">正在等待电脑的预览画面流…</string>
+    <string name="tablet_preview_port">预览流端口：%1$d</string>
+    <string name="action_translate">翻译（剪贴板）</string>
+    <string name="notes_pin">置顶</string>
+    <string name="notes_export_all">导出全部</string>
+    <string name="notes_clear_all">全部删除</string>
+    <string name="notes_clear_all_confirm">删除所有笔记？此操作无法撤销。</string>
+    <string name="btn_open_link">打开链接</string>
+    <string name="btn_send_email">发送邮件</string>
+    <string name="settings_battery_saver">省电模式</string>
+    <string name="settings_battery_saver_desc">手写笔插入时，闲置5秒后暂停数位板读取器；拔出手写笔立即唤醒</string>
 </resources>

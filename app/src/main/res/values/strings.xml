@@ -202,4 +202,21 @@
     <string name="notes_no_match">No notes match your search.</string>
     <string name="notes_character_count">%1$d characters</string>
     <string name="tablet_auto_detect_resolution">Detect device resolution</string>
+    <!-- Tablet Mode PC preview -->
+    <string name="tablet_frames_sent">Frames sent: %1$d</string>
+    <string name="tablet_preview_button">PC screen</string>
+    <string name="tablet_preview_title">PC screen preview</string>
+    <string name="tablet_preview_hint">Start the PC client with --preview to see the Windows screen here.</string>
+    <string name="tablet_preview_waiting">Waiting for the PC preview stream…</string>
+    <string name="tablet_preview_port">Preview stream on port %1$d</string>
+    <!-- Screen-off memo and notes extras -->
+    <string name="action_translate">Translate (clipboard)</string>
+    <string name="notes_pin">Pin</string>
+    <string name="notes_export_all">Export all</string>
+    <string name="notes_clear_all">Delete all</string>
+    <string name="notes_clear_all_confirm">Delete all notes? This cannot be undone.</string>
+    <string name="btn_open_link">Open link</string>
+    <string name="btn_send_email">Send email</string>
+    <string name="settings_battery_saver">Battery saver</string>
+    <string name="settings_battery_saver_desc">Parks the digitizer reader after 5 idle seconds with the pen stored; taking the pen out wakes it instantly</string>
 </resources>

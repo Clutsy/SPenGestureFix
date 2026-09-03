@@ -188,4 +188,20 @@
     <string name="notes_no_match">لا توجد ملاحظات تطابق البحث.</string>
     <string name="notes_character_count">%1$d حرفًا</string>
     <string name="tablet_auto_detect_resolution">اكتشاف دقة الجهاز</string>
+    <!-- معاينة شاشة الحاسوب -->
+    <string name="tablet_frames_sent">الإطارات المرسلة: %1$d</string>
+    <string name="tablet_preview_button">شاشة الحاسوب</string>
+    <string name="tablet_preview_title">معاينة شاشة الحاسوب</string>
+    <string name="tablet_preview_hint">شغّل البرنامج على الحاسوب مع --preview لرؤية شاشة Windows هنا.</string>
+    <string name="tablet_preview_waiting">في انتظار بث المعاينة من الحاسوب…</string>
+    <string name="tablet_preview_port">بث المعاينة على المنفذ %1$d</string>
+    <string name="action_translate">ترجمة (الحافظة)</string>
+    <string name="notes_pin">تثبيت</string>
+    <string name="notes_export_all">تصدير الكل</string>
+    <string name="notes_clear_all">حذف الكل</string>
+    <string name="notes_clear_all_confirm">حذف جميع الملاحظات؟ لا يمكن التراجع.</string>
+    <string name="btn_open_link">فتح الرابط</string>
+    <string name="btn_send_email">إرسال بريد</string>
+    <string name="settings_battery_saver">وفر البطارية</string>
+    <string name="settings_battery_saver_desc">يوقف قائد اللوح الرقمي مؤقتًا بعد 5 ثوانٍ من الخمول والقلم مخزنًا؛ سحبه يملحه فورًا</string>
 </resources>

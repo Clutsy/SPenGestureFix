@@ -2,11 +2,14 @@
 
 package com.spengesturefix
 
+import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +29,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,14 +73,22 @@ import java.util.Locale
 fun QuickNoteComposeScreen(
     initialText: String,
     editing: Boolean,
+    pinned: Boolean,
+    colorIndex: Int,
+    onPinnedChanged: (Boolean) -> Unit,
+    onColorChanged: (Int) -> Unit,
     onSave: (String) -> Unit,
     onOpenNotes: () -> Unit,
     onCall: (String) -> Unit,
     onMaps: (String) -> Unit,
+    onOpenLink: (String) -> Unit,
+    onEmail: (String) -> Unit,
     onClose: () -> Unit
 ) {
     var text by remember { mutableStateOf(initialText) }
     val phone = remember(text) { detectPhoneNumberForUi(text) }
+    val webLink = remember(text) { detectWebLinkForUi(text) }
+    val emailAddress = remember(text) { detectEmailForUi(text) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -115,10 +128,63 @@ fun QuickNoteComposeScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
                     )
-                    if (phone != null) {
+                    Spacer(Modifier.height(10.dp))
+                    // Pin + color row: the note identity options.
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = pinned,
+                            onClick = { onPinnedChanged(!pinned) },
+                            label = { Text("📌 " + stringResource(R.string.notes_pin)) }
+                        )
+                        Spacer(Modifier.weight(1f))
+                        QuickNote.COLORS.forEachIndexed { index, color ->
+                            val selected = colorIndex == index
+                            Box(
+                                modifier = Modifier
+                                    .size(if (selected) 26.dp else 22.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(androidx.compose.ui.graphics.Color(color))
+                                    .then(
+                                        if (selected) Modifier.border(
+                                            2.dp,
+                                            MaterialTheme.colorScheme.primary,
+                                            RoundedCornerShape(50)
+                                        ) else Modifier
+                                    )
+                                    .clickable { onColorChanged(index) }
+                            )
+                        }
+                    }
+                    if (phone != null || webLink != null || emailAddress != null) {
                         Spacer(Modifier.height(10.dp))
-                        OutlinedButton(onClick = { onCall(phone) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(R.string.btn_call_number))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (phone != null) {
+                                OutlinedButton(
+                                    onClick = { onCall(phone) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(stringResource(R.string.btn_call_number), maxLines = 1)
+                                }
+                            }
+                            if (webLink != null) {
+                                OutlinedButton(
+                                    onClick = { onOpenLink(webLink) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(stringResource(R.string.btn_open_link), maxLines = 1)
+                                }
+                            }
+                            if (emailAddress != null) {
+                                OutlinedButton(
+                                    onClick = { onEmail(emailAddress) },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(stringResource(R.string.btn_send_email), maxLines = 1)
+                                }
+                            }
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -156,10 +222,14 @@ fun NotesListComposeScreen(
     onDelete: (QuickNote) -> Unit,
     onShare: (QuickNote) -> Unit,
     onCopy: (QuickNote) -> Unit,
+    onTogglePin: (QuickNote, Boolean) -> Unit,
+    onExportAll: () -> Unit,
+    onClearAll: () -> Unit,
     onClose: () -> Unit
 ) {
     var noteToDelete by remember { mutableStateOf<QuickNote?>(null) }
     var query by remember { mutableStateOf("") }
+    var showClearAll by remember { mutableStateOf(false) }
     val visibleNotes = remember(notes, query) {
         val normalizedQuery = query.trim()
         if (normalizedQuery.isEmpty()) notes
@@ -174,13 +244,29 @@ fun NotesListComposeScreen(
             )
         },
         bottomBar = {
-            Button(
-                onClick = onNew,
-                modifier = Modifier
+            Column(
+                Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .navigationBarsPadding()
-            ) { Text(stringResource(R.string.notes_new_title)) }
+                    .navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(onClick = onNew, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.notes_new_title))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(
+                        onClick = { onExportAll() },
+                        enabled = notes.isNotEmpty(),
+                        modifier = Modifier.weight(1f)
+                    ) { Text(stringResource(R.string.notes_export_all)) }
+                    OutlinedButton(
+                        onClick = { showClearAll = true },
+                        enabled = notes.isNotEmpty(),
+                        modifier = Modifier.weight(1f)
+                    ) { Text(stringResource(R.string.notes_clear_all)) }
+                }
+            }
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { insets ->
@@ -244,7 +330,8 @@ fun NotesListComposeScreen(
                                 onEdit = { onEdit(note) },
                                 onDelete = { noteToDelete = note },
                                 onShare = { onShare(note) },
-                                onCopy = { onCopy(note) }
+                                onCopy = { onCopy(note) },
+                                onTogglePin = { onTogglePin(note, !note.pinned) }
                             )
                         }
                         item { Spacer(Modifier.height(90.dp)) }
@@ -271,6 +358,25 @@ fun NotesListComposeScreen(
             }
         )
     }
+
+    if (showClearAll) {
+        AlertDialog(
+            onDismissRequest = { showClearAll = false },
+            title = { Text(stringResource(R.string.notes_clear_all)) },
+            text = { Text(stringResource(R.string.notes_clear_all_confirm)) },
+            confirmButton = {
+                Button(onClick = {
+                    onClearAll()
+                    showClearAll = false
+                }) { Text(stringResource(R.string.dialog_ok)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearAll = false }) {
+                    Text(stringResource(R.string.dialog_cancel))
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -279,21 +385,44 @@ private fun NoteCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onShare: () -> Unit,
-    onCopy: () -> Unit
+    onCopy: () -> Unit,
+    onTogglePin: () -> Unit
 ) {
     val format = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+    val accent = note.colorIndex.takeIf { it in QuickNote.COLORS.indices }
+        ?.let { Color(QuickNote.COLORS[it]) }
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(20.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(
-                format.format(Date(note.timestamp)),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        if (accent != null) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .background(accent)
             )
-            Spacer(Modifier.height(8.dp))
+        }
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    format.format(Date(note.timestamp)),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                if (note.pinned) {
+                    Text("📌", fontSize = 14.sp)
+                    Spacer(Modifier.width(6.dp))
+                }
+                TextButton(
+                    onClick = onTogglePin,
+                    contentPadding = PaddingValues(horizontal = 6.dp),
+                    modifier = Modifier.defaultMinSize(minWidth = 32.dp, minHeight = 32.dp)
+                ) { Text(if (note.pinned) "📌" else "⚐", fontSize = 16.sp) }
+            }
+            Spacer(Modifier.height(6.dp))
             Text(note.text, style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -413,3 +542,9 @@ fun SmartSelectComposeScreen(
 
 private fun detectPhoneNumberForUi(text: String): String? =
     Regex("[+]?[0-9][0-9 ()-]{6,}[0-9]").find(text)?.value?.trim()
+
+private fun detectWebLinkForUi(text: String): String? =
+    Regex("https?://[^\\s]+").find(text)?.value
+
+private fun detectEmailForUi(text: String): String? =
+    Regex("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}").find(text)?.value

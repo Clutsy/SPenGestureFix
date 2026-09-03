@@ -188,4 +188,20 @@
     <string name="notes_no_match">検索に一致するノートはありません。</string>
     <string name="notes_character_count">%1$d 文字</string>
     <string name="tablet_auto_detect_resolution">端末の解像度を検出</string>
+    <!-- PC画面プレビュー -->
+    <string name="tablet_frames_sent">送信フレーム数：%1$d</string>
+    <string name="tablet_preview_button">PC画面</string>
+    <string name="tablet_preview_title">PC画面プレビュー</string>
+    <string name="tablet_preview_hint">PC で --preview を付けてクライアントを起動すると、Windows の画面をここに表示できます。</string>
+    <string name="tablet_preview_waiting">PC からのプレビューストリームを待機しています…</string>
+    <string name="tablet_preview_port">プレビューストリームのポート：%1$d</string>
+    <string name="action_translate">翻訳（クリップボード）</string>
+    <string name="notes_pin">ピン留め</string>
+    <string name="notes_export_all">すべて書き出す</string>
+    <string name="notes_clear_all">すべて削除</string>
+    <string name="notes_clear_all_confirm">すべてのメモを削除しますか？この操作は元に戻せません。</string>
+    <string name="btn_open_link">リンクを開く</string>
+    <string name="btn_send_email">メールを送信</string>
+    <string name="settings_battery_saver">バッテリーセーバー</string>
+    <string name="settings_battery_saver_desc">ペンが収納されている状態で5秒アイドルが続くとデジタイザ読み取りを一時停止；抽出すると即座に再開します</string>
 </resources>

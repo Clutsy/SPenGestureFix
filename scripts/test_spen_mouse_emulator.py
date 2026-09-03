@@ -6,8 +6,8 @@ from io import StringIO
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import spen_mouse_emulator as emulator_module  # noqa: E402
-from spen_mouse_emulator import (  # noqa: E402
+import SPGF_Wacom as emulator_module  # noqa: E402
+from SPGF_Wacom import (  # noqa: E402
     ASCII_LOGO,
     AdbPenEmulator,
     AxisRange,
@@ -51,7 +51,10 @@ class EmulatorTests(unittest.TestCase):
         with redirect_stdout(output):
             emulator_module.print_ascii_logo()
         self.assertEqual(output.getvalue().rstrip("\n"), ASCII_LOGO)
-        self.assertIn("S", ASCII_LOGO)
+        # The artwork is a pen drawing built from ASCII blocks; it must stay
+        # non-trivial in size and strictly ASCII-printable.
+        self.assertGreater(len(ASCII_LOGO), 100)
+        self.assertIn("@", ASCII_LOGO)
         self.assertTrue(all(ord(character) < 128 for character in ASCII_LOGO))
 
     def test_parse_event_path_with_colon(self):
@@ -150,7 +153,7 @@ class EmulatorTests(unittest.TestCase):
 
     def test_tcp_flags_keep_middle_button_separate(self):
         backend = FakeBackend()
-        from spen_mouse_emulator import TcpPenEmulator
+        from SPGF_Wacom import TcpPenEmulator
         emulator = TcpPenEmulator("127.0.0.1", 7654, backend, 1000, 500)
         emulator.handle_frame("0.5,0.5,0.5,16")
         self.assertEqual(backend.pressed, [2])
@@ -159,7 +162,7 @@ class EmulatorTests(unittest.TestCase):
 
     def test_tcp_eraser_does_not_release_right_button_while_pressed(self):
         backend = FakeBackend()
-        from spen_mouse_emulator import TcpPenEmulator
+        from SPGF_Wacom import TcpPenEmulator
         emulator = TcpPenEmulator("127.0.0.1", 7654, backend, 1000, 500)
         emulator.handle_frame("0.5,0.5,0.5,4")
         emulator.handle_frame("0.5,0.5,0.5,6")
@@ -184,6 +187,66 @@ class EmulatorTests(unittest.TestCase):
         emulator.handle_event(("EV_ABS", "ABS_X", "00000019"))
         emulator.handle_event(("EV_ABS", "ABS_Y", "00000096"))
         self.assertEqual(backend.moves[-1], (749, 374))
+
+
+    def test_preview_header_framing(self):
+        from SPGF_Wacom import PREVIEW_HEADER_PREFIX, preview_header
+
+        self.assertEqual(preview_header(0), PREVIEW_HEADER_PREFIX + b"00000000")
+        self.assertEqual(preview_header(255), PREVIEW_HEADER_PREFIX + b"000000FF")
+        self.assertEqual(preview_header(123456), PREVIEW_HEADER_PREFIX + b"0001E240")
+        with self.assertRaises(ValueError):
+            preview_header(-1)
+
+    def test_preview_streamer_pen_state_clamps(self):
+        from SPGF_Wacom import PreviewStreamer
+
+        streamer = PreviewStreamer("127.0.0.1")
+        streamer.set_pen_state(1.4, -0.3, 0b0011)
+        self.assertEqual(streamer.pen_x, 1.0)
+        self.assertEqual(streamer.pen_y, 0.0)
+        self.assertTrue(streamer.pen_touching)
+        self.assertTrue(streamer.pen_button)
+        self.assertFalse(streamer.pen_in_range)
+
+    def test_preview_pillow_fast_path_encodes_bgra(self):
+        """The new Pillow path must BGRA-decode, downscale and draw the marker."""
+        from SPGF_Wacom import PreviewStreamer
+
+        try:
+            import PIL  # noqa: F401
+        except ImportError:
+            self.skipTest("Pillow not installed")
+        streamer = PreviewStreamer("127.0.0.1", max_width=320, quality=50)
+        streamer.set_pen_state(0.5, 0.5, 0b0001)
+        # 8x2 BGRA pixels: left half blue, right half white (two full rows).
+        row = bytes([255, 0, 0, 255] * 4 + [255, 255, 255, 255] * 4)
+        bgra = row * 2
+        self.assertEqual(len(bgra), 8 * 2 * 4)
+        jpeg = streamer._encode_jpeg(8, 2, bgra)
+        self.assertIsNotNone(jpeg)
+        self.assertTrue(jpeg[:2] == b"\xff\xd8", "not a JPEG stream")
+
+    def test_preview_capture_pause_round_trip(self):
+        from SPGF_Wacom import PreviewStreamer
+
+        streamer = PreviewStreamer("127.0.0.1")
+        self.assertFalse(streamer.capture_paused.is_set())
+        streamer.capture_paused.set()
+        self.assertTrue(streamer.capture_paused.is_set())
+        streamer.capture_paused.clear()
+        self.assertFalse(streamer.capture_paused.is_set())
+
+    def test_preview_fps_counts_sent_frames(self):
+        import time as time_module
+
+        from SPGF_Wacom import PreviewStreamer
+
+        streamer = PreviewStreamer("127.0.0.1")
+        now = time_module.monotonic()
+        streamer._sent_times[:] = [now - 1.0, now - 2.0, now - 10.0]
+        # Only the two recent sends count; the 10s-old one is outside the window.
+        self.assertAlmostEqual(streamer.preview_fps(), 2.0 / 3.0, delta=0.05)
 
 
 if __name__ == "__main__":

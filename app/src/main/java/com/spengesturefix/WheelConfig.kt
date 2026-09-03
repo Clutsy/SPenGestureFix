@@ -12,7 +12,7 @@ import org.json.JSONObject
  * consistent surface is faster and keeps the pen input path unobstructed.
  */
 object WheelConfig {
-    const val SLOT_COUNT = 6
+    const val SLOT_COUNT = 7
     private const val PREFS = "spen_wheel"
     private const val KEY_SLOTS = "slots_json"
     private const val KEY_WHEEL_COLOR = "wheel_color"
@@ -53,13 +53,24 @@ object WheelConfig {
         ActionType.SCREEN_WRITE,
         ActionType.SMART_SELECT,
         ActionType.APP_SEARCH,
-        ActionType.TOGGLE_FLASHLIGHT
+        ActionType.TOGGLE_FLASHLIGHT,
+        ActionType.TRANSLATE
     ).map { type -> PenAction(type, type.label(context)) }
 
     fun saveSlot(context: Context, index: Int, action: PenAction) {
         if (index !in 0 until SLOT_COUNT) return
         val slots = loadSlots(context).toMutableList()
         slots[index] = action
+        saveSlots(context, slots)
+    }
+
+    /** Reorders a slot; used by the dashboard reorder controls. */
+    fun moveSlot(context: Context, fromIndex: Int, toIndex: Int) {
+        if (fromIndex !in 0 until SLOT_COUNT || toIndex !in 0 until SLOT_COUNT) return
+        if (fromIndex == toIndex) return
+        val slots = loadSlots(context).toMutableList()
+        val item = slots.removeAt(fromIndex)
+        slots.add(toIndex, item)
         saveSlots(context, slots)
     }
 

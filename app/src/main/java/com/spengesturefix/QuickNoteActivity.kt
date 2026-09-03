@@ -18,19 +18,31 @@ class QuickNoteActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         noteId = intent.getIntExtra(EXTRA_NOTE_ID, -1)
         noteTimestamp = intent.getLongExtra(EXTRA_NOTE_TIMESTAMP, -1L)
-        initialText = when {
+        val existing = when {
             noteTimestamp > 0L -> NotesStore.loadAll(this)
                 .firstOrNull { it.timestamp == noteTimestamp }
-                ?.text.orEmpty()
-            noteId >= 0 -> NotesStore.loadAll(this).getOrNull(noteId)?.text.orEmpty()
-            else -> ""
+            noteId >= 0 -> NotesStore.loadAll(this).getOrNull(noteId)
+            else -> null
         }
+        initialText = existing?.text.orEmpty()
 
         setContent {
-            SpenFixTheme {
+            SpenFixTheme(amoled = AppSettings.isAmoled(this)) {
                 QuickNoteComposeScreen(
                     initialText = initialText,
                     editing = noteTimestamp > 0L || noteId >= 0,
+                    pinned = existing?.pinned ?: false,
+                    colorIndex = existing?.colorIndex ?: -1,
+                    onPinnedChanged = { pinned ->
+                        noteTimestamp.takeIf { it > 0L }?.let { ts ->
+                            NotesStore.setPinned(this, ts, pinned)
+                        }
+                    },
+                    onColorChanged = { colorIndex ->
+                        noteTimestamp.takeIf { it > 0L }?.let { ts ->
+                            NotesStore.setColor(this, ts, colorIndex)
+                        }
+                    },
                     onSave = { text ->
                         when {
                             noteTimestamp > 0L -> NotesStore.updateByTimestamp(this, noteTimestamp, text)
@@ -47,6 +59,12 @@ class QuickNoteActivity : ComponentActivity() {
                     },
                     onMaps = { query ->
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(query)}")))
+                    },
+                    onOpenLink = { link ->
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link)))
+                    },
+                    onEmail = { address ->
+                        startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$address")))
                     },
                     onClose = ::finish
                 )

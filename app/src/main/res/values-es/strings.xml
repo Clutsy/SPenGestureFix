@@ -187,4 +187,20 @@
     <string name="notes_no_match">Ninguna nota coincide con la búsqueda.</string>
     <string name="notes_character_count">%1$d caracteres</string>
     <string name="tablet_auto_detect_resolution">Detectar resolución del dispositivo</string>
+    <!-- Vista previa de la pantalla del PC -->
+    <string name="tablet_frames_sent">Fotogramas enviados: %1$d</string>
+    <string name="tablet_preview_button">Pantalla del PC</string>
+    <string name="tablet_preview_title">Vista previa de la pantalla del PC</string>
+    <string name="tablet_preview_hint">Inicia el cliente en el PC con --preview para ver la pantalla de Windows aquí.</string>
+    <string name="tablet_preview_waiting">Esperando el flujo de vista previa del PC…</string>
+    <string name="tablet_preview_port">Flujo de vista previa en el puerto %1$d</string>
+    <string name="action_translate">Traducir (portapapeles)</string>
+    <string name="notes_pin">Fijar</string>
+    <string name="notes_export_all">Exportar todo</string>
+    <string name="notes_clear_all">Borrar todo</string>
+    <string name="notes_clear_all_confirm">¿Borrar todas las notas? No se puede deshacer.</string>
+    <string name="btn_open_link">Abrir enlace</string>
+    <string name="btn_send_email">Enviar correo</string>
+    <string name="settings_battery_saver">Ahorro de batería</string>
+    <string name="settings_battery_saver_desc">Pausa el lector del digitalizador tras 5 segundos de inactividad con la pluma guardada; sacarla lo reactiva al instante</string>
 </resources>

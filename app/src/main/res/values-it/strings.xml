@@ -202,4 +202,21 @@
     <string name="notes_no_match">Nessuna nota corrisponde alla ricerca.</string>
     <string name="notes_character_count">%1$d caratteri</string>
     <string name="tablet_auto_detect_resolution">Rileva risoluzione dispositivo</string>
+    <!-- Anteprima schermo PC in modalità tavoletta -->
+    <string name="tablet_frames_sent">Frame inviati: %1$d</string>
+    <string name="tablet_preview_button">Schermo PC</string>
+    <string name="tablet_preview_title">Anteprima schermo PC</string>
+    <string name="tablet_preview_hint">Avvia il client sul PC con --preview per vedere lo schermo Windows qui.</string>
+    <string name="tablet_preview_waiting">In attesa del flusso di anteprima dal PC…</string>
+    <string name="tablet_preview_port">Flusso di anteprima sulla porta %1$d</string>
+    <!-- Memo a schermo spento e note extra -->
+    <string name="action_translate">Traduci (clipboard)</string>
+    <string name="notes_pin">Fissa</string>
+    <string name="notes_export_all">Esporta tutto</string>
+    <string name="notes_clear_all">Elimina tutto</string>
+    <string name="notes_clear_all_confirm">Eliminare tutte le note? Operazione irreversibile.</string>
+    <string name="btn_open_link">Apri link</string>
+    <string name="btn_send_email">Invia email</string>
+    <string name="settings_battery_saver">Risparmio batteria</string>
+    <string name="settings_battery_saver_desc">Mette in pausa il lettore del digitalizzatore dopo 5 secondi di inattività con la penna inserita; l\'estrazione la riattiva subito</string>
 </resources>

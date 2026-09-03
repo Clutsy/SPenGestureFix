@@ -44,7 +44,18 @@ object TabletNetworkServer {
     @Volatile private var frameIntervalNanos = 1_000_000_000L / 133L
     @Volatile private var metadata = StreamMetadata(0, 0, 0, "landscape")
     private val latestFrame = AtomicReference<Frame?>(null)
+    @Volatile private var framesSent = 0L
+    @Volatile private var bytesSent = 0L
     private var serverThread: Thread? = null
+
+    val isClientConnected: Boolean
+        get() = client != null
+
+    /** Total frames flushed to the PC during this server lifetime. */
+    fun framesSent(): Long = framesSent
+
+    /** Approximate bytes written to the PC during this server lifetime. */
+    fun bytesSent(): Long = bytesSent
 
     fun start(
         onStatusChange: (connected: Boolean) -> Unit,
@@ -65,6 +76,8 @@ object TabletNetworkServer {
             orientation.ifBlank { "landscape" }
         )
         latestFrame.set(null)
+        framesSent = 0L
+        bytesSent = 0L
         serverThread = Thread({
             try {
                 ServerSocket(PORT).also { serverSocket = it }.use { server ->
@@ -121,15 +134,18 @@ object TabletNetworkServer {
                     // Keep this as an actual line feed: the PC client consumes
                     // one complete frame per line. A legacy client ignores the
                     // preceding metadata line as an invalid frame.
-                    writer.write(String.format(
+                    val line = String.format(
                         Locale.US,
                         "%.5f,%.5f,%.5f,%d\n",
                         frame.x,
                         frame.y,
                         frame.pressure,
                         flags
-                    ))
+                    )
+                    writer.write(line)
                     writer.flush()
+                    framesSent += 1L
+                    bytesSent += line.length.toLong()
                 }
 
                 val remaining = frameIntervalNanos - (System.nanoTime() - tick)
@@ -199,9 +215,6 @@ object TabletNetworkServer {
         serverThread?.interrupt()
         serverThread = null
     }
-
-    val isClientConnected: Boolean
-        get() = client != null
 
     private fun notifyStatus(callback: (Boolean) -> Unit, connected: Boolean) {
         try {

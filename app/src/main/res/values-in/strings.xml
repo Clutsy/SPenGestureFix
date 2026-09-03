@@ -188,4 +188,20 @@
     <string name="notes_no_match">Tidak ada catatan yang cocok dengan pencarian.</string>
     <string name="notes_character_count">%1$d karakter</string>
     <string name="tablet_auto_detect_resolution">Deteksi resolusi perangkat</string>
+    <!-- Pratinjau layar PC -->
+    <string name="tablet_frames_sent">Frame terkirim: %1$d</string>
+    <string name="tablet_preview_button">Layar PC</string>
+    <string name="tablet_preview_title">Pratinjau layar PC</string>
+    <string name="tablet_preview_hint">Jalankan klien di PC dengan --preview untuk melihat layar Windows di sini.</string>
+    <string name="tablet_preview_waiting">Menunggu aliran pratinjau dari PC…</string>
+    <string name="tablet_preview_port">Aliran pratinjau di port %1$d</string>
+    <string name="action_translate">Terjemahkan (clipboard)</string>
+    <string name="notes_pin">Sematkan</string>
+    <string name="notes_export_all">Ekspor semua</string>
+    <string name="notes_clear_all">Hapus semua</string>
+    <string name="notes_clear_all_confirm">Hapus semua catatan? Tidak dapat dibatalkan.</string>
+    <string name="btn_open_link">Buka tautan</string>
+    <string name="btn_send_email">Kirim surel</string>
+    <string name="settings_battery_saver">Penghemat baterai</string>
+    <string name="settings_battery_saver_desc">Menjeda pembaca digitizer setelah 5 detik tidak aktif dengan pena tersimpan; mencabutnya langsung membangunkannya</string>
 </resources>

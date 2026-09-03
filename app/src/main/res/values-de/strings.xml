@@ -188,4 +188,20 @@
     <string name="notes_no_match">Keine Notiz passt zu deiner Suche.</string>
     <string name="notes_character_count">%1$d Zeichen</string>
     <string name="tablet_auto_detect_resolution">Geräteauflösung erkennen</string>
+    <!-- PC-Bildschirmvorschau -->
+    <string name="tablet_frames_sent">Gesendete Frames: %1$d</string>
+    <string name="tablet_preview_button">PC-Bildschirm</string>
+    <string name="tablet_preview_title">PC-Bildschirmvorschau</string>
+    <string name="tablet_preview_hint">Starte den Client auf dem PC mit --preview, um den Windows-Bildschirm hier zu sehen.</string>
+    <string name="tablet_preview_waiting">Warte auf den Vorschau-Stream vom PC…</string>
+    <string name="tablet_preview_port">Vorschau-Stream auf Port %1$d</string>
+    <string name="action_translate">Übersetzen (Zwischenablage)</string>
+    <string name="notes_pin">Anheften</string>
+    <string name="notes_export_all">Alle exportieren</string>
+    <string name="notes_clear_all">Alle löschen</string>
+    <string name="notes_clear_all_confirm">Alle Notizen löschen? Das kann nicht rückgängig gemacht werden.</string>
+    <string name="btn_open_link">Link öffnen</string>
+    <string name="btn_send_email">E-Mail senden</string>
+    <string name="settings_battery_saver">Batteriesparmodus</string>
+    <string name="settings_battery_saver_desc">Pausiert den Digitizer-Reader nach 5 Leerlaufsekunden bei eingelegtem Stift; das Herausziehen weckt ihn sofort</string>
 </resources>

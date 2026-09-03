@@ -188,4 +188,20 @@
     <string name="notes_no_match">Brak notatek pasujących do wyszukiwania.</string>
     <string name="notes_character_count">%1$d znaków</string>
     <string name="tablet_auto_detect_resolution">Wykryj rozdzielczość urządzenia</string>
+    <!-- Podgląd ekranu komputera -->
+    <string name="tablet_frames_sent">Wysłane klatki: %1$d</string>
+    <string name="tablet_preview_button">Ekran komputera</string>
+    <string name="tablet_preview_title">Podgląd ekranu komputera</string>
+    <string name="tablet_preview_hint">Uruchom klienta na komputerze z opcją --preview, aby zobaczyć ekran Windows tutaj.</string>
+    <string name="tablet_preview_waiting">Oczekiwanie na strumień podglądu z komputera…</string>
+    <string name="tablet_preview_port">Strumień podglądu na porcie %1$d</string>
+    <string name="action_translate">Przetłumacz (schowek)</string>
+    <string name="notes_pin">Przypnij</string>
+    <string name="notes_export_all">Eksportuj wszystko</string>
+    <string name="notes_clear_all">Usuń wszystko</string>
+    <string name="notes_clear_all_confirm">Usunąć wszystkie notatki? Tej operacji nie można cofnąć.</string>
+    <string name="btn_open_link">Otwórz link</string>
+    <string name="btn_send_email">Wyślij e-mail</string>
+    <string name="settings_battery_saver">Oszczędzanie baterii</string>
+    <string name="settings_battery_saver_desc">Wstrzymuje czytnik digitizera po 5 sekundach bezczynności przy schowanym rysiku; wyjęcie rysika natychmiast go wybudza</string>
 </resources>

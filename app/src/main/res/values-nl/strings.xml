@@ -188,4 +188,20 @@
     <string name="notes_no_match">Geen notities komen overeen met je zoekopdracht.</string>
     <string name="notes_character_count">%1$d tekens</string>
     <string name="tablet_auto_detect_resolution">Apparaatresolutie detecteren</string>
+    <!-- PC-schermpreview -->
+    <string name="tablet_frames_sent">Verzonden frames: %1$d</string>
+    <string name="tablet_preview_button">PC-scherm</string>
+    <string name="tablet_preview_title">PC-schermpreview</string>
+    <string name="tablet_preview_hint">Start de client op de pc met --preview om het Windows-scherm hier te zien.</string>
+    <string name="tablet_preview_waiting">Wachten op de preview-stream van de pc…</string>
+    <string name="tablet_preview_port">Preview-stream op poort %1$d</string>
+    <string name="action_translate">Vertalen (klembord)</string>
+    <string name="notes_pin">Vastzetten</string>
+    <string name="notes_export_all">Alles exporteren</string>
+    <string name="notes_clear_all">Alles verwijderen</string>
+    <string name="notes_clear_all_confirm">Alle notities verwijderen? Dit kan niet ongedaan worden gemaakt.</string>
+    <string name="btn_open_link">Link openen</string>
+    <string name="btn_send_email">E-mail versturen</string>
+    <string name="settings_battery_saver">Batterijbesparing</string>
+    <string name="settings_battery_saver_desc">Pauzeert de digitizer-lezer na 5 inactieve seconden met de pen opgeborgen; het eruit halen wekt hem direct</string>
 </resources>

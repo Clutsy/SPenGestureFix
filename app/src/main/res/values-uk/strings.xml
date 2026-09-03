@@ -188,4 +188,20 @@
     <string name="notes_no_match">Немає нотаток, що відповідають пошуку.</string>
     <string name="notes_character_count">Символів: %1$d</string>
     <string name="tablet_auto_detect_resolution">Визначити роздільну здатність пристрою</string>
+    <!-- Попередній перегляд екрана ПК -->
+    <string name="tablet_frames_sent">Надіслано кадрів: %1$d</string>
+    <string name="tablet_preview_button">Екран ПК</string>
+    <string name="tablet_preview_title">Попередній перегляд екрана ПК</string>
+    <string name="tablet_preview_hint">Запустіть клієнт на ПК з ключем --preview, щоб бачити екран Windows тут.</string>
+    <string name="tablet_preview_waiting">Очікування потоку попереднього перегляду з ПК…</string>
+    <string name="tablet_preview_port">Потік попереднього перегляду на порту %1$d</string>
+    <string name="action_translate">Перекласти (буфер обміну)</string>
+    <string name="notes_pin">Закріпити</string>
+    <string name="notes_export_all">Експортувати все</string>
+    <string name="notes_clear_all">Видалити все</string>
+    <string name="notes_clear_all_confirm">Видалити всі нотатки? Дію не можна скасувати.</string>
+    <string name="btn_open_link">Відкрити посилання</string>
+    <string name="btn_send_email">Надіслати лист</string>
+    <string name="settings_battery_saver">Економія батареї</string>
+    <string name="settings_battery_saver_desc">Призупиняє читач дигітайзера через 5 секунд бездіяльності звставленим пером; виняття пера мігдально його будить</string>
 </resources>

@@ -23,7 +23,7 @@ class SmartSelectActivity : ComponentActivity() {
         }
         sourceBitmap = bitmap
         setContent {
-            SpenFixTheme {
+            SpenFixTheme(amoled = AppSettings.isAmoled(this)) {
                 SmartSelectComposeScreen(
                     bitmap = sourceBitmap,
                     onSave = ::saveCrop,

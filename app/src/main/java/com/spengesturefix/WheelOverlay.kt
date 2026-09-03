@@ -8,17 +8,24 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PointF
-import android.graphics.RectF
+import android.graphics.PorterDuff
+import android.graphics.RadialGradient
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityNodeInfo
+import android.view.animation.OvershootInterpolator
 import androidx.compose.ui.graphics.toArgb
+import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.min
@@ -26,11 +33,17 @@ import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /**
- * Compact Air Command-style fan anchored to the lower-right screen corner.
+ * Air Command-style wheel anchored to the lower-right screen corner.
  *
- * The window and its view are transparent. Only the action targets and two
- * subtle guide arcs are drawn, so the application underneath remains visible
- * and the overlay adds very little work to the main thread or GPU.
+ * Design goals (2026.09 refinement):
+ *  - clean pie menu: every slot sits on ONE even circle, spaced by equal
+ *    angles — no staggered rings, no overlapping targets;
+ *  - real vector icons drawn from tinted VectorDrawables instead of emoji;
+ *  - short localized labels under the icon, only inside the slot disc;
+ *  - closing is the dedicated center disc (X icon), always the same place;
+ *  - press-and-drag selection like the Samsung original with a haptic tick
+ *    when the finger crosses into a new slot;
+ *  - soft radial backdrop so the wheel stays readable over any app.
  */
 class WheelOverlay(context: Context) {
     private val appContext = context.applicationContext
@@ -67,10 +80,10 @@ class WheelOverlay(context: Context) {
         val metrics = appContext.resources.displayMetrics
         val shortSide = min(metrics.widthPixels, metrics.heightPixels).coerceAtLeast(1)
         val minimum = dp(250f).coerceAtMost(shortSide)
-        val size = (shortSide * 0.68f).roundToInt()
+        val size = (shortSide * 0.72f).roundToInt()
             .coerceAtLeast(minimum)
             .coerceAtMost(shortSide)
-        val inset = dp(8f)
+        val inset = dp(10f)
         val view = WheelView(
             context = appContext,
             slots = WheelConfig.loadSlots(appContext),
@@ -99,9 +112,11 @@ class WheelOverlay(context: Context) {
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             android.graphics.PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = Gravity.BOTTOM or Gravity.END
-            x = inset
-            y = inset
+            // Centered pie menu: every slot is equidistant from the eye and the
+            // layout no longer crams all targets into one corner arc.
+            gravity = Gravity.CENTER
+            x = 0
+            y = 0
         }
 
         try {
@@ -141,6 +156,48 @@ class WheelOverlay(context: Context) {
         ).roundToInt()
 }
 
+/**
+ * Pure geometry for the centered full-circle pie menu. Exposed for unit
+ * tests: the slot angle math is intentionally deterministic and hardware-free.
+ */
+object WheelGeometry {
+    /**
+     * Slot k angle in radians. Slot 0 sits at the top and the rest follow
+     * clockwise at exactly even 2π/count steps, so every disc is identical
+     * and no pair of neighbors can drift closer than the chord distance.
+     */
+    fun slotAngle(index: Int, count: Int): Double {
+        val n = count.coerceAtLeast(1)
+        return -PI / 2.0 + (2.0 * PI * index) / n
+    }
+
+    /**
+     * Chord distance between adjacent slot centers on a full circle of
+     * [ringRadius]: 2R·sin(π/count). Adjacent discs never touch as long as
+     * this stays above twice the disc radius.
+     */
+    fun minimumCenterDistance(count: Int, ringRadius: Float): Float {
+        if (count < 2) return Float.MAX_VALUE
+        return (2.0 * ringRadius * sin(PI / count)).toFloat()
+    }
+
+    /**
+     * Slot center as a plain (x, y) pair. Returning a Pair instead of an
+     * Android class keeps this function testable on the JVM.
+     */
+    fun slotCenter(
+        index: Int,
+        count: Int,
+        centerX: Float,
+        centerY: Float,
+        ringRadius: Float
+    ): Pair<Float, Float> {
+        val angle = slotAngle(index, count)
+        return (centerX + ringRadius * cos(angle).toFloat()) to
+            (centerY + ringRadius * sin(angle).toFloat())
+    }
+}
+
 private class WheelView(
     context: Context,
     private val slots: List<PenAction>,
@@ -148,44 +205,47 @@ private class WheelView(
     private val onSlotTapped: (PenAction) -> Unit,
     private val onDismiss: () -> Unit
 ) : View(context) {
-    private val connectorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        strokeCap = Paint.Cap.ROUND
-    }
-    private val accentPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val appContext = context.applicationContext
+    private val typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+
+    private val backdropPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val discPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
-    private val buttonPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val buttonBorderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val arcPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
     }
-    private val iconPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val glyphPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = android.graphics.Typeface.create(
-            android.graphics.Typeface.SANS_SERIF,
-            android.graphics.Typeface.NORMAL
-        )
+        typeface = typeface
     }
     private val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        typeface = android.graphics.Typeface.create(
-            android.graphics.Typeface.SANS_SERIF,
-            android.graphics.Typeface.BOLD
-        )
+        typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
     }
+
     private val center = PointF()
-    private val guideRect = RectF()
-    private val innerGuideRect = RectF()
-    private val slotCenters = ArrayList<PointF>()
+    private val slotCenters = ArrayList<PointF>(slots.size + 1)
     private val labels = slots.map { compactLabel(it.label) }
+    private val icons: List<android.graphics.drawable.Drawable?> = slots.map {
+        loadIcon(it.type.iconResId)
+    }
+    private val closeIcon: android.graphics.drawable.Drawable? = loadIcon(R.drawable.ic_act_none)
     private var ringRadius = 0f
-    private var buttonRadius = 0f
-    private var closeRadius = 0f
-    private val startAngle = Math.PI
-    // Canvas angles increase clockwise because the Y axis points down. From
-    // the left anchor, a 90-degree sweep travels cleanly upward without
-    // clipping the upper target at the right edge.
-    private val sweepAngle = Math.PI / 2.0
+    private var slotRadius = 0f
+    private var centerRadius = 0f
+    private var iconSize = 0f
+    private var iconBounds = android.graphics.Rect()
+
+    // Canvas angles increase clockwise because Y points down. From the left
+    // anchor a 90-degree sweep travels cleanly upward without clipping.
+    private val startAngle = PI
+    private val sweepAngle = PI / 2.0
+
     private var selectedSlot = -1
     private var tracking = false
     private var animation: ValueAnimator? = null
@@ -200,48 +260,51 @@ private class WheelView(
         contentDescription = context.getString(R.string.section_wheel)
     }
 
+    private fun loadIcon(resId: Int): android.graphics.drawable.Drawable? = try {
+        // Native VectorDrawable on API 21+, compat inflater as the fallback.
+        val drawable = appContext.getDrawable(resId)
+            ?: VectorDrawableCompat.create(appContext.resources, resId, appContext.theme)
+        drawable?.apply { setTint(Color.WHITE) }
+    } catch (_: Exception) {
+        null
+    }
+
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         val side = min(width, height).toFloat()
-        center.set(side * 0.84f, side * 0.84f)
+        // Centered pie menu: the close disc sits exactly in the middle.
+        center.set(side * 0.5f, side * 0.5f)
 
-        buttonRadius = (side * 0.073f)
-            .coerceAtLeast(dp(20f).toFloat())
-            .coerceAtMost(side * 0.088f)
-        closeRadius = buttonRadius * 0.90f
-        ringRadius = (side * 0.60f).coerceAtLeast(buttonRadius * 2.7f)
-        ringRadius = min(
-            ringRadius,
-            min(
-                center.x - buttonRadius - dp(12f),
-                center.y - buttonRadius - dp(12f)
-            ).coerceAtLeast(buttonRadius * 2f)
-        )
+        // Every configured action gets a slot on one even circle.
+        val slotCount = slots.size.coerceAtLeast(1)
+        centerRadius = (side * 0.075f).coerceAtLeast(dp(21f).toFloat())
+        slotRadius = (side * 0.080f).coerceAtLeast(dp(23f).toFloat())
 
-        val guideRadius = ringRadius + buttonRadius * 1.30f
-        guideRect.set(
-            center.x - guideRadius,
-            center.y - guideRadius,
-            center.x + guideRadius,
-            center.y + guideRadius
-        )
-        val innerRadius = guideRadius - dp(8f)
-        innerGuideRect.set(
-            center.x - innerRadius,
-            center.y - innerRadius,
-            center.x + innerRadius,
-            center.y + innerRadius
-        )
+        // Ring radius sized so adjacent discs always keep an air gap, capped
+        // by what the square window can actually show.
+        val maxReachable = min(center.x, center.y) - slotRadius - dp(6f)
+        val unitChord = WheelGeometry.minimumCenterDistance(slotCount, 1f)
+        val needed = if (unitChord > 0f) {
+            (slotRadius * 1.35f) / unitChord
+        } else {
+            0.34f
+        }
+        ringRadius = (needed * side)
+            .coerceAtLeast(side * 0.30f)
+            .coerceAtMost(maxReachable)
+            .coerceAtLeast(centerRadius + slotRadius + dp(10f))
 
         slotCenters.clear()
-        slots.forEachIndexed { index, _ ->
-            val denominator = (slots.size - 1).coerceAtLeast(1).toDouble()
-            val fraction = if (slots.size == 1) 0.5 else index.toDouble() / denominator
-            val angle = startAngle + sweepAngle * fraction
-            slotCenters += PointF(
-                center.x + ringRadius * cos(angle).toFloat(),
-                center.y + ringRadius * sin(angle).toFloat()
+        repeat(slotCount) { index ->
+            val point = WheelGeometry.slotCenter(
+                index = index,
+                count = slotCount,
+                centerX = center.x,
+                centerY = center.y,
+                ringRadius = ringRadius
             )
+            slotCenters += PointF(point.first, point.second)
         }
+        iconSize = slotRadius * 0.92f
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -252,111 +315,133 @@ private class WheelView(
         val alpha = (progress * 255f).roundToInt().coerceIn(0, 255)
         canvas.save()
         canvas.scale(scale, scale, center.x, center.y)
-        drawGuide(canvas, alpha)
-        drawConnectors(canvas, alpha)
-        drawButtons(canvas, alpha)
-        drawCloseButton(canvas, alpha)
+        drawBackdrop(canvas, alpha)
+        drawGuideArc(canvas, alpha)
+        drawSlots(canvas, alpha)
+        drawCenter(canvas, alpha)
         canvas.restore()
     }
 
-    private fun drawGuide(canvas: Canvas, alpha: Int) {
-        accentPaint.strokeWidth = dp(1.5f).toFloat()
-        accentPaint.color = accent.withAlpha((alpha * 0.42f).roundToInt())
-        canvas.drawArc(
-            guideRect,
-            Math.toDegrees(startAngle).toFloat(),
-            Math.toDegrees(sweepAngle).toFloat(),
-            false,
-            accentPaint
+    private fun drawBackdrop(canvas: Canvas, alpha: Int) {
+        val backdropRadius = ringRadius + slotRadius + centerRadius * 2.0f
+        backdropPaint.shader = RadialGradient(
+            center.x, center.y,
+            backdropRadius,
+            intArrayOf(
+                Color.argb((alpha * 0.34f).roundToInt(), 8, 8, 14),
+                Color.argb((alpha * 0.18f).roundToInt(), 8, 8, 14),
+                Color.argb(0, 8, 8, 14)
+            ),
+            floatArrayOf(0f, 0.70f, 1f),
+            Shader.TileMode.CLAMP
         )
-
-        accentPaint.strokeWidth = dp(1f).toFloat()
-        accentPaint.color = Color.argb((alpha * 0.16f).roundToInt(), 255, 255, 255)
-        canvas.drawArc(
-            innerGuideRect,
-            Math.toDegrees(startAngle).toFloat(),
-            Math.toDegrees(sweepAngle).toFloat(),
-            false,
-            accentPaint
-        )
+        canvas.drawCircle(center.x, center.y, backdropRadius, backdropPaint)
     }
 
-    private fun drawConnectors(canvas: Canvas, alpha: Int) {
-        connectorPaint.strokeWidth = dp(1f).toFloat()
-        connectorPaint.color = accent.withAlpha((alpha * 0.24f).roundToInt())
-        slotCenters.forEachIndexed { index, point ->
-            val denominator = (slots.size - 1).coerceAtLeast(1).toDouble()
-            val fraction = if (slots.size == 1) 0.5 else index.toDouble() / denominator
-            val angle = startAngle + sweepAngle * fraction
-            val startRadius = ringRadius - buttonRadius - dp(5f)
-            val endRadius = ringRadius - buttonRadius + dp(2f)
-            canvas.drawLine(
-                center.x + startRadius * cos(angle).toFloat(),
-                center.y + startRadius * sin(angle).toFloat(),
-                center.x + endRadius * cos(angle).toFloat(),
-                center.y + endRadius * sin(angle).toFloat(),
-                connectorPaint
-            )
-            canvas.drawCircle(point.x, point.y, dp(2f).toFloat(), connectorPaint)
-        }
+    private fun drawGuideArc(canvas: Canvas, alpha: Int) {
+        // Subtle accent ring through every slot center.
+        arcPaint.strokeWidth = dp(1.5f).toFloat()
+        arcPaint.color = accent.withAlpha((alpha * 0.35f).roundToInt())
+        canvas.drawCircle(center.x, center.y, ringRadius, arcPaint)
     }
 
-    private fun drawButtons(canvas: Canvas, alpha: Int) {
-        val iconSize = dp(16f).toFloat()
-        val labelSize = dp(7f).toFloat()
+    private fun drawSlots(canvas: Canvas, alpha: Int) {
+        val labelSize = slotRadius * 0.42f
         slotCenters.forEachIndexed { index, point ->
             val selected = selectedSlot == index
-            val radius = buttonRadius * if (selected) 1.10f else 1f
-            if (!selected) {
-                buttonPaint.color = accent.withAlpha((alpha * 0.10f).roundToInt())
-                canvas.drawCircle(point.x, point.y, radius + dp(4f), buttonPaint)
-            }
-            buttonPaint.color = if (selected) {
-                accent.withAlpha((alpha * 0.92f).roundToInt())
-            } else {
-                Color.argb((alpha * 0.76f).roundToInt(), 17, 23, 35)
-            }
-            canvas.drawCircle(point.x, point.y, radius, buttonPaint)
+            val radius = if (selected) slotRadius * 1.12f else slotRadius
 
-            buttonBorderPaint.strokeWidth = if (selected) dp(2f).toFloat() else dp(1f).toFloat()
-            buttonBorderPaint.color = if (selected) {
+            if (selected) {
+                glowPaint.color = accent.withAlpha((alpha * 0.30f).roundToInt())
+                canvas.drawCircle(point.x, point.y, radius + dp(6f), glowPaint)
+            }
+
+            discPaint.color = if (selected) {
+                accent.withAlpha((alpha * 0.96f).roundToInt())
+            } else {
+                Color.argb((alpha * 0.80f).roundToInt(), 17, 19, 30)
+            }
+            canvas.drawCircle(point.x, point.y, radius, discPaint)
+
+            borderPaint.strokeWidth = if (selected) dp(2f).toFloat() else dp(1.2f).toFloat()
+            borderPaint.color = if (selected) {
                 Color.argb(alpha, 255, 255, 255)
             } else {
-                accent.withAlpha((alpha * 0.72f).roundToInt())
+                accent.withAlpha((alpha * 0.55f).roundToInt())
             }
-            canvas.drawCircle(point.x, point.y, radius, buttonBorderPaint)
+            canvas.drawCircle(point.x, point.y, radius, borderPaint)
 
-            iconPaint.textSize = iconSize
-            iconPaint.color = if (selected) Color.rgb(8, 12, 20) else Color.WHITE
-            canvas.drawText(slots[index].type.icon, point.x, point.y - dp(1f), iconPaint)
+            val icon = icons.getOrNull(index)
+            if (icon != null) {
+                val half = iconSize / 2f
+                iconBounds.set(
+                    (point.x - half).roundToInt(),
+                    (point.y - half - labelSize * 0.18f).roundToInt(),
+                    (point.x + half).roundToInt(),
+                    (point.y + half - labelSize * 0.18f).roundToInt()
+                )
+                icon.bounds = iconBounds
+                icon.setTint(if (selected) Color.argb(alpha, 10, 12, 20) else Color.argb(alpha, 255, 255, 255))
+                icon.draw(canvas)
+            }
 
             labelPaint.textSize = labelSize
             labelPaint.color = if (selected) {
-                Color.argb(alpha, 8, 12, 20)
+                Color.argb(alpha, 10, 12, 20)
             } else {
-                Color.argb(alpha, 232, 235, 242)
+                Color.argb((alpha * 0.92f).roundToInt(), 232, 234, 242)
             }
-            canvas.drawText(
-                labels[index],
-                point.x,
-                point.y + buttonRadius * 0.62f,
-                labelPaint
-            )
+            canvas.drawText(labels[index], point.x, point.y + radius * 0.58f, labelPaint)
         }
     }
 
-    private fun drawCloseButton(canvas: Canvas, alpha: Int) {
-        buttonPaint.color = Color.argb((alpha * 0.82f).roundToInt(), 14, 19, 30)
-        canvas.drawCircle(center.x, center.y, closeRadius, buttonPaint)
-        buttonBorderPaint.strokeWidth = dp(1.5f).toFloat()
-        buttonBorderPaint.color = accent.withAlpha((alpha * 0.95f).roundToInt())
-        canvas.drawCircle(center.x, center.y, closeRadius, buttonBorderPaint)
+    private fun drawCenter(canvas: Canvas, alpha: Int) {
+        val selected = selectedSlot == CLOSE_SLOT
+        val radius = if (selected) centerRadius * 1.12f else centerRadius
 
-        val cross = closeRadius * 0.42f
-        connectorPaint.strokeWidth = dp(2f).toFloat()
-        connectorPaint.color = Color.argb(alpha, 245, 246, 250)
-        canvas.drawLine(center.x - cross, center.y - cross, center.x + cross, center.y + cross, connectorPaint)
-        canvas.drawLine(center.x + cross, center.y - cross, center.x - cross, center.y + cross, connectorPaint)
+        // Soft accent core behind the anchor point.
+        glowPaint.shader = RadialGradient(
+            center.x, center.y,
+            radius * 2.4f,
+            intArrayOf(
+                accent.withAlpha((alpha * 0.30f).roundToInt()),
+                accent.withAlpha(0)
+            ),
+            floatArrayOf(0f, 1f),
+            Shader.TileMode.CLAMP
+        )
+        canvas.drawCircle(center.x, center.y, radius * 2.4f, glowPaint)
+        glowPaint.shader = null
+
+        if (selected) {
+            glowPaint.color = accent.withAlpha((alpha * 0.30f).roundToInt())
+            canvas.drawCircle(center.x, center.y, radius + dp(6f), glowPaint)
+        }
+
+        discPaint.color = if (selected) {
+            Color.argb(alpha, 255, 255, 255)
+        } else {
+            accent.withAlpha((alpha * 0.90f).roundToInt())
+        }
+        canvas.drawCircle(center.x, center.y, radius, discPaint)
+
+        borderPaint.strokeWidth = dp(1.5f).toFloat()
+        borderPaint.color = if (selected) accent.withAlpha(alpha) else Color.argb((alpha * 0.85f).roundToInt(), 255, 255, 255)
+        canvas.drawCircle(center.x, center.y, radius, borderPaint)
+
+        val icon = closeIcon
+        if (icon != null) {
+            val half = radius * 0.44f
+            iconBounds.set(
+                (center.x - half).roundToInt(),
+                (center.y - half).roundToInt(),
+                (center.x + half).roundToInt(),
+                (center.y + half).roundToInt()
+            )
+            icon.bounds = iconBounds
+            icon.setTint(if (selected) accent.withAlpha(alpha) else Color.argb(alpha, 12, 14, 22))
+            icon.draw(canvas)
+        }
     }
 
     private fun contentPoint(x: Float, y: Float): Pair<Float, Float> {
@@ -367,17 +452,18 @@ private class WheelView(
 
     private fun hitSlot(x: Float, y: Float): Int {
         val (pointX, pointY) = contentPoint(x, y)
+        val distanceFromCenter = hypot(pointX - center.x, pointY - center.y)
+        if (distanceFromCenter <= centerRadius * 1.22f) return CLOSE_SLOT
+        var best = -1
+        var bestDistance = Float.MAX_VALUE
         slotCenters.forEachIndexed { index, slot ->
-            if (hypot(pointX - slot.x, pointY - slot.y) <= buttonRadius * 1.20f) {
-                return index
+            val distance = hypot(pointX - slot.x, pointY - slot.y)
+            if (distance <= slotRadius * 1.25f && distance < bestDistance) {
+                bestDistance = distance
+                best = index
             }
         }
-        return -1
-    }
-
-    private fun isInCloseButton(x: Float, y: Float): Boolean {
-        val (pointX, pointY) = contentPoint(x, y)
-        return hypot(pointX - center.x, pointY - center.y) <= closeRadius * 1.30f
+        return best
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
@@ -391,33 +477,36 @@ private class WheelView(
             }
             MotionEvent.ACTION_DOWN -> {
                 val slot = hitSlot(event.x, event.y)
-                val close = isInCloseButton(event.x, event.y)
-                if (slot < 0 && !close) {
+                if (slot < 0) {
                     onDismiss()
                     return true
                 }
                 tracking = true
                 selectedSlot = slot
+                performHaptic()
                 invalidate()
                 parent?.requestDisallowInterceptTouchEvent(true)
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
                 if (!tracking) return false
-                selectedSlot = hitSlot(event.x, event.y)
-                invalidate()
+                val slot = hitSlot(event.x, event.y)
+                if (slot != selectedSlot) {
+                    selectedSlot = slot
+                    if (slot >= 0) performHaptic()
+                    invalidate()
+                }
                 return true
             }
             MotionEvent.ACTION_UP -> {
                 if (!tracking) return false
                 val releasedSlot = hitSlot(event.x, event.y)
-                val close = isInCloseButton(event.x, event.y)
                 tracking = false
                 selectedSlot = -1
                 invalidate()
                 performClick()
                 when {
-                    close -> onDismiss()
+                    releasedSlot == CLOSE_SLOT -> onDismiss()
                     releasedSlot >= 0 -> onSlotTapped(slots[releasedSlot])
                 }
                 return true
@@ -430,6 +519,17 @@ private class WheelView(
             }
         }
         return true
+    }
+
+    private fun performHaptic() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            } else {
+                @Suppress("DEPRECATION")
+                performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            }
+        } catch (_: Exception) { }
     }
 
     override fun performClick(): Boolean {
@@ -445,14 +545,18 @@ private class WheelView(
 
     fun playEnterAnimation() {
         interactive = true
-        animateTo(1f, 90L, null)
+        animateTo(1f, 150L, object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                if (interactive && progress >= 0.99f) performHaptic()
+            }
+        })
     }
 
     fun playExitAnimation(onFinished: (WheelView) -> Unit) {
         interactive = false
         tracking = false
         selectedSlot = -1
-        animateTo(0f, 80L, object : AnimatorListenerAdapter() {
+        animateTo(0f, 110L, object : AnimatorListenerAdapter() {
             override fun onAnimationEnd(animation: Animator) {
                 if (!interactive && progress <= 0.01f) onFinished(this@WheelView)
             }
@@ -463,7 +567,7 @@ private class WheelView(
         animation?.cancel()
         val animator = ValueAnimator.ofFloat(progress, target).apply {
             this.duration = duration
-            interpolator = android.view.animation.DecelerateInterpolator()
+            interpolator = OvershootInterpolator(1.15f)
             addUpdateListener {
                 progress = it.animatedValue as Float
                 invalidate()
@@ -492,4 +596,9 @@ private class WheelView(
         Color.green(this),
         Color.blue(this)
     )
+
+    companion object {
+        /** The center disc is the dedicated close target. */
+        const val CLOSE_SLOT = 999
+    }
 }

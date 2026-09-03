@@ -188,4 +188,20 @@
     <string name="notes_no_match">Aucune note ne correspond à la recherche.</string>
     <string name="notes_character_count">%1$d caractères</string>
     <string name="tablet_auto_detect_resolution">Détecter la résolution de l’appareil</string>
+    <!-- Aperçu de l'écran du PC -->
+    <string name="tablet_frames_sent">Images envoyées : %1$d</string>
+    <string name="tablet_preview_button">Écran du PC</string>
+    <string name="tablet_preview_title">Aperçu de l\'écran du PC</string>
+    <string name="tablet_preview_hint">Lancez le client sur le PC avec --preview pour voir l\'écran Windows ici.</string>
+    <string name="tablet_preview_waiting">En attente du flux d\'aperçu du PC…</string>
+    <string name="tablet_preview_port">Flux d\'aperçu sur le port %1$d</string>
+    <string name="action_translate">Traduire (presse-papiers)</string>
+    <string name="notes_pin">Épingler</string>
+    <string name="notes_export_all">Tout exporter</string>
+    <string name="notes_clear_all">Tout supprimer</string>
+    <string name="notes_clear_all_confirm">Supprimer toutes les notes ? Action irréversible.</string>
+    <string name="btn_open_link">Ouvrir le lien</string>
+    <string name="btn_send_email">Envoyer un e-mail</string>
+    <string name="settings_battery_saver">Économie de batterie</string>
+    <string name="settings_battery_saver_desc">Met en pause le lecteur du numériseur après 5 secondes d\'inactivité, stylet rangé ; le sortir le réveille instantanément</string>
 </resources>

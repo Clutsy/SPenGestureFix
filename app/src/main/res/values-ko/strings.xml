@@ -188,4 +188,20 @@
     <string name="notes_no_match">검색과 일치하는 노트가 없습니다.</string>
     <string name="notes_character_count">%1$d자</string>
     <string name="tablet_auto_detect_resolution">기기 해상도 감지</string>
+    <!-- PC 화면 미리보기 -->
+    <string name="tablet_frames_sent">전송된 프레임: %1$d</string>
+    <string name="tablet_preview_button">PC 화면</string>
+    <string name="tablet_preview_title">PC 화면 미리보기</string>
+    <string name="tablet_preview_hint">PC에서 --preview 옵션으로 클라이언트를 시작하면 Windows 화면을 여기서 볼 수 있습니다.</string>
+    <string name="tablet_preview_waiting">PC의 미리보기 스트림을 기다리는 중…</string>
+    <string name="tablet_preview_port">미리보기 스트림 포트: %1$d</string>
+    <string name="action_translate">번역(클립보드)</string>
+    <string name="notes_pin">고정</string>
+    <string name="notes_export_all">모두 내보내기</string>
+    <string name="notes_clear_all">모두 삭제</string>
+    <string name="notes_clear_all_confirm">모든 메모를 삭제할까요? 되돌릴 수 없습니다.</string>
+    <string name="btn_open_link">링크 열기</string>
+    <string name="btn_send_email">이메일 보내기</string>
+    <string name="settings_battery_saver">배터리 전약</string>
+    <string name="settings_battery_saver_desc">펜이 적재된 상태로 5초 목리하면 디지타이저 독인기를 일시 중지합니다; 개입하면 바로 재개합니다</string>
 </resources>

@@ -11,12 +11,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +35,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -59,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.text.KeyboardOptions
@@ -109,6 +114,7 @@ fun MainComposeScreen(
     notificationGranted: Boolean,
     amoled: Boolean,
     autoStart: Boolean,
+    batterySaver: Boolean,
     languageCode: String?,
     gestures: Map<GestureKind, PenAction>,
     wheelSlots: List<PenAction>,
@@ -119,9 +125,11 @@ fun MainComposeScreen(
     onStopService: () -> Unit,
     onAmoledChanged: (Boolean) -> Unit,
     onAutoStartChanged: (Boolean) -> Unit,
+    onBatterySaverChanged: (Boolean) -> Unit,
     onLanguageChanged: (String?) -> Unit,
     onActionPicked: (BindingTarget, PenAction) -> Unit,
     onWheelColorChanged: (Color) -> Unit,
+    onMoveWheelSlot: (Int, Int) -> Unit,
     onOpenNotes: () -> Unit,
     onOpenTablet: () -> Unit,
     onOpenTabletSettings: () -> Unit
@@ -194,10 +202,28 @@ fun MainComposeScreen(
                 )
             }
 
+            item(key = "tablet", contentType = "card") {
+                SectionCard(
+                    title = stringResource(R.string.section_tablet_mode),
+                    subtitle = stringResource(R.string.tablet_mode_subtitle),
+                    iconRes = R.drawable.ic_act_screen_write
+                ) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onOpenTablet, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.btn_start_tablet))
+                        }
+                        OutlinedButton(onClick = onOpenTabletSettings, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.btn_tablet_settings))
+                        }
+                    }
+                }
+            }
+
             item(key = "settings", contentType = "card") {
                 SectionCard(
                     title = stringResource(R.string.section_settings),
-                    subtitle = stringResource(R.string.settings_subtitle)
+                    subtitle = stringResource(R.string.settings_subtitle),
+                    iconRes = R.drawable.ic_act_open_wheel
                 ) {
                     SettingsRow(
                         title = stringResource(R.string.settings_language),
@@ -218,13 +244,21 @@ fun MainComposeScreen(
                         checked = autoStart,
                         onCheckedChange = onAutoStartChanged
                     )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
+                    ToggleRow(
+                        title = stringResource(R.string.settings_battery_saver),
+                        subtitle = stringResource(R.string.settings_battery_saver_desc),
+                        checked = batterySaver,
+                        onCheckedChange = onBatterySaverChanged
+                    )
                 }
             }
 
             item(key = "gestures", contentType = "card") {
                 SectionCard(
                     title = stringResource(R.string.section_spen_button),
-                    subtitle = stringResource(R.string.hint_tap_row)
+                    subtitle = stringResource(R.string.hint_tap_row),
+                    iconRes = R.drawable.ic_act_none
                 ) {
                     gestureKinds.forEach { gesture ->
                         ActionRow(
@@ -242,7 +276,9 @@ fun MainComposeScreen(
             item(key = "wheel", contentType = "card") {
                 SectionCard(
                     title = stringResource(R.string.section_wheel),
-                    subtitle = stringResource(R.string.wheel_slots_subtitle)
+                    subtitle = stringResource(R.string.wheel_slots_subtitle),
+                    iconRes = R.drawable.ic_act_open_wheel,
+                    accent = wheelColor
                 ) {
                     WheelColorRow(
                         selected = wheelColor,
@@ -253,7 +289,13 @@ fun MainComposeScreen(
                         ActionRow(
                             title = stringResource(R.string.wheel_slot_label, index + 1),
                             action = wheelSlots.getOrNull(index) ?: emptyAction,
-                            onClick = { pickerTarget = BindingTarget.WheelSlot(index) }
+                            onClick = { pickerTarget = BindingTarget.WheelSlot(index) },
+                            onMoveUp = if (index > 0) {
+                                { onMoveWheelSlot(index, index - 1) }
+                            } else null,
+                            onMoveDown = if (index < WheelConfig.SLOT_COUNT - 1) {
+                                { onMoveWheelSlot(index, index + 1) }
+                            } else null
                         )
                         if (index < WheelConfig.SLOT_COUNT - 1) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
@@ -265,26 +307,11 @@ fun MainComposeScreen(
             item(key = "notes", contentType = "card") {
                 SectionCard(
                     title = stringResource(R.string.section_notes),
-                    subtitle = stringResource(R.string.notes_card_subtitle)
+                    subtitle = stringResource(R.string.notes_card_subtitle),
+                    iconRes = R.drawable.ic_act_quick_note
                 ) {
                     Button(onClick = onOpenNotes, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.btn_view_notes))
-                    }
-                }
-            }
-
-            item(key = "tablet", contentType = "card") {
-                SectionCard(
-                    title = stringResource(R.string.section_tablet_mode),
-                    subtitle = stringResource(R.string.tablet_mode_subtitle)
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onOpenTablet, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.btn_start_tablet))
-                        }
-                        OutlinedButton(onClick = onOpenTabletSettings, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.btn_tablet_settings))
-                        }
                     }
                 }
             }
@@ -426,6 +453,8 @@ private fun DeviceStatusCard(
 private fun SectionCard(
     title: String,
     subtitle: String? = null,
+    iconRes: Int? = null,
+    accent: Color? = null,
     content: @Composable () -> Unit
 ) {
     Card(
@@ -434,7 +463,31 @@ private fun SectionCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (iconRes != null) {
+                    Surface(
+                        color = (accent ?: MaterialTheme.colorScheme.primary).copy(alpha = 0.16f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                painter = painterResource(iconRes),
+                                contentDescription = null,
+                                tint = accent ?: MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                }
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+            }
             if (!subtitle.isNullOrBlank()) {
                 Spacer(Modifier.height(3.dp))
                 Text(
@@ -481,7 +534,13 @@ private fun ToggleRow(
 }
 
 @Composable
-private fun ActionRow(title: String, action: PenAction, onClick: () -> Unit) {
+private fun ActionRow(
+    title: String,
+    action: PenAction,
+    onClick: () -> Unit,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null
+) {
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = {
@@ -492,7 +551,38 @@ private fun ActionRow(title: String, action: PenAction, onClick: () -> Unit) {
             )
         },
         trailingContent = {
-            Text(action.type.icon, fontSize = 20.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (onMoveUp != null || onMoveDown != null) {
+                    if (onMoveUp != null) {
+                        TextButton(
+                            onClick = onMoveUp,
+                            contentPadding = PaddingValues(horizontal = 6.dp),
+                            modifier = Modifier.defaultMinSize(minWidth = 30.dp, minHeight = 30.dp)
+                        ) { Text("▲", fontSize = 13.sp) }
+                    }
+                    if (onMoveDown != null) {
+                        TextButton(
+                            onClick = onMoveDown,
+                            contentPadding = PaddingValues(horizontal = 6.dp),
+                            modifier = Modifier.defaultMinSize(minWidth = 30.dp, minHeight = 30.dp)
+                        ) { Text("▼", fontSize = 13.sp) }
+                    }
+                }
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painter = painterResource(action.type.iconResId),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+                }
+            }
         },
         modifier = Modifier
             .fillMaxWidth()
@@ -507,15 +597,19 @@ private fun StatusPill(label: String, color: Color) {
     Surface(
         color = color.copy(alpha = .16f),
         contentColor = color,
-        shape = RoundedCornerShape(50),
+        shape = RoundedCornerShape(12.dp),
         modifier = Modifier.height(32.dp)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 11.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Spacer(Modifier.size(7.dp).background(color, RoundedCornerShape(50)))
-            Spacer(Modifier.width(6.dp))
+            Box(
+                Modifier
+                    .size(8.dp)
+                    .background(color, CircleShape)
+            )
+            Spacer(Modifier.width(7.dp))
             Text(label, style = MaterialTheme.typography.labelMedium)
         }
     }
@@ -627,7 +721,14 @@ private fun ActionPickerSheet(
                         items(actionTypes, key = { it.name }) { type ->
                             ListItem(
                                 headlineContent = { Text(type.label(context)) },
-                                leadingContent = { Text(type.icon, fontSize = 22.sp) },
+                                leadingContent = {
+                                    Icon(
+                                        painter = painterResource(type.iconResId),
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {

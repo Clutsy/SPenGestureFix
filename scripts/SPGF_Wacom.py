@@ -21,11 +21,17 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, Protocol, Sequence, Tuple
 
 LOG = logging.getLogger("spen_mouse_emulator")
 DEFAULT_ADB = "adb"
+
+# Reverse screen-preview channel of the Android app (TabletPreviewServer).
+PREVIEW_PORT = 7655
+PREVIEW_HEADER_PREFIX = b"#PV"
 
 ASCII_LOGO = r"""                                                                                          
                                                          B$% $@@@@@@                                
@@ -643,7 +649,15 @@ class AdbPenEmulator:
 
 class TcpPenEmulator:
     """Optional client for the app's normalized TCP tablet stream."""
-    def __init__(self, host: str, port: int, backend: MouseBackend, width: int, height: int) -> None:
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        backend: MouseBackend,
+        width: int,
+        height: int,
+        preview: Optional[PreviewStreamer] = None,
+    ) -> None:
         self.host, self.port = host, port
         self.backend = backend
         self.width, self.height = width, height
@@ -655,6 +669,7 @@ class TcpPenEmulator:
         self.right_output = False
         self.metadata: Optional[dict[str, object]] = None
         self.source_orientation = ORIENTATION_LANDSCAPE
+        self.preview = preview
 
     def stop(self) -> None:
         self.stop_event.set()
@@ -717,6 +732,8 @@ class TcpPenEmulator:
             flags = int(parts[3])
         except ValueError:
             return
+        if self.preview is not None:
+            self.preview.set_pen_state(x, y, flags)
         x, y = map_frame_orientation(
             max(0.0, min(1.0, x)),
             max(0.0, min(1.0, y)),
@@ -747,6 +764,461 @@ class TcpPenEmulator:
             self.right_output = right_output
         self.button = button
         self.eraser = eraser
+
+
+def enable_windows_dpi_awareness() -> None:
+    """Make GetSystemMetrics report real pixels, not scaled logical ones.
+
+    Without this, a 150% DPI desktop reports a smaller desktop and the preview
+    silently captures (and re-scales) the wrong region.
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PER_MONITOR_DPI_AWARE
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
+
+def preview_header(length: int) -> bytes:
+    """Header consumed by TabletPreviewServer: '#PV' + 8 hex digits of length."""
+    if length < 0 or length > 0xFFFFFFFF:
+        raise ValueError("invalid preview payload length")
+    return PREVIEW_HEADER_PREFIX + ("%08X" % length).encode("ascii")
+
+
+class PreviewStreamer:
+    """Streams small JPEG screen previews to the Android app (Tablet Mode).
+
+    The stream is the reverse direction of the pen data: the phone already
+    shows what the pen does; this channel shows WHERE on the Windows desktop
+    the pen currently is. Frames are captured with GDI (zero hard
+    dependencies), encoded as JPEG via Pillow when available or via GDI+
+    otherwise, and framed as ``#PV<hex-length>`` records for
+    TabletPreviewServer.
+
+    ``set_pen_state`` is called from the TCP reader thread; the capture thread
+    reads it without locks (single writer, tolerant reads).
+    """
+
+    def __init__(
+        self,
+        host: str,
+        port: int = PREVIEW_PORT,
+        max_width: int = 960,
+        quality: int = 55,
+        interval: float = 0.033,
+    ) -> None:
+        self.host = host
+        self.port = port
+        self.max_width = max(160, int(max_width))
+        self.quality = min(95, max(15, int(quality)))
+        self.interval = max(0.016, float(interval))
+        self.stop_event = threading.Event()
+        # Terminal command "stop": pauses capture ("preview" resumes it) so
+        # the stream can be throttled at runtime without killing the script.
+        self.capture_paused = threading.Event()
+        # Terminal command "stop": pauses capture ("preview" resumes it) so
+        # the stream can be throttled at runtime without killing the script.
+        self.capture_paused = threading.Event()
+        # Latest encoded frame cache, guarded by a lock (producer/consumer).
+        self._frame_lock = threading.Lock()
+        self._frame: Optional[bytes] = None
+        self._frame_seq = 0
+        self._capture_error: Optional[str] = None
+        # Trailing send timestamps for the terminal `fps` command.
+        self._sent_times: list[float] = []
+        # Trailing send timestamps for the terminal `fps` command.
+        self._sent_times: list[float] = []
+        # Pen cursor overlay state (written by the pen reader thread).
+        self.pen_x = 0.5
+        self.pen_y = 0.5
+        self.pen_touching = False
+        self.pen_button = False
+        self.pen_in_range = False
+
+    def stop(self) -> None:
+        self.stop_event.set()
+
+    def preview_fps(self) -> float:
+        """Frames actually streamed over the trailing three seconds."""
+        now = time.monotonic()
+        recent = [t for t in self._sent_times if now - t <= 3.0]
+        self._sent_times[:] = recent
+        return len(recent) / 3.0
+
+    # ------------------------------------------------------------------ pen
+    def set_pen_state(self, x: float, y: float, flags: int) -> None:
+        """Mirror the latest pen frame so the cursor overlay stays live."""
+        self.pen_x = max(0.0, min(1.0, x))
+        self.pen_y = max(0.0, min(1.0, y))
+        self.pen_touching = bool(flags & TOUCH)
+        self.pen_button = bool(flags & BUTTON)
+        self.pen_in_range = bool(flags & IN_RANGE)
+
+    # --------------------------------------------------------------- capture
+    def _encode_jpeg(self, width: int, height: int, bgra: bytes) -> Optional[bytes]:
+        """Pillow fast path: BGRA buffer straight into a JPEG.
+
+        All the heavy lifting (pixel format conversion, downscale, encode)
+        happens inside Pillow at C speed — the old per-pixel Python loop was
+        the reason the preview ran at a slideshow frame rate.
+        """
+        try:
+            import io
+
+            from PIL import Image  # type: ignore
+
+            image = Image.frombuffer("RGBA", (width, height), bgra, "raw", "BGRA", 0, 1)
+            if width > self.max_width:
+                scale = self.max_width / float(width)
+                target = (self.max_width, max(1, int(height * scale)))
+                image = image.resize(target, Image.BILINEAR)
+            # JPEG has no alpha channel; drop it once, after resizing.
+            image = image.convert("RGB")
+            # Draw the pen cursor overlay before encoding so the phone sees it.
+            self._draw_pen_marker(image)
+            buffer = io.BytesIO()
+            image.save(buffer, format="JPEG", quality=self.quality)
+            return buffer.getvalue()
+        except ImportError:
+            return None
+        except Exception as error:
+            LOG.debug("Pillow JPEG encode failed: %s", error)
+            return None
+
+    def _draw_pen_marker(self, image) -> None:
+        from PIL import ImageDraw  # type: ignore
+
+        draw = ImageDraw.Draw(image)
+        width, height = image.size
+        cx = int(self.pen_x * (width - 1))
+        cy = int(self.pen_y * (height - 1))
+        radius = max(6, min(width, height) // 60)
+        color = (255, 84, 84) if self.pen_touching else (84, 190, 255)
+        outline = (255, 255, 255) if self.pen_button else (0, 0, 0)
+        draw.ellipse(
+            (cx - radius, cy - radius, cx + radius, cy + radius),
+            fill=color,
+            outline=outline,
+            width=2,
+        )
+        if not self.pen_in_range:
+            draw.line((cx - radius, cy, cx + radius, cy), fill=(120, 120, 120), width=1)
+
+    def _gdi_screen_raw(self) -> Optional[tuple[int, int, bytes]]:
+        """One BitBlt of the whole virtual desktop; returns (w, h, BGRA bytes).
+
+        The buffer is handed to Pillow untouched: conversion and downscale run
+        at C speed inside _encode_jpeg instead of a per-pixel Python loop.
+        """
+        if sys.platform != "win32":
+            return None
+        try:
+            user32 = ctypes.windll.user32
+            gdi32 = ctypes.windll.gdi32
+            left = int(user32.GetSystemMetrics(76))
+            top = int(user32.GetSystemMetrics(77))
+            width = max(1, int(user32.GetSystemMetrics(78)))
+            height = max(1, int(user32.GetSystemMetrics(79)))
+
+            screen_dc = user32.GetDC(0)
+            mem_dc = gdi32.CreateCompatibleDC(screen_dc)
+
+            class BITMAPINFOHEADER(ctypes.Structure):
+                _fields_ = [
+                    ("biSize", ctypes.c_uint32),
+                    ("biWidth", ctypes.c_int32),
+                    ("biHeight", ctypes.c_int32),
+                    ("biPlanes", ctypes.c_uint16),
+                    ("biBitCount", ctypes.c_uint16),
+                    ("biCompression", ctypes.c_uint32),
+                    ("biSizeImage", ctypes.c_uint32),
+                    ("biXPelsPerMeter", ctypes.c_int32),
+                    ("biYPelsPerMeter", ctypes.c_int32),
+                    ("biClrUsed", ctypes.c_uint32),
+                    ("biClrImportant", ctypes.c_uint32),
+                ]
+
+            class BITMAPINFO(ctypes.Structure):
+                _fields_ = [("bmiHeader", BITMAPINFOHEADER)]
+
+            header = BITMAPINFOHEADER()
+            header.biSize = ctypes.sizeof(BITMAPINFOHEADER)
+            header.biWidth = width
+            header.biHeight = -height  # top-down
+            header.biPlanes = 1
+            header.biBitCount = 32
+            header.biCompression = 0  # BI_RGB
+            info = BITMAPINFO()
+            info.bmiHeader = header
+
+            bits = ctypes.c_void_p()
+            bitmap = gdi32.CreateDIBSection(
+                mem_dc, ctypes.byref(info), 0, ctypes.byref(bits), None, 0
+            )
+            if not bitmap or not bits.value:
+                gdi32.DeleteDC(mem_dc)
+                user32.ReleaseDC(0, screen_dc)
+                return None
+            old = gdi32.SelectObject(mem_dc, bitmap)
+            gdi32.BitBlt(mem_dc, 0, 0, width, height, screen_dc, left, top, 0x00CC0020)
+            size = width * height * 4
+            raw = ctypes.string_at(bits.value, size)
+            gdi32.SelectObject(mem_dc, old)
+            gdi32.DeleteObject(bitmap)
+            gdi32.DeleteDC(mem_dc)
+            user32.ReleaseDC(0, screen_dc)
+            return width, height, raw
+        except Exception as error:
+            self._capture_error = str(error)
+            return None
+
+    def _gdiplus_jpeg_from_screen(self) -> Optional[bytes]:
+        """GDI+ JPEG fallback when Pillow is missing (Windows only)."""
+        if sys.platform != "win32":
+            return None
+        try:
+            user32 = ctypes.windll.user32
+            gdi32 = ctypes.windll.gdi32
+            kernel32 = ctypes.windll.kernel32
+
+            left = int(user32.GetSystemMetrics(76))
+            top = int(user32.GetSystemMetrics(77))
+            width = max(1, int(user32.GetSystemMetrics(78)))
+            height = max(1, int(user32.GetSystemMetrics(79)))
+
+            screen_dc = user32.GetDC(0)
+            mem_dc = gdi32.CreateCompatibleDC(screen_dc)
+            compatible = gdi32.CreateCompatibleBitmap(screen_dc, width, height)
+            old = gdi32.SelectObject(mem_dc, compatible)
+            gdi32.BitBlt(mem_dc, 0, 0, width, height, screen_dc, left, top, 0x00CC0020)
+            gdi32.SelectObject(mem_dc, old)
+            gdi32.DeleteDC(mem_dc)
+            user32.ReleaseDC(0, screen_dc)
+
+            class GdiplusStartupInput(ctypes.Structure):
+                _fields_ = [
+                    ("GdiplusVersion", ctypes.c_uint32),
+                    ("DebugEventCallback", ctypes.c_void_p),
+                    ("SuppressBackgroundThread", ctypes.c_int),
+                    ("SuppressExternalCodecs", ctypes.c_int),
+                ]
+
+            token = ctypes.c_ulong()
+            startup = GdiplusStartupInput(1, None, 0, 0)
+            gdiplus = ctypes.windll.gdiplus
+            if gdiplus.GdiplusStartup(ctypes.byref(token), ctypes.byref(startup), None) != 0:
+                gdi32.DeleteObject(compatible)
+                return None
+            gdi_bitmap = ctypes.c_void_p()
+            status = gdiplus.GdipCreateBitmapFromHBITMAP(
+                compatible, None, ctypes.byref(gdi_bitmap)
+            )
+            gdi32.DeleteObject(compatible)
+            if status != 0 or not gdi_bitmap.value:
+                gdiplus.GdiplusShutdown(token)
+                return None
+
+            # Locate the built-in JPEG encoder CLSID.
+            num = ctypes.c_uint()
+            size = ctypes.c_uint()
+            if gdiplus.GdipGetImageEncodersSize(
+                ctypes.byref(num), ctypes.byref(size)
+            ) != 0 or size.value == 0:
+                gdiplus.GdipDisposeImage(gdi_bitmap)
+                gdiplus.GdiplusShutdown(token)
+                return None
+
+            class ImageCodecInfo(ctypes.Structure):
+                _fields_ = [
+                    ("Clsid", ctypes.c_byte * 16),
+                    ("FormatID", ctypes.c_byte * 16),
+                    ("CodecName", ctypes.c_wchar_p),
+                    ("DllName", ctypes.c_wchar_p),
+                    ("FormatDescription", ctypes.c_wchar_p),
+                    ("FilenameExtension", ctypes.c_wchar_p),
+                    ("MimeType", ctypes.c_wchar_p),
+                    ("Flags", ctypes.c_uint32),
+                    ("Version", ctypes.c_uint32),
+                    ("SigCount", ctypes.c_uint32),
+                    ("SigSize", ctypes.c_uint32),
+                    ("SigPattern", ctypes.c_void_p),
+                    ("SigMask", ctypes.c_void_p),
+                ]
+
+            buffer = (ctypes.c_byte * size.value)()
+            if gdiplus.GdipGetImageEncoders(
+                num.value, size.value, ctypes.cast(buffer, ctypes.c_void_p)
+            ) != 0:
+                gdiplus.GdipDisposeImage(gdi_bitmap)
+                gdiplus.GdiplusShutdown(token)
+                return None
+            jpeg_clsid = None
+            entry_size = size.value // max(1, num.value)
+            for index in range(num.value):
+                codec = ImageCodecInfo.from_buffer_copy(
+                    ctypes.cast(buffer, ctypes.POINTER(ctypes.c_byte)).contents
+                    if False
+                    else (ctypes.c_char * size.value).from_buffer(buffer).raw[
+                        index * entry_size : (index + 1) * entry_size
+                    ]
+                )
+                if codec.MimeType and codec.MimeType.lower() == "image/jpeg":
+                    jpeg_clsid = (ctypes.c_byte * 16).from_buffer_copy(codec.Clsid)
+                    break
+            if jpeg_clsid is None:
+                gdiplus.GdipDisposeImage(gdi_bitmap)
+                gdiplus.GdiplusShutdown(token)
+                return None
+
+            # GDI+ Save requires a wide path; use a short-lived temp file.
+            name_buffer = ctypes.create_unicode_buffer(300)
+            if not kernel32.GetTempFileNameW(
+                ctypes.c_wchar_p("."), ctypes.c_wchar_p("spg"), 0, name_buffer
+            ):
+                gdiplus.GdipDisposeImage(gdi_bitmap)
+                gdiplus.GdiplusShutdown(token)
+                return None
+            status = gdiplus.GdipSaveImageToFile(
+                gdi_bitmap,
+                ctypes.c_wchar_p(name_buffer.value),
+                ctypes.byref(jpeg_clsid),
+                None,
+            )
+            gdiplus.GdipDisposeImage(gdi_bitmap)
+            gdiplus.GdiplusShutdown(token)
+            if status != 0:
+                return None
+            data = Path(name_buffer.value).read_bytes()
+            try:
+                Path(name_buffer.value).unlink()
+            except OSError:
+                pass
+            return data or None
+        except Exception as error:
+            self._capture_error = str(error)
+            return None
+
+    # ------------------------------------------------------------- threading
+    def _capture_loop(self) -> None:
+        pil_warned = False
+        while not self.stop_event.is_set():
+            if self.capture_paused.is_set():
+                # Terminal "stop" command: idle until "preview" resumes it.
+                self.stop_event.wait(0.25)
+                continue
+            frame: Optional[bytes] = None
+            capture = self._gdi_screen_raw()
+            if capture is not None:
+                width, height, bgra = capture
+                frame = self._encode_jpeg(width, height, bgra)
+                if frame is None and not pil_warned:
+                    pil_warned = True
+                    LOG.info("Pillow not installed; falling back to GDI+ JPEG encoding")
+                    frame = self._gdiplus_jpeg_from_screen()
+            elif self._capture_error:
+                LOG.warning("Screen capture failed: %s", self._capture_error)
+                self._capture_error = None
+            if frame:
+                with self._frame_lock:
+                    self._frame = frame
+                    self._frame_seq += 1
+            self.stop_event.wait(self.interval)
+
+    def _stream_loop(self) -> None:
+        while not self.stop_event.is_set():
+            sock: Optional[socket.socket] = None
+            try:
+                sock = socket.create_connection((self.host, self.port), timeout=5)
+                sock.settimeout(None)
+                LOG.info("Preview stream connected to %s:%d", self.host, self.port)
+                last_sent_sequence = -1
+                while not self.stop_event.is_set():
+                    with self._frame_lock:
+                        frame = self._frame
+                        sequence = self._frame_seq
+                    if frame and sequence != last_sent_sequence:
+                        sock.sendall(preview_header(len(frame)) + frame)
+                        last_sent_sequence = sequence
+                        self._sent_times.append(time.monotonic())
+                        if len(self._sent_times) > 600:
+                            del self._sent_times[:300]
+                        now = time.monotonic()
+                        self._sent_times.append(now)
+                        if len(self._sent_times) > 600:
+                            del self._sent_times[:300]
+                    self.stop_event.wait(self.interval)
+            except (OSError, ValueError) as error:
+                LOG.warning("Preview stream error: %s", error)
+            finally:
+                if sock:
+                    try:
+                        sock.close()
+                    except OSError:
+                        pass
+            if self.stop_event.wait(2.0):
+                break
+            LOG.info("Reconnecting preview stream…")
+
+    def start(self) -> None:
+        threading.Thread(
+            target=self._capture_loop, name="PreviewCapture", daemon=True
+        ).start()
+        threading.Thread(
+            target=self._stream_loop, name="PreviewStream", daemon=True
+        ).start()
+
+
+def run_interactive_console(worker, preview: Optional[PreviewStreamer]) -> None:
+    """Runtime command console for interactive terminals.
+
+    Once the script is running you can type `preview` to (re)start streaming,
+    `stop` to pause it, `fps` to check the actual stream rate, and `quit` to
+    exit — no need to restart the script to toggle the preview.
+    """
+    print("Commands: preview | stop | fps | status | quit")
+    while True:
+        try:
+            raw = input("spgf> ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            raw = "quit"
+        if raw in ("quit", "exit", "q"):
+            break
+        if raw in ("", "help", "h", "?"):
+            print("Commands: preview | stop | fps | status | quit")
+        elif raw == "preview":
+            if preview is None:
+                print("Preview is not running (start the script with --preview).")
+            else:
+                preview.capture_paused.clear()
+                print("Preview streaming resumed.")
+        elif raw == "stop":
+            if preview is None:
+                print("Preview is not running (start the script with --preview).")
+            else:
+                preview.capture_paused.set()
+                print("Preview capture paused; type 'preview' to resume.")
+        elif raw == "fps":
+            if preview is None:
+                print("Preview is not running (start the script with --preview).")
+            else:
+                print("Preview stream: %.1f fps" % preview.preview_fps())
+        elif raw == "status":
+            if preview is None:
+                print("Preview: off")
+            else:
+                state = "paused" if preview.capture_paused.is_set() else "streaming"
+                print("Preview: %s" % state)
+        else:
+            print("Unknown command. Commands: preview | stop | fps | status | quit")
+    if worker is not None:
+        worker.stop()
+    if preview is not None:
+        preview.stop()
 
 
 def adb_command(serial: Optional[str]) -> list[str]:
@@ -796,11 +1268,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tcp", action="store_true", help="Use the optional TCP tablet protocol")
     parser.add_argument("--host", help="Phone IP address for --tcp")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
+    parser.add_argument(
+        "--preview",
+        action="store_true",
+        help="Stream the PC screen to the phone (works alone or with --tcp)",
+    )
+    parser.add_argument("--preview-port", type=int, default=PREVIEW_PORT)
+    parser.add_argument("--preview-width", type=int, default=960)
+    parser.add_argument("--preview-quality", type=int, default=55)
     return parser
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     print_ascii_logo()
+    enable_windows_dpi_awareness()
     parser = build_parser()
     args = parser.parse_args(argv)
     logging.basicConfig(
@@ -824,6 +1305,30 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # target the actual Windows desktop unless the user explicitly overrides it.
     width = args.screen_w or local_width
     height = args.screen_h or local_height
+
+    # --preview alone is valid: stream only the screen, no pen input needed.
+    if args.preview and not args.tcp:
+        if not args.host:
+            parser.error("--preview requires --host <phone-ip>")
+        LOG.info("Preview-only mode: streaming the PC screen to %s:%d", args.host, args.preview_port)
+        preview = PreviewStreamer(
+            args.host,
+            port=args.preview_port,
+            max_width=args.preview_width,
+            quality=args.preview_quality,
+        )
+        try:
+            preview.start()
+            if sys.stdin is not None and sys.stdin.isatty():
+                run_interactive_console(None, preview)
+            else:
+                while True:
+                    time.sleep(3600)
+        except KeyboardInterrupt:
+            LOG.info("Stopping preview")
+        finally:
+            preview.stop()
+        return 0
     if width <= 0 or height <= 0:
         parser.error("screen dimensions must be positive")
     if args.list and not args.tcp:
@@ -851,11 +1356,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     backend = create_backend(width, height)
     worker = None
+    preview: Optional[PreviewStreamer] = None
     try:
         if args.tcp:
             if not args.host:
                 parser.error("--tcp requires --host <phone-ip>")
-            worker = TcpPenEmulator(args.host, args.port, backend, width, height)
+            if args.preview:
+                preview = PreviewStreamer(
+                    args.host,
+                    port=args.preview_port,
+                    max_width=args.preview_width,
+                    quality=args.preview_quality,
+                )
+                preview.start()
+            worker = TcpPenEmulator(args.host, args.port, backend, width, height, preview=preview)
         else:
             device, capabilities = discover_device(adb) if not args.device else (args.device, DeviceCapabilities())
             if args.device:
@@ -890,7 +1404,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 orientation=args.orientation,
                 display_rotation=auto_rotation,
             )
-        worker.run()
+        if sys.stdin is not None and sys.stdin.isatty():
+            worker_thread = threading.Thread(
+                target=worker.run, name="PenEmulator", daemon=True
+            )
+            worker_thread.start()
+            run_interactive_console(worker, preview)
+            worker_thread.join(timeout=2.0)
+        else:
+            worker.run()
         return 0
     except KeyboardInterrupt:
         LOG.info("Stopping")
@@ -901,6 +1423,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     finally:
         if worker is not None:
             worker.stop()
+        if preview is not None:
+            preview.stop()
         backend.close()
 
 

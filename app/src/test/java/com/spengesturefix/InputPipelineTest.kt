@@ -127,6 +127,33 @@ class InputPipelineTest {
     }
 
     @Test
+    fun digitizerSleepsOnlyWhenIdleAndPresentOrLongIdle() {
+        // Pen idle past 5s, still flagged present (switch says inserted): sleep.
+        assertEquals(true, SPenGestureService.shouldSleepDigitizer(6_100L, 1_000L, true))
+        // Same idle but pen active recently: no sleep.
+        assertEquals(false, SPenGestureService.shouldSleepDigitizer(6_000L, 5_500L, true))
+        // Pen flagged removed but idle below the sleep threshold: no sleep.
+        assertEquals(false, SPenGestureService.shouldSleepDigitizer(6_000L, 1_000L, false))
+        // Removed and idle well past the threshold: sleep.
+        assertEquals(true, SPenGestureService.shouldSleepDigitizer(20_000L, 1_000L, false))
+        // No input ever recorded: never sleep.
+        assertEquals(false, SPenGestureService.shouldSleepDigitizer(600_000L, 0L, true))
+    }
+
+    @Test
+    fun presenceEventsComeOnlyFromTheSlotSwitch() {
+        // Real switch events (all spellings seen in the wild).
+        assertEquals(true, SPenGestureService.isPresenceEvent("EV_SW", "SW_001A"))
+        assertEquals(true, SPenGestureService.isPresenceEvent("EV_SW", "001a"))
+        assertEquals(true, SPenGestureService.isPresenceEvent("EV_SW", "SW_PEN_INSERTED"))
+        // Ordinary digitizer activity must never flip presence.
+        assertEquals(false, SPenGestureService.isPresenceEvent("EV_KEY", "BTN_TOUCH"))
+        assertEquals(false, SPenGestureService.isPresenceEvent("EV_ABS", "ABS_PRESSURE"))
+        assertEquals(false, SPenGestureService.isPresenceEvent("EV_KEY", "BTN_TOOL_PEN"))
+        assertEquals(false, SPenGestureService.isPresenceEvent("EV_SYN", "SYN_REPORT"))
+    }
+
+    @Test
     fun normalizesDeviceRanges() {
         assertEquals(0f, TabletInputCapture.normalize(10, 10, 101), 0.0001f)
         assertEquals(1f, TabletInputCapture.normalize(101, 10, 101), 0.0001f)

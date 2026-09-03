@@ -188,4 +188,20 @@
     <string name="notes_no_match">Nenhuma nota corresponde à pesquisa.</string>
     <string name="notes_character_count">%1$d caracteres</string>
     <string name="tablet_auto_detect_resolution">Detectar resolução do dispositivo</string>
+    <!-- Pré-visualização da tela do PC -->
+    <string name="tablet_frames_sent">Quadros enviados: %1$d</string>
+    <string name="tablet_preview_button">Tela do PC</string>
+    <string name="tablet_preview_title">Pré-visualização da tela do PC</string>
+    <string name="tablet_preview_hint">Inicie o cliente no PC com --preview para ver a tela do Windows aqui.</string>
+    <string name="tablet_preview_waiting">Aguardando o fluxo de pré-visualização do PC…</string>
+    <string name="tablet_preview_port">Fluxo de pré-visualização na porta %1$d</string>
+    <string name="action_translate">Traduzir (área de transferência)</string>
+    <string name="notes_pin">Fixar</string>
+    <string name="notes_export_all">Exportar tudo</string>
+    <string name="notes_clear_all">Apagar tudo</string>
+    <string name="notes_clear_all_confirm">Apagar todas as notas? Não é possível desfazer.</string>
+    <string name="btn_open_link">Abrir link</string>
+    <string name="btn_send_email">Enviar e-mail</string>
+    <string name="settings_battery_saver">Poupança de bateria</string>
+    <string name="settings_battery_saver_desc">Pausa o leitor do digitalizador após 5 segundos de inatividade com a caneta guardada; retirá-la acorda-o instantaneamente</string>
 </resources>
