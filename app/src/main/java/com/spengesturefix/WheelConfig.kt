@@ -13,9 +13,12 @@ import org.json.JSONObject
  */
 object WheelConfig {
     const val SLOT_COUNT = 7
+    /** How many recently used wheel colors are remembered. */
+    const val RECENT_COLOR_LIMIT = 8
     private const val PREFS = "spen_wheel"
     private const val KEY_SLOTS = "slots_json"
     private const val KEY_WHEEL_COLOR = "wheel_color"
+    private const val KEY_RECENT_COLORS = "recent_wheel_colors"
     private val DEFAULT_WHEEL_COLOR = Color(0xFF29B6F6)
 
     fun loadSlots(context: Context): List<PenAction> {
@@ -97,6 +100,37 @@ object WheelConfig {
     fun setWheelColor(context: Context, color: Color) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putInt(KEY_WHEEL_COLOR, color.toArgb())
+            .apply()
+        rememberWheelColor(context, color)
+    }
+
+    /** Recently applied wheel colors, newest first (empty until one is picked). */
+    fun getRecentWheelColors(context: Context): List<Color> {
+        val json = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_RECENT_COLORS, null)
+            ?: return emptyList()
+        return try {
+            val array = JSONArray(json)
+            (0 until array.length()).mapNotNull { index ->
+                runCatching { Color(array.getInt(index)) }.getOrNull()
+            }.take(RECENT_COLOR_LIMIT)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    /**
+     * Records [color] as recently used: moves it to the front when it is
+     * already known, trims the list to [RECENT_COLOR_LIMIT]. Called together
+     * with [setWheelColor] so every applied color stays reachable.
+     */
+    fun rememberWheelColor(context: Context, color: Color) {
+        val updated = (listOf(color) + getRecentWheelColors(context).filter { it != color })
+            .take(RECENT_COLOR_LIMIT)
+        val array = JSONArray()
+        updated.forEach { array.put(it.toArgb()) }
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_RECENT_COLORS, array.toString())
             .apply()
     }
 }

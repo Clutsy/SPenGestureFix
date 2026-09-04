@@ -24,6 +24,11 @@
     <string name="section_wheel">S Pen圆环</string>
     <string name="wheel_color_title">圆环颜色</string>
     <string name="wheel_color_subtitle">Air Command圆环的强调色</string>
+    <string name="wheel_color_custom_label">十六进制或 RGB</string>
+    <string name="wheel_color_hint">例如 #29B6F6 或 41,182,246</string>
+    <string name="wheel_color_invalid">颜色无效</string>
+    <string name="wheel_color_apply">应用</string>
+    <string name="wheel_color_recent_title">最近使用</string>
     <string name="wheel_slots_label">圆环槽位</string>
     <string name="wheel_slot_label">槽位%d</string>
     <string name="wheel_no_slots">未配置槽位</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">已发送帧数：%1$d</string>
     <string name="tablet_preview_button">电脑屏幕</string>
     <string name="tablet_preview_title">电脑屏幕预览</string>
-    <string name="tablet_preview_hint">在电脑上使用 --preview 启动客户端，即可在此查看 Windows 屏幕。</string>
+    <string name="tablet_preview_hint">在电脑上启动客户端（SPGF_Wacom.py），即可在此查看 Windows 屏幕。</string>
     <string name="tablet_preview_waiting">正在等待电脑的预览画面流…</string>
     <string name="tablet_preview_port">预览流端口：%1$d</string>
     <string name="action_translate">翻译（剪贴板）</string>

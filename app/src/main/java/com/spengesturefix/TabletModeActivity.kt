@@ -97,7 +97,6 @@ class TabletModeActivity : ComponentActivity() {
                     ip = ipAddress,
                     showGrid = TabletConfig.getShowGrid(this),
                     framesSent = framesSent,
-                    pcConnected = TabletNetworkServer.isClientConnected,
                     previewConnected = previewConnected,
                     onToggle = { if (running) stopTabletMode() else startTabletMode() },
                     onSettings = { startActivity(Intent(this, TabletSettingsActivity::class.java)) },

@@ -24,6 +24,11 @@
     <string name="section_wheel">Колесо S Pen</string>
     <string name="wheel_color_title">Цвет колеса</string>
     <string name="wheel_color_subtitle">Акцентный цвет колеса Air Command</string>
+    <string name="wheel_color_custom_label">Hex или RGB</string>
+    <string name="wheel_color_hint">напр. #29B6F6 или 41,182,246</string>
+    <string name="wheel_color_invalid">Недопустимый цвет</string>
+    <string name="wheel_color_apply">Применить</string>
+    <string name="wheel_color_recent_title">Недавние</string>
     <string name="wheel_slots_label">Слоты колеса</string>
     <string name="wheel_slot_label">Слот %d</string>
     <string name="wheel_no_slots">Слоты не настроены</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">Отправлено кадров: %1$d</string>
     <string name="tablet_preview_button">Экран ПК</string>
     <string name="tablet_preview_title">Предпросмотр экрана ПК</string>
-    <string name="tablet_preview_hint">Запустите клиент на ПК с ключом --preview, чтобы видеть экран Windows здесь.</string>
+    <string name="tablet_preview_hint">Запустите клиент на ПК (SPGF_Wacom.py), чтобы видеть экран Windows здесь.</string>
     <string name="tablet_preview_waiting">Ожидание потока предпросмотра с ПК…</string>
     <string name="tablet_preview_port">Поток предпросмотра на порту %1$d</string>
     <string name="action_translate">Перевести (буфер обмена)</string>

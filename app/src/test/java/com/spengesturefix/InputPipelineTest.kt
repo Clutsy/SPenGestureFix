@@ -127,15 +127,15 @@ class InputPipelineTest {
     }
 
     @Test
-    fun digitizerSleepsOnlyWhenIdleAndPresentOrLongIdle() {
-        // Pen idle past 5s, still flagged present (switch says inserted): sleep.
+    fun digitizerSleepsOnlyWhenSwitchConfirmsPenStored() {
+        // Switch says INSERTED and input idle past 5s: safe to park.
         assertEquals(true, SPenGestureService.shouldSleepDigitizer(6_100L, 1_000L, true))
-        // Same idle but pen active recently: no sleep.
+        // Pen active recently: never sleep.
         assertEquals(false, SPenGestureService.shouldSleepDigitizer(6_000L, 5_500L, true))
-        // Pen flagged removed but idle below the sleep threshold: no sleep.
-        assertEquals(false, SPenGestureService.shouldSleepDigitizer(6_000L, 1_000L, false))
-        // Removed and idle well past the threshold: sleep.
-        assertEquals(true, SPenGestureService.shouldSleepDigitizer(20_000L, 1_000L, false))
+        // Switch says REMOVED (pen in use): never park — nothing would wake it.
+        assertEquals(false, SPenGestureService.shouldSleepDigitizer(600_000L, 1_000L, false))
+        // Presence unknown (no working switch): never park.
+        // (modeled by penPresent=false) — covered above.
         // No input ever recorded: never sleep.
         assertEquals(false, SPenGestureService.shouldSleepDigitizer(600_000L, 0L, true))
     }

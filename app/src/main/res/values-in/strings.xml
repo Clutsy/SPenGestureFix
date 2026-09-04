@@ -24,6 +24,11 @@
     <string name="section_wheel">Roda S Pen</string>
     <string name="wheel_color_title">Warna roda</string>
     <string name="wheel_color_subtitle">Warna aksen roda Air Command</string>
+    <string name="wheel_color_custom_label">Hex atau RGB</string>
+    <string name="wheel_color_hint">mis. #29B6F6 atau 41,182,246</string>
+    <string name="wheel_color_invalid">Warna tidak valid</string>
+    <string name="wheel_color_apply">Terapkan</string>
+    <string name="wheel_color_recent_title">Baru digunakan</string>
     <string name="wheel_slots_label">Slot roda</string>
     <string name="wheel_slot_label">Slot %d</string>
     <string name="wheel_no_slots">Tidak ada slot yang dikonfigurasi</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">Frame terkirim: %1$d</string>
     <string name="tablet_preview_button">Layar PC</string>
     <string name="tablet_preview_title">Pratinjau layar PC</string>
-    <string name="tablet_preview_hint">Jalankan klien di PC dengan --preview untuk melihat layar Windows di sini.</string>
+    <string name="tablet_preview_hint">Jalankan klien di PC (SPGF_Wacom.py) untuk melihat layar Windows di sini.</string>
     <string name="tablet_preview_waiting">Menunggu aliran pratinjau dari PC…</string>
     <string name="tablet_preview_port">Aliran pratinjau di port %1$d</string>
     <string name="action_translate">Terjemahkan (clipboard)</string>

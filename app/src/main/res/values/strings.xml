@@ -28,6 +28,11 @@
     <string name="section_wheel">S Pen Wheel</string>
     <string name="wheel_color_title">Wheel color</string>
     <string name="wheel_color_subtitle">Accent color of the Air Command wheel</string>
+    <string name="wheel_color_custom_label">Hex or RGB</string>
+    <string name="wheel_color_hint">e.g. #29B6F6 or 41,182,246</string>
+    <string name="wheel_color_invalid">Invalid color</string>
+    <string name="wheel_color_apply">Apply</string>
+    <string name="wheel_color_recent_title">Recently used</string>
     <string name="wheel_slots_label">Wheel slots</string>
     <string name="wheel_slot_label">Slot %d</string>
     <string name="wheel_no_slots">No slots configured</string>
@@ -206,7 +211,7 @@
     <string name="tablet_frames_sent">Frames sent: %1$d</string>
     <string name="tablet_preview_button">PC screen</string>
     <string name="tablet_preview_title">PC screen preview</string>
-    <string name="tablet_preview_hint">Start the PC client with --preview to see the Windows screen here.</string>
+    <string name="tablet_preview_hint">Start the PC client (SPGF_Wacom.py) to see the Windows screen here.</string>
     <string name="tablet_preview_waiting">Waiting for the PC preview stream…</string>
     <string name="tablet_preview_port">Preview stream on port %1$d</string>
     <!-- Screen-off memo and notes extras -->

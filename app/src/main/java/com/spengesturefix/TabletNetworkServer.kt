@@ -92,6 +92,14 @@ object TabletNetworkServer {
                             break
                         }
                         socket.tcpNoDelay = true
+                        // Latest connection wins: the PC reconnects after a
+                        // Wi-Fi hiccup, so a zombie socket from the previous
+                        // connection must be evicted, never queued ahead of
+                        // the new client.
+                        client?.let { previous ->
+                            try { previous.close() } catch (_: Exception) { }
+                            Log.i(TAG, "Evicted previous tablet client for a new one")
+                        }
                         client = socket
                         notifyStatus(onStatusChange, true)
                         streamClient(socket, onStatusChange)
@@ -121,8 +129,24 @@ object TabletNetworkServer {
             writer.write(metadataLine(metadata))
             writer.flush()
 
+            var lastHeartbeat = 0L
             while (running && !socket.isClosed) {
                 val tick = System.nanoTime()
+                // One-byte heartbeat once per second while the pen is idle.
+                // Without it a static hand sends no traffic at all, the
+                // phone's Wi-Fi radio drops into power save, and the next
+                // pen-down stutters or resets the link. The PC clients ignore
+                // lines that are not complete frames.
+                val nowMs = System.currentTimeMillis()
+                if (nowMs - lastHeartbeat >= 1000L) {
+                    try {
+                        writer.write("#hb\n")
+                        writer.flush()
+                        lastHeartbeat = nowMs
+                    } catch (_: Exception) {
+                        break
+                    }
+                }
                 latestFrame.getAndSet(null)?.let { frame ->
                     var flags = 0
                     if (frame.touching) flags = flags or FLAG_TOUCH

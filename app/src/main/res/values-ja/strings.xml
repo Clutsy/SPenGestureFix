@@ -24,6 +24,11 @@
     <string name="section_wheel">S Penホイール</string>
     <string name="wheel_color_title">ホイールの色</string>
     <string name="wheel_color_subtitle">Air Commandホイールのアクセントカラー</string>
+    <string name="wheel_color_custom_label">16進またはRGB</string>
+    <string name="wheel_color_hint">例: #29B6F6 または 41,182,246</string>
+    <string name="wheel_color_invalid">無効な色です</string>
+    <string name="wheel_color_apply">適用</string>
+    <string name="wheel_color_recent_title">最近使用した色</string>
     <string name="wheel_slots_label">ホイールのスロット</string>
     <string name="wheel_slot_label">スロット%d</string>
     <string name="wheel_no_slots">スロットが未設定</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">送信フレーム数：%1$d</string>
     <string name="tablet_preview_button">PC画面</string>
     <string name="tablet_preview_title">PC画面プレビュー</string>
-    <string name="tablet_preview_hint">PC で --preview を付けてクライアントを起動すると、Windows の画面をここに表示できます。</string>
+    <string name="tablet_preview_hint">PC でクライアント (SPGF_Wacom.py) を起動すると、Windows の画面をここに表示できます。</string>
     <string name="tablet_preview_waiting">PC からのプレビューストリームを待機しています…</string>
     <string name="tablet_preview_port">プレビューストリームのポート：%1$d</string>
     <string name="action_translate">翻訳（クリップボード）</string>

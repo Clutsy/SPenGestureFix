@@ -227,6 +227,25 @@ class EmulatorTests(unittest.TestCase):
         self.assertIsNotNone(jpeg)
         self.assertTrue(jpeg[:2] == b"\xff\xd8", "not a JPEG stream")
 
+    def test_preview_ndarray_bgra_path_encodes(self):
+        """Desktop Duplication frames (BGRA ndarray) encode straight to JPEG."""
+        from SPGF_Wacom import PreviewStreamer
+
+        try:
+            import numpy as np
+            import PIL  # noqa: F401
+        except ImportError:
+            self.skipTest("numpy/Pillow not installed")
+        streamer = PreviewStreamer("127.0.0.1", max_width=320, quality=50)
+        streamer.set_pen_state(0.5, 0.5, 0b0001)
+        # 8x2 BGRA pixels: left half blue, right half white (two full rows).
+        row = np.zeros((2, 8, 4), dtype=np.uint8)
+        row[:, :4] = (255, 0, 0, 255)  # blue in BGRA order
+        row[:, 4:] = (255, 255, 255, 255)
+        jpeg = streamer._encode_ndarray(8, 2, row)
+        self.assertIsNotNone(jpeg)
+        self.assertTrue(jpeg[:2] == b"\xff\xd8", "not a JPEG stream")
+
     def test_preview_capture_pause_round_trip(self):
         from SPGF_Wacom import PreviewStreamer
 
@@ -247,6 +266,145 @@ class EmulatorTests(unittest.TestCase):
         streamer._sent_times[:] = [now - 1.0, now - 2.0, now - 10.0]
         # Only the two recent sends count; the 10s-old one is outside the window.
         self.assertAlmostEqual(streamer.preview_fps(), 2.0 / 3.0, delta=0.05)
+
+
+class TcpInputControllerTest(unittest.TestCase):
+    """Input must flow only while the app-side Tablet Mode session is live."""
+
+    class RecordingBackend:
+        def __init__(self):
+            self.calls = []
+            self.closed = False
+
+        def move_absolute(self, x, y):
+            self.calls.append(("move", x, y))
+
+        def press(self, button):
+            self.calls.append(("press", button))
+
+        def release(self, button):
+            self.calls.append(("release", button))
+
+        def close(self):
+            self.closed = True
+
+    def _serve_one_frame(self, metadata=True):
+        """One-shot tablet server: metadata line + a single pen frame."""
+        import socket
+
+        import threading as thr
+
+        srv = socket.socket()
+        srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        srv.bind(("127.0.0.1", 0))
+        srv.listen(1)
+        port = srv.getsockname()[1]
+        payload = {
+            "port": port,
+            "done": thr.Event(),
+        }
+
+        def runner():
+            try:
+                srv.settimeout(5)
+                conn, _ = srv.accept()
+                conn.settimeout(5)
+                hello = "#SPEN_TABLET 1 800 400 0 landscape\n"
+                frame = "0.50,0.25,0.50,9\n"  # in range + touching
+                conn.sendall((hello + frame).encode("ascii"))
+                payload["done"].wait(4)
+                conn.close()
+            except OSError:
+                pass
+            finally:
+                srv.close()
+
+        thr.Thread(target=runner, daemon=True).start()
+        return payload
+
+    def test_frame_injection_requires_backend(self):
+        from SPGF_Wacom import TcpInputController
+
+        session = self._serve_one_frame()
+        controller = TcpInputController("127.0.0.1", session["port"])
+        controller.start()
+        session["done"].set()
+        controller.stop()
+        # No backend attached -> no injection attempted, no crash.
+        self.assertFalse(controller.active())
+
+    def test_controller_releases_buttons_on_drop(self):
+        from SPGF_Wacom import BUTTON, LEFT, TcpInputController
+
+        controller = TcpInputController("127.0.0.1", 1)  # port 1: connect fails
+        backend = self.RecordingBackend()
+        controller.swap_backend(backend, 1920, 1080)
+        controller._touching = True
+        controller._right_output = True
+        controller._close_socket()
+        releases = [c for c in backend.calls if c[0] == "release"]
+        self.assertIn(("release", LEFT), releases)
+        self.assertFalse(controller.active())
+        _ = BUTTON
+
+    def test_active_flag_tracks_session(self):
+        from SPGF_Wacom import TcpInputController
+
+        controller = TcpInputController("127.0.0.1", 1)
+        self.assertFalse(controller.active())
+        controller.swap_backend(self.RecordingBackend(), 100, 100)
+        self.assertFalse(controller.active())  # backend alone is not a session
+
+
+class RuntimeCommandHubTest(unittest.TestCase):
+    def test_hub_streams_immediately_on_construction(self):
+        from SPGF_Wacom import RuntimeCommandHub
+
+        # The new contract: both channels start in the constructor.
+        hub = RuntimeCommandHub(
+            "127.0.0.1",
+            preview_port=47660,
+            tablet_port=47661,
+            preview_args={"max_width": 320, "quality": 50, "fps": 24},
+        )
+        self.assertIsNotNone(hub.preview)
+        self.assertTrue(hub.preview._started)
+        self.assertIsNotNone(hub.controller)
+        out = hub.handle("preview")
+        self.assertIn("Preview streaming", out)
+        hub.shutdown()
+
+    def test_hub_unknown_command(self):
+        from SPGF_Wacom import RuntimeCommandHub
+
+        hub = RuntimeCommandHub(
+            "127.0.0.1",
+            preview_port=47662,
+            tablet_port=47663,
+            preview_args={},
+        )
+        out = hub.handle("nonsense")
+        self.assertIn("Unknown command", out)
+        hub.shutdown()
+
+    def test_adaptive_quality_steps_down_and_back(self):
+        from SPGF_Wacom import PREVIEW_MIN_QUALITY, PreviewStreamer
+
+        streamer = PreviewStreamer("127.0.0.1", quality=70, fps=30)
+        self.assertEqual(streamer._quality, 70)
+        self.assertEqual(streamer._scale, 1.0)
+        # Simulate sustained slow sends: sizes accumulate, measured fps sags.
+        import time as time_module
+
+        now = time_module.monotonic()
+        streamer._sent_times[:] = [now - 2.0 + i * 0.05 for i in range(10)]
+        # A recent capture is required for adaptation: a quiet screen (no
+        # captures) must never be read as a congested network.
+        streamer._last_capture_at = now
+        for _ in range(20):
+            streamer._note_frame_size(50_000)
+        self.assertLess(streamer._quality, 70)
+        self.assertGreaterEqual(streamer._quality, PREVIEW_MIN_QUALITY)
 
 
 if __name__ == "__main__":

@@ -36,13 +36,6 @@ class SPenGestureService : Service() {
         const val PRESENCE_SWITCH_CODE = "001a"
         /** No pen input for this long => the pen is considered inserted. */
         const val PEN_IDLE_INSERTED_MS = 5_000L
-        /**
-         * The pen never left the slot but the user stopped using it for this
-         * long: the digitizer reader is parked until the next pen event to
-         * save battery (no root getevent polling the stream). The presence
-         * reader and gesture logic stay fully alive.
-         */
-        const val DIGITIZER_SLEEP_AFTER_MS = 5_000L
         private const val WATCHDOG_INTERVAL_MS = 1_000L
 
         /** Strictly greater than five seconds, matching the user-facing rule. */
@@ -51,19 +44,19 @@ class SPenGestureService : Service() {
             lastInputAt > 0L && now - lastInputAt > PEN_IDLE_INSERTED_MS
 
         /**
-         * Pure battery-saver decision: with the pen inserted (or idle long
-         * enough to count as inserted) and no digitizer input for
-         * [DIGITIZER_SLEEP_AFTER_MS], the reader is parked. Injectable for
-         * tests.
+         * Pure battery-saver decision: park the digitizer reader only when
+         * the physical slot switch CONFIRMS the pen is stored and no input
+         * arrived for five seconds. A pen flagged removed, or an unknown
+         * presence (no working switch), must never park the reader — that
+         * would kill gestures with no event left to wake them. Injectable
+         * for tests.
          */
         @JvmStatic
         fun shouldSleepDigitizer(
             now: Long,
             lastInputAt: Long,
             penPresent: Boolean
-        ): Boolean =
-            isPenIdle(now, lastInputAt) &&
-                (penPresent || now - lastInputAt > DIGITIZER_SLEEP_AFTER_MS)
+        ): Boolean = isPenIdle(now, lastInputAt) && penPresent
 
         /**
          * Only a real slot-switch event may flip presence. The old presence
@@ -82,22 +75,27 @@ class SPenGestureService : Service() {
     }
 
     /**
-     * Battery saver: after five seconds with the pen idle in its slot the
-     * digitizer reader process is parked entirely. The presence reader keeps
-     * listening, so pulling the pen out instantly wakes everything again.
+     * Presence as reported by the physical slot switch ONLY. The idle-based
+     * inference (presenceWatchdog) must never feed this: parking the reader
+     * on an inferred state would leave nothing alive to wake it back up.
+     */
+    @Volatile private var switchPresence = PenPresenceState.UNKNOWN
+
+    /**
+     * Battery saver: when the slot switch confirms the pen is stored and no
+     * input arrived for five seconds, the digitizer reader process is parked
+     * entirely. Pulling the pen out fires a real switch event which restarts
+     * the reader instantly (see applyPresenceChanged).
      */
     private val digitizerSleepWatchdog = object : Runnable {
         override fun run() {
             val now = SystemClock.elapsedRealtime()
-            val presence = presenceState.get()
-            val present = presence == PenPresenceState.INSERTED ||
-                presence == PenPresenceState.UNKNOWN
             if (AppSettings.isBatterySaver(applicationContext) &&
-                shouldSleepDigitizer(now, PenInputActivity.lastInputAt(), present) &&
+                shouldSleepDigitizer(now, PenInputActivity.lastInputAt(), switchPresence == PenPresenceState.INSERTED) &&
                 digitizerReader?.isRunning == true &&
                 !TabletModeState.isActive
             ) {
-                Log.i(TAG, "Pen idle; parking digitizer reader until the next pen event")
+                Log.i(TAG, "Pen stored and idle; parking digitizer reader until the pen is extracted")
                 setupExecutor.execute { stopNormalDigitizerReader(waitForTermination = true) }
             }
             mainHandler.postDelayed(this, WATCHDOG_INTERVAL_MS)
@@ -130,7 +128,9 @@ class SPenGestureService : Service() {
             if (presenceState.get() != PenPresenceState.INSERTED &&
                 isPenIdle(now, PenInputActivity.lastInputAt())
             ) {
-                handlePresenceChanged(PenPresenceState.INSERTED)
+                // Inferred state: NOT from the switch, so it must never arm
+                // the battery-saver park (nothing would wake the reader up).
+                handlePresenceChanged(PenPresenceState.INSERTED, fromSwitch = false)
             }
             mainHandler.postDelayed(this, WATCHDOG_INTERVAL_MS)
         }
@@ -174,7 +174,7 @@ class SPenGestureService : Service() {
         TabletModeState.setNormalInputOwner(true)
         PenRuntimeState.publish(this, serviceActive = true, digitizerActive = false)
         mainHandler.post(presenceWatchdog)
-        mainHandler.postDelayed(digitizerSleepWatchdog, DIGITIZER_SLEEP_AFTER_MS)
+        mainHandler.postDelayed(digitizerSleepWatchdog, WATCHDOG_INTERVAL_MS)
         setupExecutor.execute { startReaders() }
     }
 
@@ -206,9 +206,9 @@ class SPenGestureService : Service() {
             // This callback stays on the reader thread. The analyzer posts only
             // low-frequency gesture results to the main looper.
             if (!TabletModeState.isActive) gestureAnalyzer.onEvent(type, code, value)
-            if (isPresenceEvent(type, code)) {
-                PenInputActivity.mark()
-            }
+            // Every digitizer event feeds the idle clock used by the presence
+            // inference. It NEVER flips presence itself.
+            PenInputActivity.mark()
         }
         synchronized(digitizerLock) {
             if (TabletModeState.isActive || digitizerReader?.isRunning == true) return
@@ -230,11 +230,12 @@ class SPenGestureService : Service() {
         EventDeviceFinder.readSwitchState(PRESENCE_DEVICE_NAME)?.let { rawState ->
             Log.i(TAG, "Initial presence raw state: $rawState")
             PenPresenceDecoder.decode("EV_SW", PRESENCE_SWITCH_CODE, rawState)
-                ?.let(::handlePresenceChanged)
+                ?.let { handlePresenceChanged(it, fromSwitch = true) }
         }
         Log.i(TAG, "Starting presence reader on $presencePath")
         presenceReader = EPenInputReader(presencePath) { type, code, value ->
-            PenPresenceDecoder.decode(type, code, value)?.let(::handlePresenceChanged)
+            PenPresenceDecoder.decode(type, code, value)
+                ?.let { handlePresenceChanged(it, fromSwitch = true) }
         }.also { it.start() }
     }
 
@@ -251,7 +252,10 @@ class SPenGestureService : Service() {
         TabletModeState.markNormalInputReleased()
     }
 
-    private fun handlePresenceChanged(state: PenPresenceState) {
+    private fun handlePresenceChanged(state: PenPresenceState, fromSwitch: Boolean) {
+        // Only genuine slot-switch evidence may feed the battery saver; the
+        // idle-based inference stays invisible to it.
+        if (fromSwitch) switchPresence = state
         // Presence callbacks come from root reader threads. Deduplicate before
         // posting so a switch event cannot flood the main queue.
         if (presenceState.getAndSet(state) == state) return

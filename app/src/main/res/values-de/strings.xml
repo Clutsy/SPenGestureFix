@@ -24,6 +24,11 @@
     <string name="section_wheel">S-Pen-Rad</string>
     <string name="wheel_color_title">Radfarbe</string>
     <string name="wheel_color_subtitle">Akzentfarbe des Air-Command-Rads</string>
+    <string name="wheel_color_custom_label">Hex oder RGB</string>
+    <string name="wheel_color_hint">z. B. #29B6F6 oder 41,182,246</string>
+    <string name="wheel_color_invalid">Ungültige Farbe</string>
+    <string name="wheel_color_apply">Anwenden</string>
+    <string name="wheel_color_recent_title">Zuletzt verwendet</string>
     <string name="wheel_slots_label">Rad-Plätze</string>
     <string name="wheel_slot_label">Platz %d</string>
     <string name="wheel_no_slots">Keine Plätze konfiguriert</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">Gesendete Frames: %1$d</string>
     <string name="tablet_preview_button">PC-Bildschirm</string>
     <string name="tablet_preview_title">PC-Bildschirmvorschau</string>
-    <string name="tablet_preview_hint">Starte den Client auf dem PC mit --preview, um den Windows-Bildschirm hier zu sehen.</string>
+    <string name="tablet_preview_hint">Starte den Client auf dem PC (SPGF_Wacom.py), um den Windows-Bildschirm hier zu sehen.</string>
     <string name="tablet_preview_waiting">Warte auf den Vorschau-Stream vom PC…</string>
     <string name="tablet_preview_port">Vorschau-Stream auf Port %1$d</string>
     <string name="action_translate">Übersetzen (Zwischenablage)</string>

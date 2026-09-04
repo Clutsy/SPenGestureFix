@@ -45,7 +45,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -74,7 +76,6 @@ fun TabletModeComposeScreen(
     ip: String?,
     showGrid: Boolean,
     framesSent: Long,
-    pcConnected: Boolean,
     previewConnected: Boolean,
     onToggle: () -> Unit,
     onSettings: () -> Unit,
@@ -260,16 +261,22 @@ private fun PreviewPill(
  */
 @Composable
 private fun PcPreviewOverlay(connected: Boolean, onClose: () -> Unit) {
-    var frameTick by remember { mutableStateOf(0) }
+    // Recompose within one vsync of every decoded frame: the loop polls the
+    // frame sequence at 60 Hz but skips work entirely when nothing arrived,
+    // so the preview shows each frame as soon as the network delivers it.
+    var frameTick by remember { mutableStateOf(0L) }
     var fps by remember { mutableStateOf(0f) }
     var lastFrames by remember { mutableStateOf(0L) }
     var lastFpsAt by remember { mutableStateOf(0L) }
 
-    androidx.compose.runtime.LaunchedEffect(connected) {
+    LaunchedEffect(connected) {
         lastFrames = TabletPreviewServer.framesReceived()
         lastFpsAt = android.os.SystemClock.elapsedRealtime()
         while (connected) {
-            frameTick++
+            val seq = TabletPreviewServer.frameSeq()
+            if (seq != frameTick) {
+                frameTick = seq
+            }
             val now = android.os.SystemClock.elapsedRealtime()
             val frames = TabletPreviewServer.framesReceived()
             val elapsed = now - lastFpsAt
@@ -278,12 +285,13 @@ private fun PcPreviewOverlay(connected: Boolean, onClose: () -> Unit) {
                 lastFrames = frames
                 lastFpsAt = now
             }
-            kotlinx.coroutines.delay(66L)
+            kotlinx.coroutines.delay(16L)
         }
     }
 
-    val bitmap: Bitmap? = if (connected) {
-        frameTick // read to subscribe to the polling loop
+    // key() makes the frame-sequence read an explicit composition input:
+    // every decoded frame forces a fresh recomposition of the image.
+    val bitmap: Bitmap? = if (connected) key(frameTick) {
         TabletPreviewServer.lastFrame()
     } else {
         null

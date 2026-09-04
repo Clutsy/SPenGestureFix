@@ -24,6 +24,11 @@
     <string name="section_wheel">S Pen-rad</string>
     <string name="wheel_color_title">Radkleur</string>
     <string name="wheel_color_subtitle">Accentkleur van het Air Command-rad</string>
+    <string name="wheel_color_custom_label">Hex of RGB</string>
+    <string name="wheel_color_hint">bijv. #29B6F6 of 41,182,246</string>
+    <string name="wheel_color_invalid">Ongeldige kleur</string>
+    <string name="wheel_color_apply">Toepassen</string>
+    <string name="wheel_color_recent_title">Onlangs gebruikt</string>
     <string name="wheel_slots_label">Radvakken</string>
     <string name="wheel_slot_label">Vak %d</string>
     <string name="wheel_no_slots">Geen vakken geconfigureerd</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">Verzonden frames: %1$d</string>
     <string name="tablet_preview_button">PC-scherm</string>
     <string name="tablet_preview_title">PC-schermpreview</string>
-    <string name="tablet_preview_hint">Start de client op de pc met --preview om het Windows-scherm hier te zien.</string>
+    <string name="tablet_preview_hint">Start de client op de pc (SPGF_Wacom.py) om het Windows-scherm hier te zien.</string>
     <string name="tablet_preview_waiting">Wachten op de preview-stream van de pc…</string>
     <string name="tablet_preview_port">Preview-stream op poort %1$d</string>
     <string name="action_translate">Vertalen (klembord)</string>

@@ -38,6 +38,11 @@
     <string name="section_wheel">Rueda del S Pen</string>
     <string name="wheel_color_title">Color de la rueda</string>
     <string name="wheel_color_subtitle">Color de acento de la rueda Air Command</string>
+    <string name="wheel_color_custom_label">Hex o RGB</string>
+    <string name="wheel_color_hint">p. ej. #29B6F6 o 41,182,246</string>
+    <string name="wheel_color_invalid">Color no válido</string>
+    <string name="wheel_color_apply">Aplicar</string>
+    <string name="wheel_color_recent_title">Usados recientemente</string>
     <string name="wheel_slots_label">Ranuras de la rueda</string>
     <string name="wheel_slot_label">Ranura %d</string>
     <string name="wheel_no_slots">No hay ranuras configuradas</string>
@@ -191,7 +196,7 @@
     <string name="tablet_frames_sent">Fotogramas enviados: %1$d</string>
     <string name="tablet_preview_button">Pantalla del PC</string>
     <string name="tablet_preview_title">Vista previa de la pantalla del PC</string>
-    <string name="tablet_preview_hint">Inicia el cliente en el PC con --preview para ver la pantalla de Windows aquí.</string>
+    <string name="tablet_preview_hint">Inicia el cliente en el PC (SPGF_Wacom.py) para ver la pantalla de Windows aquí.</string>
     <string name="tablet_preview_waiting">Esperando el flujo de vista previa del PC…</string>
     <string name="tablet_preview_port">Flujo de vista previa en el puerto %1$d</string>
     <string name="action_translate">Traducir (portapapeles)</string>

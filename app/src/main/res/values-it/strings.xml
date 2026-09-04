@@ -28,6 +28,11 @@
     <string name="section_wheel">Ruota S Pen</string>
     <string name="wheel_color_title">Colore ruota</string>
     <string name="wheel_color_subtitle">Colore di accento della ruota Air Command</string>
+    <string name="wheel_color_custom_label">Hex o RGB</string>
+    <string name="wheel_color_hint">es. #29B6F6 oppure 41,182,246</string>
+    <string name="wheel_color_invalid">Colore non valido</string>
+    <string name="wheel_color_apply">Applica</string>
+    <string name="wheel_color_recent_title">Usati di recente</string>
     <string name="wheel_slots_label">Spicchi della ruota</string>
     <string name="wheel_slot_label">Spicchio %d</string>
     <string name="wheel_no_slots">Nessuno spicchio configurato</string>
@@ -206,7 +211,7 @@
     <string name="tablet_frames_sent">Frame inviati: %1$d</string>
     <string name="tablet_preview_button">Schermo PC</string>
     <string name="tablet_preview_title">Anteprima schermo PC</string>
-    <string name="tablet_preview_hint">Avvia il client sul PC con --preview per vedere lo schermo Windows qui.</string>
+    <string name="tablet_preview_hint">Avvia il client sul PC (SPGF_Wacom.py) per vedere lo schermo Windows qui.</string>
     <string name="tablet_preview_waiting">In attesa del flusso di anteprima dal PC…</string>
     <string name="tablet_preview_port">Flusso di anteprima sulla porta %1$d</string>
     <!-- Memo a schermo spento e note extra -->

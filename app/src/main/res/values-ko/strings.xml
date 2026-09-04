@@ -24,6 +24,11 @@
     <string name="section_wheel">S Pen 휠</string>
     <string name="wheel_color_title">휠 색상</string>
     <string name="wheel_color_subtitle">Air Command 휠의 강조 색상</string>
+    <string name="wheel_color_custom_label">HEX 또는 RGB</string>
+    <string name="wheel_color_hint">예: #29B6F6 또는 41,182,246</string>
+    <string name="wheel_color_invalid">잘못된 색상</string>
+    <string name="wheel_color_apply">적용</string>
+    <string name="wheel_color_recent_title">최근 사용한 색상</string>
     <string name="wheel_slots_label">휠 슬롯</string>
     <string name="wheel_slot_label">슬롯 %d</string>
     <string name="wheel_no_slots">구성된 슬롯 없음</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">전송된 프레임: %1$d</string>
     <string name="tablet_preview_button">PC 화면</string>
     <string name="tablet_preview_title">PC 화면 미리보기</string>
-    <string name="tablet_preview_hint">PC에서 --preview 옵션으로 클라이언트를 시작하면 Windows 화면을 여기서 볼 수 있습니다.</string>
+    <string name="tablet_preview_hint">PC에서 클라이언트(SPGF_Wacom.py)를 시작하면 Windows 화면을 여기서 볼 수 있습니다.</string>
     <string name="tablet_preview_waiting">PC의 미리보기 스트림을 기다리는 중…</string>
     <string name="tablet_preview_port">미리보기 스트림 포트: %1$d</string>
     <string name="action_translate">번역(클립보드)</string>

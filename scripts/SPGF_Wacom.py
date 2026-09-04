@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
-"""S Pen / Wacom mouse emulator.
+"""S Pen / Wacom mouse emulator with automatic screen streaming.
 
-ADB mode is the canonical path:
-    python spen_mouse_emulator.py --list
-    python spen_mouse_emulator.py --device /dev/input/event3
+A plain launch does everything by itself — nothing to type, no flags:
 
-The phone may not expose a reliable USB HID pen gadget on stock kernels. The
-script therefore reads the rooted Wacom input stream through ADB and emits
-absolute mouse input locally. Windows uses SendInput and has no third-party
-runtime dependency. TCP mode remains available with ``--tcp --host`` for the
-Compose tablet server.
+    python SPGF_Wacom.py
+
+The phone IP is remembered from the first launch (SPGF_Wacom.ini). At startup
+the script immediately streams the PC screen to the phone's Tablet Mode
+preview (port 7655) and arms the pen-input session (the cursor only moves
+while Tablet Mode is on in the app). The interactive console stays available
+for pause/status (`stop`, `preview`, `fps`, `tcp`, `status`, `quit`) but is
+never required.
+
+Legacy ADB mode (read the rooted digitizer over USB; used without the app)
+remains available for hub-less launches:
+    python SPGF_Wacom.py --list
+    python SPGF_Wacom.py --device /dev/input/event3
 """
 from __future__ import annotations
 
@@ -32,6 +38,41 @@ DEFAULT_ADB = "adb"
 # Reverse screen-preview channel of the Android app (TabletPreviewServer).
 PREVIEW_PORT = 7655
 PREVIEW_HEADER_PREFIX = b"#PV"
+
+# Remembered launch options (host, ports, preview width/quality/fps). Written
+# automatically on a successful launch so a plain restart reconnects to the
+# exact same phone — no retyping the command every time.
+CONFIG_PATH = Path(__file__).resolve().parent / "SPGF_Wacom.ini"
+
+# Adaptive preview: try to keep at least this share of the fps target while
+# shrinking JPEG quality and resolution when WiFi (or CPU) cannot keep up.
+PREVIEW_MIN_QUALITY = 30
+PREVIEW_MIN_SCALE = 0.5
+
+
+def load_saved_config() -> dict:
+    try:
+        config: dict = {}
+        for raw_line in CONFIG_PATH.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            config[key.strip()] = value.strip()
+        return config
+    except OSError:
+        return {}
+
+
+def save_saved_config(values: dict) -> None:
+    try:
+        lines = ["# SPGF_Wacom launch options (overwritten automatically)"]
+        for key in sorted(values):
+            lines.append("%s=%s" % (key, values[key]))
+        CONFIG_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    except OSError as error:
+        LOG.debug("Could not save config: %s", error)
+
 
 ASCII_LOGO = r"""                                                                                          
                                                          B$% $@@@@@@                                
@@ -680,7 +721,9 @@ class TcpPenEmulator:
             sock: Optional[socket.socket] = None
             try:
                 sock = socket.create_connection((self.host, self.port), timeout=5)
-                sock.settimeout(None)
+                # Heartbeat-aware timeout (see TcpInputController): a silent
+                # socket is a dead socket, reconnect promptly.
+                sock.settimeout(12.0)
                 LOG.info("Connected to tablet server %s:%d", self.host, self.port)
                 buffer = ""
                 while not self.stop_event.is_set():
@@ -790,6 +833,370 @@ def preview_header(length: int) -> bytes:
     return PREVIEW_HEADER_PREFIX + ("%08X" % length).encode("ascii")
 
 
+class TcpInputController:
+    """On-demand pen-input session towards the phone's tablet server.
+
+    Owns the socket and the mouse backend. ``active`` is checked before every
+    injected mouse event, so the PC only moves the cursor while Tablet Mode
+    is actually running in the app; disconnecting or toggling the mode off
+    releases any held button immediately. Threads pick the connection up via
+    ``swap_backend`` without ever injecting through a dead socket.
+    """
+
+    def __init__(self, host: str, port: int) -> None:
+        self.host, self.port = host, port
+        self.stop_event = threading.Event()
+        self._lock = threading.Lock()
+        self._sock: Optional[socket.socket] = None
+        self._backend: Optional[MouseBackend] = None
+        self._width = 0
+        self._height = 0
+        self._metadata: Optional[dict[str, object]] = None
+        self._source_orientation = ORIENTATION_LANDSCAPE
+        self._thread: Optional[threading.Thread] = None
+        self._touching = False
+        self._middle_output = False
+        self._right_output = False
+        # Optional preview mirror so the on-screen pen marker stays live.
+        self.preview: Optional[PreviewStreamer] = None
+
+    # ------------------------------------------------------------- lifecycle
+    def active(self) -> bool:
+        """True only while a socket to the app's tablet server is alive."""
+        with self._lock:
+            return self._sock is not None
+
+    def swap_backend(self, backend: MouseBackend, width: int, height: int) -> None:
+        """Attach (or replace) the mouse backend once connected."""
+        with self._lock:
+            self._backend = backend
+            self._width, self._height = width, height
+
+    def start(self) -> None:
+        if self._thread is None:
+            self._thread = threading.Thread(
+                target=self._run, name="TabletInput", daemon=True
+            )
+            self._thread.start()
+
+    def stop(self) -> None:
+        self.stop_event.set()
+        self._close_socket()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            self._thread = None
+
+    def _close_socket(self) -> None:
+        with self._lock:
+            backend = self._backend
+            sock = self._sock
+            self._sock = None
+        if backend is not None:
+            try:
+                backend.release(LEFT)
+                backend.release(RIGHT)
+                backend.release(MIDDLE)
+            except Exception:
+                pass
+        if sock is not None:
+            try:
+                sock.close()
+            except OSError:
+                pass
+
+    def _run(self) -> None:
+        backoff = 1.0
+        while not self.stop_event.is_set():
+            try:
+                sock = socket.create_connection((self.host, self.port), timeout=5)
+                # The app sends a heartbeat every second while connected, so a
+                # read timeout reliably means the link is dead (Wi-Fi hiccup,
+                # zombie socket) and the session must reconnect instead of
+                # hanging forever.
+                sock.settimeout(12.0)
+                with self._lock:
+                    self._sock = sock
+                LOG.info("Input session connected to %s:%d", self.host, self.port)
+                buffer = ""
+                while not self.stop_event.is_set():
+                    data = sock.recv(4096)
+                    if not data:
+                        break
+                    buffer += data.decode("ascii", errors="ignore")
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        if line.startswith("#SPEN_TABLET"):
+                            self._metadata = parse_tablet_metadata(line)
+                            if self._metadata:
+                                self._source_orientation = str(self._metadata["orientation"])
+                                LOG.info(
+                                    "Tablet source: %sx%s, rotation %s°, orientation=%s",
+                                    self._metadata["source_width"],
+                                    self._metadata["source_height"],
+                                    int(self._metadata["source_rotation"]) * 90,
+                                    self._source_orientation,
+                                )
+                        else:
+                            self._handle_frame(line)
+                backoff = 1.0
+            except (OSError, ValueError) as error:
+                LOG.info("Input session idle (%s)", error)
+            finally:
+                self._close_socket()
+            if self.stop_event.wait(backoff):
+                break
+            # Short cap: pick up Tablet Mode again within a few seconds of
+            # the user turning it on.
+            backoff = min(5.0, backoff * 2)
+
+    def _handle_frame(self, line: str) -> None:
+        parts = line.strip().split(",")
+        if len(parts) != 4:
+            return
+        try:
+            x, y = float(parts[0]), float(parts[1])
+            flags = int(parts[3])
+        except ValueError:
+            return
+        with self._lock:
+            backend = self._backend
+            width, height = self._width, self._height
+            orientation = self._source_orientation
+        if backend is None or width <= 0 or height <= 0:
+            return
+        if self.preview is not None:
+            self.preview.set_pen_state(x, y, flags)
+        x, y = map_frame_orientation(
+            max(0.0, min(1.0, x)),
+            max(0.0, min(1.0, y)),
+            orientation,
+            width,
+            height,
+        )
+        try:
+            backend.move_absolute(
+                int(max(0.0, min(1.0, x)) * (width - 1)),
+                int(max(0.0, min(1.0, y)) * (height - 1)),
+            )
+            touching = bool(flags & TOUCH)
+            button = bool(flags & BUTTON)
+            middle_button = bool(flags & MIDDLE_BUTTON)
+            eraser = bool(flags & ERASER)
+            if touching != self._touching:
+                (backend.press if touching else backend.release)(LEFT)
+                self._touching = touching
+            if middle_button != self._middle_output:
+                (backend.press if middle_button else backend.release)(MIDDLE)
+                self._middle_output = middle_button
+            # SendInput has no eraser primitive: expose eraser as a
+            # right-button hold like the legacy client does.
+            right_output = button or eraser
+            if right_output != self._right_output:
+                (backend.press if right_output else backend.release)(RIGHT)
+                self._right_output = right_output
+        except Exception:
+            # Dead backend or disconnected socket: drop the session so
+            # ``active()`` turns false and no further input is injected.
+            self._close_socket()
+
+
+class RuntimeCommandHub:
+    """Owns both channels and starts them at launch.
+
+    The screen streams and the pen-input session is armed the moment the hub
+    is created — no console commands or flags needed. `preview`/`tcp` remain
+    usable at runtime to resume after `stop`, and `status` reports both.
+    """
+
+    def __init__(
+        self,
+        host: str,
+        preview_port: int,
+        tablet_port: int,
+        preview_args: dict,
+    ) -> None:
+        self.host = host
+        self.preview_port = preview_port
+        self.tablet_port = tablet_port
+        self._preview_args = preview_args
+        self.preview: Optional[PreviewStreamer] = None
+        self.controller: Optional[TcpInputController] = None
+        self._lock = threading.Lock()
+        self._backend: Optional[MouseBackend] = None
+        self._size: Tuple[int, int] = (0, 0)
+        # Everything starts here: stream immediately, arm input immediately.
+        # The mouse backend is attached by main() moments later; frames that
+        # arrive before then are dropped gracefully by the controller.
+        self._ensure_preview().start()
+        self.ensure_input()
+
+    # ------------------------------------------------------------- factories
+    def _ensure_preview(self) -> PreviewStreamer:
+        with self._lock:
+            if self.preview is None:
+                self.preview = PreviewStreamer(
+                    self.host, port=self.preview_port, **self._preview_args
+                )
+            return self.preview
+
+    def _ensure_controller(self) -> TcpInputController:
+        with self._lock:
+            if self.controller is None:
+                self.controller = TcpInputController(self.host, self.tablet_port)
+        # Attach the preview OUTSIDE the hub lock: _ensure_preview acquires
+        # the same non-reentrant lock, and nesting them deadlocks startup.
+        # (Pen state also feeds the preview cursor overlay.)
+        if self.controller.preview is None:
+            self.controller.preview = self._ensure_preview()
+        return self.controller
+
+    # --------------------------------------------------------------- backend
+    def attach_backend(self, backend: Optional[MouseBackend], size: Tuple[int, int]) -> None:
+        with self._lock:
+            self._backend = backend
+            self._size = size
+        controller = self.controller
+        if controller is not None and backend is not None:
+            controller.swap_backend(backend, size[0], size[1])
+
+    def ensure_input(self) -> TcpInputController:
+        """Create (idempotently) and start the pen input session."""
+        controller = self._ensure_controller()
+        backend = self._backend
+        if backend is not None:
+            controller.swap_backend(backend, self._size[0], self._size[1])
+        controller.start()
+        return controller
+
+    def shutdown(self) -> None:
+        if self.controller is not None:
+            self.controller.stop()
+        if self.preview is not None:
+            self.preview.stop()
+
+    def handle(self, command: str) -> str:
+        command = command.strip().lower()
+        if command in ("quit", "exit", "q"):
+            return "quit"
+        if command in ("", "help", "h", "?"):
+            return "Commands: preview | stop | fps | status | tcp | quit"
+        if command == "preview":
+            preview = self._ensure_preview()
+            preview.start()
+            preview.capture_paused.clear()
+            return "Preview streaming towards %s:%d" % (self.host, self.preview_port)
+        if command == "stop":
+            if self.preview is None:
+                return "Preview not created yet; type 'preview' first."
+            self.preview.capture_paused.set()
+            return "Preview capture paused; type 'preview' to resume."
+        if command == "fps":
+            if self.preview is None:
+                return "Preview not started; type 'preview' first."
+            return "Preview stream: %.1f fps" % self.preview.preview_fps()
+        if command == "tcp":
+            self.ensure_input()
+            return "Pen input armed towards %s:%d (injects only while Tablet Mode is on in the app)" % (
+                self.host,
+                self.tablet_port,
+            )
+        if command == "status":
+            lines = []
+            if self.preview is None:
+                lines.append("Preview: off (type 'preview' to start)")
+            else:
+                if not self.preview._started:
+                    state = "created (type 'preview' to start)"
+                elif self.preview.capture_paused.is_set():
+                    state = "paused"
+                else:
+                    state = "streaming"
+                lines.append("Preview: %s (%.1f fps)" % (state, self.preview.preview_fps()))
+            if self.controller is None:
+                lines.append("Input: off (type 'tcp' to start)")
+            else:
+                lines.append(
+                    "Input: %s" % ("active" if self.controller.active() else "waiting for Tablet Mode in the app")
+                )
+            return "\n".join(lines)
+        return "Unknown command. Commands: preview | stop | fps | status | tcp | quit"
+
+
+class DxgiScreenCapture:
+    """Desktop Duplication capture (dxcam): GPU-assisted, 60+ fps, low CPU.
+
+    Falls back gracefully: when dxcam is not installed or COM init fails,
+    ``broken`` turns true and the caller keeps using GDI BitBlt. ``grab``
+    returns None both for "no new frame" (screen unchanged) and "not
+    available"; ``available`` tells the two apart.
+    """
+
+    def __init__(self) -> None:
+        self._cam = None
+        self._broken = False
+        # Two consecutive failures (create returning nothing, or a grab
+        # exception) permanently disable Desktop Duplication for the session
+        # and hand capture back to GDI. A bounded fallback is what keeps the
+        # stream stable when dxcam's COM stack misbehaves.
+        self._failures = 0
+
+    @property
+    def broken(self) -> bool:
+        return self._broken
+
+    @property
+    def available(self) -> bool:
+        return not self._broken
+
+    def grab(self) -> Optional[tuple[int, int, object]]:
+        """Return (width, height, BGRA ndarray) or None when nothing is new.
+
+        BGRA output keeps dxcam on its numpy processor path (an RGB request
+        would lazily import OpenCV). The frame is copied out of dxcam's
+        internal buffer, which the next grab overwrites.
+        """
+        if self._broken:
+            return None
+        try:
+            if self._cam is None:
+                import dxcam  # type: ignore
+
+                self._cam = dxcam.create(output_color="BGRA")
+                if self._cam is None:
+                    self._failures += 1
+                    if self._failures >= 2:
+                        LOG.info("Desktop Duplication unavailable; using GDI capture")
+                        self._broken = True
+                    return None
+                self._failures = 0
+            frame = self._cam.grab()  # None when the screen did not change
+            if frame is None:
+                self._failures = 0
+                return None
+            height, width = frame.shape[0], frame.shape[1]
+            return (int(width), int(height), frame.copy())
+        except Exception as error:
+            self._failures += 1
+            if self._failures >= 2:
+                LOG.info("Desktop Duplication error (%s); using GDI capture", error)
+                self._release()
+                self._broken = True
+            else:
+                self._release()
+            return None
+
+    def _release(self) -> None:
+        try:
+            if self._cam is not None:
+                self._cam.release()
+        except Exception:
+            pass
+        self._cam = None
+
+    def close(self) -> None:
+        self._release()
+
+
 class PreviewStreamer:
     """Streams small JPEG screen previews to the Android app (Tablet Mode).
 
@@ -810,27 +1217,57 @@ class PreviewStreamer:
         port: int = PREVIEW_PORT,
         max_width: int = 960,
         quality: int = 55,
-        interval: float = 0.033,
+        fps: float = 30.0,
+        capture: str = "gdi",
     ) -> None:
         self.host = host
         self.port = port
         self.max_width = max(160, int(max_width))
         self.quality = min(95, max(15, int(quality)))
-        self.interval = max(0.016, float(interval))
+        self.interval = max(0.008, 1.0 / max(5.0, float(fps)))
+        # GDI BitBlt is the default capture: it is slower than Desktop
+        # Duplication on paper but rock stable on every driver. DXGI is an
+        # explicit opt-in (--capture dxgi) because dxcam's COM stack is
+        # unreliable on some machines and once degraded the stream to ~2 fps.
+        self._dxgi_enabled = str(capture).lower().strip() == "dxgi"
         self.stop_event = threading.Event()
         # Terminal command "stop": pauses capture ("preview" resumes it) so
         # the stream can be throttled at runtime without killing the script.
         self.capture_paused = threading.Event()
-        # Terminal command "stop": pauses capture ("preview" resumes it) so
-        # the stream can be throttled at runtime without killing the script.
-        self.capture_paused = threading.Event()
+        # start() is idempotent: the runtime `preview` command may call it
+        # any number of times without spawning duplicate threads.
+        self._start_lock = threading.Lock()
+        self._started = False
         # Latest encoded frame cache, guarded by a lock (producer/consumer).
         self._frame_lock = threading.Lock()
         self._frame: Optional[bytes] = None
         self._frame_seq = 0
+        # Latest raw capture handed from the capture thread to the encoder
+        # thread so BitBlt and JPEG work never serialize on one thread.
+        self._raw_lock = threading.Lock()
+        # GDI path: (width, height, raw BGRA bytes). DXGI path: the ndarray
+        # comes straight from Desktop Duplication, RGB, zero-copy.
+        self._raw: object = None
+        self._raw_seq = 0
+        self._encoded_raw_seq = -1
         self._capture_error: Optional[str] = None
-        # Trailing send timestamps for the terminal `fps` command.
-        self._sent_times: list[float] = []
+        # Desktop Duplication handle (lazily created; GDI when unavailable).
+        self._dxgi = DxgiScreenCapture()
+        # Adaptive quality: keeps the stream near the fps target when WiFi
+        # or CPU cannot sustain the current byte budget.
+        self._adaptive = True
+        self._quality = self.quality
+        self._scale = 1.0
+        self._sizes: list[int] = []
+        # Last time the capture loop actually produced a frame; adaptive
+        # quality must not react to a quiet screen (no captures = nothing to
+        # adapt to, the network is fine).
+        self._last_capture_at = 0.0
+        # Signalled by the encoder as soon as a new JPEG is ready, so the
+        # stream thread sends instantly instead of waking up on a fixed
+        # poll that can land just before the next frame (aliasing halved
+        # the effective rate).
+        self._frame_ready = threading.Event()
         # Trailing send timestamps for the terminal `fps` command.
         self._sent_times: list[float] = []
         # Pen cursor overlay state (written by the pen reader thread).
@@ -850,6 +1287,36 @@ class PreviewStreamer:
         self._sent_times[:] = recent
         return len(recent) / 3.0
 
+    # ------------------------------------------------------ adaptive quality
+    def _note_frame_size(self, size: int) -> None:
+        """Track send sizes; retunes quality/scale when the rate sags."""
+        self._sizes.append(size)
+        if len(self._sizes) < 20:
+            return
+        if len(self._sizes) > 60:
+            del self._sizes[:-60]
+        measured = self.preview_fps()
+        if measured <= 0:
+            return
+        # A static screen produces no new captures; a low send rate then means
+        # "nothing happened", never "the link cannot keep up".
+        if time.monotonic() - self._last_capture_at > 1.5:
+            return
+        target = 1.0 / self.interval
+        if measured < target * 0.75 and (self._quality > PREVIEW_MIN_QUALITY or self._scale > PREVIEW_MIN_SCALE):
+            # Falling behind: shrink the payload a step, both levers.
+            self._quality = max(PREVIEW_MIN_QUALITY, self._quality - 8)
+            self._scale = max(PREVIEW_MIN_SCALE, self._scale - 0.08)
+            self._sizes.clear()
+            LOG.info("Preview adaptive: quality %d, scale %.2f (measured %.1f fps)", self._quality, self._scale, measured)
+        elif measured > target * 0.95 and len(self._sizes) >= 60:
+            # Comfortable headroom: claw quality back one careful step.
+            if self._quality < self.quality or self._scale < 1.0:
+                self._quality = min(self.quality, self._quality + 4)
+                self._scale = min(1.0, self._scale + 0.04)
+                self._sizes.clear()
+                LOG.info("Preview adaptive: quality %d, scale %.2f", self._quality, self._scale)
+
     # ------------------------------------------------------------------ pen
     def set_pen_state(self, x: float, y: float, flags: int) -> None:
         """Mirror the latest pen frame so the cursor overlay stays live."""
@@ -864,8 +1331,8 @@ class PreviewStreamer:
         """Pillow fast path: BGRA buffer straight into a JPEG.
 
         All the heavy lifting (pixel format conversion, downscale, encode)
-        happens inside Pillow at C speed — the old per-pixel Python loop was
-        the reason the preview ran at a slideshow frame rate.
+        happens inside Pillow at C speed. Converting RGB at full resolution
+        before resizing benchmarks faster than resizing the RGBA image.
         """
         try:
             import io
@@ -873,12 +1340,12 @@ class PreviewStreamer:
             from PIL import Image  # type: ignore
 
             image = Image.frombuffer("RGBA", (width, height), bgra, "raw", "BGRA", 0, 1)
+            # JPEG has no alpha channel; drop it first (benchmarks faster).
+            image = image.convert("RGB")
             if width > self.max_width:
                 scale = self.max_width / float(width)
                 target = (self.max_width, max(1, int(height * scale)))
                 image = image.resize(target, Image.BILINEAR)
-            # JPEG has no alpha channel; drop it once, after resizing.
-            image = image.convert("RGB")
             # Draw the pen cursor overlay before encoding so the phone sees it.
             self._draw_pen_marker(image)
             buffer = io.BytesIO()
@@ -888,6 +1355,39 @@ class PreviewStreamer:
             return None
         except Exception as error:
             LOG.debug("Pillow JPEG encode failed: %s", error)
+            return None
+
+    def _encode_ndarray(self, width: int, height: int, frame) -> Optional[bytes]:
+        """Desktop Duplication path: BGRA ndarray straight into Pillow.
+
+        ``memoryview`` views the capture buffer without copying; the RGB
+        conversion, downscale and JPEG encode all run at C speed.
+        """
+        try:
+            import io
+
+            from PIL import Image  # type: ignore
+
+            if frame.ndim == 3 and frame.shape[2] == 4:
+                image = Image.frombuffer(
+                    "RGBA", (width, height), memoryview(frame), "raw", "BGRA", 0, 1
+                ).convert("RGB")
+            else:
+                import numpy as np  # noqa: F401  (fromarray needs numpy present)
+
+                image = Image.fromarray(frame)
+            target_scale = self._scale
+            if width > self.max_width:
+                target_scale = min(target_scale, self.max_width / float(width))
+            if target_scale < 1.0:
+                target = (max(1, int(width * target_scale)), max(1, int(height * target_scale)))
+                image = image.resize(target, Image.BILINEAR)
+            self._draw_pen_marker(image)
+            buffer = io.BytesIO()
+            image.save(buffer, format="JPEG", quality=self._quality)
+            return buffer.getvalue()
+        except Exception as error:
+            LOG.debug("DXGI JPEG encode failed: %s", error)
             return None
 
     def _draw_pen_marker(self, image) -> None:
@@ -1105,53 +1605,132 @@ class PreviewStreamer:
 
     # ------------------------------------------------------------- threading
     def _capture_loop(self) -> None:
-        pil_warned = False
+        """Producer: GDI BitBlt as fast as the screen allows.
+
+        BitBlt plus the 8 MB buffer copy are the single most expensive step
+        (~17 ms on a 1080p desktop), so this runs on its own thread at full
+        speed and only publishes the newest buffer; the encoder dedupes by
+        sequence, so duplicate captures of an unchanged screen are cheap.
+        The fps throttle lives in the encoder — adding it here too would
+        stack on top of the capture time and halve the real frame rate.
+        """
         while not self.stop_event.is_set():
             if self.capture_paused.is_set():
                 # Terminal "stop" command: idle until "preview" resumes it.
                 self.stop_event.wait(0.25)
                 continue
+            capture = None
+            if self._dxgi_enabled and self._dxgi.available:
+                # Opt-in Desktop Duplication; None = screen unchanged.
+                capture = self._dxgi.grab()
+            if capture is None and (not self._dxgi_enabled or not self._dxgi.available):
+                # The stable default path: GDI BitBlt.
+                capture = self._gdi_screen_raw()
+            if capture is None:
+                if self._capture_error:
+                    LOG.warning("Screen capture failed: %s", self._capture_error)
+                    self._capture_error = None
+                    self.stop_event.wait(0.5)
+                else:
+                    # Screen unchanged since the last duplicated frame.
+                    self.stop_event.wait(0.003)
+                continue
+            with self._raw_lock:
+                self._raw = capture
+                self._raw_seq += 1
+            self._last_capture_at = time.monotonic()
+            # Short yield only: keeps the CPU from pegging a core without
+            # imposing a second, hidden frame-rate limit.
+            self.stop_event.wait(0.002)
+
+    def _encode_loop(self) -> None:
+        """Consumer: JPEG-encode the newest raw buffer at the fps target.
+
+        Parallel to the capture this hides the ~8 ms encode behind the next
+        BitBlt. The frame-rate cap is enforced here (once per interval) so
+        CPU stays bounded by the requested fps instead of the screen rate.
+        """
+        pil_warned = False
+        last_encode = 0.0
+        while not self.stop_event.is_set():
+            if self.capture_paused.is_set():
+                self.stop_event.wait(0.25)
+                continue
+            now = time.monotonic()
+            if now - last_encode < self.interval * 0.85:
+                self.stop_event.wait(0.003)
+                continue
+            with self._raw_lock:
+                raw = self._raw
+                raw_seq = self._raw_seq
             frame: Optional[bytes] = None
-            capture = self._gdi_screen_raw()
-            if capture is not None:
-                width, height, bgra = capture
-                frame = self._encode_jpeg(width, height, bgra)
-                if frame is None and not pil_warned:
-                    pil_warned = True
-                    LOG.info("Pillow not installed; falling back to GDI+ JPEG encoding")
-                    frame = self._gdiplus_jpeg_from_screen()
-            elif self._capture_error:
-                LOG.warning("Screen capture failed: %s", self._capture_error)
-                self._capture_error = None
-            if frame:
-                with self._frame_lock:
-                    self._frame = frame
-                    self._frame_seq += 1
-            self.stop_event.wait(self.interval)
+            if raw is not None and raw_seq != self._encoded_raw_seq:
+                self._encoded_raw_seq = raw_seq
+                last_encode = now
+                if isinstance(raw[2], (bytes, bytearray)):
+                    frame = self._encode_jpeg(raw[0], raw[1], raw[2])
+                    if frame is None and not pil_warned:
+                        pil_warned = True
+                        LOG.info("Pillow not installed; falling back to GDI+ JPEG encoding")
+                        frame = self._gdiplus_jpeg_from_screen()
+                else:
+                    # Desktop Duplication ndarray: zero-copy Pillow path.
+                    frame = self._encode_ndarray(raw[0], raw[1], raw[2])
+                if frame:
+                    self._note_frame_size(len(frame))
+                    with self._frame_lock:
+                        self._frame = frame
+                        self._frame_seq += 1
+                    self._frame_ready.set()
+            else:
+                # Nothing new to encode; brief sleep to avoid busy-spinning.
+                self.stop_event.wait(0.004)
 
     def _stream_loop(self) -> None:
         while not self.stop_event.is_set():
             sock: Optional[socket.socket] = None
             try:
                 sock = socket.create_connection((self.host, self.port), timeout=5)
-                sock.settimeout(None)
+                # Send timeout: if the phone stops ACKing (Wi-Fi hiccup, zombie
+                # socket) the sender must give up and reconnect instead of
+                # blocking forever on a dead connection.
+                sock.settimeout(10.0)
+                try:
+                    # Send each frame as soon as it is ready instead of letting
+                    # Nagle batch them (adds up to 40 ms latency per frame).
+                    sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                except OSError:
+                    pass
                 LOG.info("Preview stream connected to %s:%d", self.host, self.port)
                 last_sent_sequence = -1
+                last_frame: Optional[bytes] = None
+                last_send_at = 0.0
                 while not self.stop_event.is_set():
+                    # Sleep until a frame is encoded (or the poll horizon
+                    # passes) — wakes within microseconds of a new JPEG.
+                    self._frame_ready.wait(timeout=0.25)
+                    self._frame_ready.clear()
                     with self._frame_lock:
                         frame = self._frame
                         sequence = self._frame_seq
+                    now = time.monotonic()
                     if frame and sequence != last_sent_sequence:
                         sock.sendall(preview_header(len(frame)) + frame)
+                        last_frame = frame
                         last_sent_sequence = sequence
-                        self._sent_times.append(time.monotonic())
-                        if len(self._sent_times) > 600:
-                            del self._sent_times[:300]
-                        now = time.monotonic()
+                        last_send_at = now
                         self._sent_times.append(now)
                         if len(self._sent_times) > 600:
                             del self._sent_times[:300]
-                    self.stop_event.wait(self.interval)
+                    elif last_frame is not None and now - last_send_at >= 1.0:
+                        # Keepalive: a static screen would otherwise send no
+                        # traffic at all and the phone's Wi-Fi radio drops into
+                        # power save; the next motion burst then stutters and
+                        # can even reset the link. Resending the identical JPEG
+                        # costs ~35 KB/s and keeps the path warm. It is not
+                        # counted in preview_fps (that reports new frames).
+                        sock.sendall(preview_header(len(last_frame)) + last_frame)
+                        last_send_at = now
             except (OSError, ValueError) as error:
                 LOG.warning("Preview stream error: %s", error)
             finally:
@@ -1165,22 +1744,35 @@ class PreviewStreamer:
             LOG.info("Reconnecting preview stream…")
 
     def start(self) -> None:
+        with self._start_lock:
+            if self._started:
+                return
+            self._started = True
+        self.capture_paused.clear()
         threading.Thread(
             target=self._capture_loop, name="PreviewCapture", daemon=True
+        ).start()
+        threading.Thread(
+            target=self._encode_loop, name="PreviewEncode", daemon=True
         ).start()
         threading.Thread(
             target=self._stream_loop, name="PreviewStream", daemon=True
         ).start()
 
 
-def run_interactive_console(worker, preview: Optional[PreviewStreamer]) -> None:
+def run_interactive_console(worker, hub: Optional["RuntimeCommandHub"]) -> None:
     """Runtime command console for interactive terminals.
 
-    Once the script is running you can type `preview` to (re)start streaming,
-    `stop` to pause it, `fps` to check the actual stream rate, and `quit` to
-    exit — no need to restart the script to toggle the preview.
+    Streaming and input are already live when this starts; the console only
+    exists for control: `stop` pauses the screen stream, `preview` resumes
+    it, `fps`/`status` report live state, `tcp` re-arms pen input, `quit`
+    exits. Nothing here is required for normal operation.
     """
-    print("Commands: preview | stop | fps | status | quit")
+    if hub is None:
+        print("Legacy ADB input mode (no phone configured). Start once with --host <phone-ip> "
+              "to enable automatic screen streaming.")
+    else:
+        print("Screen streaming is live. Commands: stop | preview | fps | status | tcp | quit")
     while True:
         try:
             raw = input("spgf> ").strip().lower()
@@ -1189,36 +1781,16 @@ def run_interactive_console(worker, preview: Optional[PreviewStreamer]) -> None:
         if raw in ("quit", "exit", "q"):
             break
         if raw in ("", "help", "h", "?"):
-            print("Commands: preview | stop | fps | status | quit")
-        elif raw == "preview":
-            if preview is None:
-                print("Preview is not running (start the script with --preview).")
-            else:
-                preview.capture_paused.clear()
-                print("Preview streaming resumed.")
-        elif raw == "stop":
-            if preview is None:
-                print("Preview is not running (start the script with --preview).")
-            else:
-                preview.capture_paused.set()
-                print("Preview capture paused; type 'preview' to resume.")
-        elif raw == "fps":
-            if preview is None:
-                print("Preview is not running (start the script with --preview).")
-            else:
-                print("Preview stream: %.1f fps" % preview.preview_fps())
-        elif raw == "status":
-            if preview is None:
-                print("Preview: off")
-            else:
-                state = "paused" if preview.capture_paused.is_set() else "streaming"
-                print("Preview: %s" % state)
-        else:
-            print("Unknown command. Commands: preview | stop | fps | status | quit")
+            print("Commands: stop | preview | fps | status | tcp | quit")
+            continue
+        if hub is None:
+            print("No phone configured: start once with --host <phone-ip>.")
+            continue
+        print(hub.handle(raw))
     if worker is not None:
         worker.stop()
-    if preview is not None:
-        preview.stop()
+    if hub is not None:
+        hub.shutdown()
 
 
 def adb_command(serial: Optional[str]) -> list[str]:
@@ -1266,16 +1838,29 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--list", action="store_true", help="Print rooted input devices and exit")
     parser.add_argument("--debug", action="store_true", help="Enable verbose logging")
     parser.add_argument("--tcp", action="store_true", help="Use the optional TCP tablet protocol")
-    parser.add_argument("--host", help="Phone IP address for --tcp")
-    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument(
-        "--preview",
-        action="store_true",
-        help="Stream the PC screen to the phone (works alone or with --tcp)",
+        "--host",
+        help="Phone IP for --tcp. Remembered after the first launch: the next "
+        "run may omit it (saved in scripts/SPGF_Wacom.ini).",
     )
+    parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--preview-port", type=int, default=PREVIEW_PORT)
     parser.add_argument("--preview-width", type=int, default=960)
     parser.add_argument("--preview-quality", type=int, default=55)
+    parser.add_argument(
+        "--preview-fps",
+        type=float,
+        default=30.0,
+        help="Preview capture/stream target rate (default 30)",
+    )
+    parser.add_argument(
+        "--capture",
+        choices=("gdi", "dxgi"),
+        default="gdi",
+        help="Screen capture backend for the preview: gdi (stable default) "
+        "or dxgi (Desktop Duplication, higher fps, needs a reliable GPU "
+        "duplicator; falls back to gdi after two failures)",
+    )
     return parser
 
 
@@ -1284,15 +1869,49 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     enable_windows_dpi_awareness()
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    # Launch options persist across runs: give --host once and every later
+    # plain launch reconnects to the same phone. Explicit flags always win.
+    saved = load_saved_config()
+    remembered_host = saved.get("host")
+    if args.host is None and remembered_host and not args.list:
+        args.host = remembered_host
+        print("Using remembered host %s (from %s); pass --host to change it" % (remembered_host, CONFIG_PATH.name))
+
     logging.basicConfig(
         level=logging.DEBUG if args.debug else logging.INFO,
         format="[%(asctime)s] %(levelname)s: %(message)s",
         datefmt="%H:%M:%S",
     )
     adb = adb_command(args.serial)
+    # One runtime hub owns both channels and starts them immediately: the
+    # screen streams and the pen-input session is armed from the first
+    # second — nothing to type, no flags. The mouse backend is attached
+    # right after creation.
+    hub: Optional[RuntimeCommandHub] = None
+    if args.host and not args.list:
+        hub = RuntimeCommandHub(
+            args.host,
+            preview_port=args.preview_port,
+            tablet_port=args.port,
+            preview_args={
+                "max_width": args.preview_width,
+                "quality": args.preview_quality,
+                "fps": args.preview_fps,
+                "capture": args.capture,
+            },
+        )
+        save_saved_config({"host": args.host, "port": args.port, "preview_port": args.preview_port})
+        LOG.info(
+            "Screen streaming to %s:%d; pen input armed (injects only while Tablet Mode is on in the app)",
+            args.host,
+            args.preview_port,
+        )
     device_resolution: Optional[Tuple[int, int]] = None
     device_rotation: Optional[int] = None
-    if not args.tcp:
+    if hub is None:
+        # Legacy ADB input mode only: the hub mode maps coordinates through
+        # the app's metadata handshake instead of querying the device.
         device_resolution = query_device_resolution(adb)
         device_rotation = query_device_rotation(adb)
         if device_resolution:
@@ -1306,29 +1925,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     width = args.screen_w or local_width
     height = args.screen_h or local_height
 
-    # --preview alone is valid: stream only the screen, no pen input needed.
-    if args.preview and not args.tcp:
-        if not args.host:
-            parser.error("--preview requires --host <phone-ip>")
-        LOG.info("Preview-only mode: streaming the PC screen to %s:%d", args.host, args.preview_port)
-        preview = PreviewStreamer(
-            args.host,
-            port=args.preview_port,
-            max_width=args.preview_width,
-            quality=args.preview_quality,
-        )
-        try:
-            preview.start()
-            if sys.stdin is not None and sys.stdin.isatty():
-                run_interactive_console(None, preview)
-            else:
-                while True:
-                    time.sleep(3600)
-        except KeyboardInterrupt:
-            LOG.info("Stopping preview")
-        finally:
-            preview.stop()
-        return 0
+    # One runtime hub owns every channel; streaming and input are already
+    # live at this point (started in the constructor above).
     if width <= 0 or height <= 0:
         parser.error("screen dimensions must be positive")
     if args.list and not args.tcp:
@@ -1356,21 +1954,16 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     backend = create_backend(width, height)
     worker = None
-    preview: Optional[PreviewStreamer] = None
+    if hub is not None:
+        # The PC mouse backend powers on-demand input sessions regardless of
+        # which primary path (TCP/ADB) this launch uses.
+        hub.attach_backend(backend, (width, height))
     try:
-        if args.tcp:
-            if not args.host:
+        if hub is None:
+            # Hub-less legacy path: read the rooted digitizer over ADB/USB
+            # (no phone network involved, no screen streaming).
+            if args.tcp:
                 parser.error("--tcp requires --host <phone-ip>")
-            if args.preview:
-                preview = PreviewStreamer(
-                    args.host,
-                    port=args.preview_port,
-                    max_width=args.preview_width,
-                    quality=args.preview_quality,
-                )
-                preview.start()
-            worker = TcpPenEmulator(args.host, args.port, backend, width, height, preview=preview)
-        else:
             device, capabilities = discover_device(adb) if not args.device else (args.device, DeviceCapabilities())
             if args.device:
                 try:
@@ -1394,25 +1987,38 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 capabilities = DeviceCapabilities(
                     capabilities.x, capabilities.y, AxisRange(capabilities.pressure.minimum, args.max_pressure)
                 )
-            worker = AdbPenEmulator(
-                adb,
-                device,
-                capabilities,
-                backend,
-                width,
-                height,
-                orientation=args.orientation,
-                display_rotation=auto_rotation,
-            )
+            try:
+                worker = AdbPenEmulator(
+                    adb,
+                    device,
+                    capabilities,
+                    backend,
+                    width,
+                    height,
+                    orientation=args.orientation,
+                    display_rotation=auto_rotation,
+                )
+            except (OSError, RuntimeError) as error:
+                # ADB problems (no device, no root) must never take the screen
+                # stream down: the hub keeps streaming; only input is absent.
+                LOG.error("ADB input unavailable: %s", error)
         if sys.stdin is not None and sys.stdin.isatty():
-            worker_thread = threading.Thread(
-                target=worker.run, name="PenEmulator", daemon=True
-            )
-            worker_thread.start()
-            run_interactive_console(worker, preview)
-            worker_thread.join(timeout=2.0)
+            if worker is not None:
+                worker_thread = threading.Thread(
+                    target=worker.run, name="PenEmulator", daemon=True
+                )
+                worker_thread.start()
+            run_interactive_console(worker, hub)
+            if worker is not None:
+                worker_thread.join(timeout=2.0)
         else:
-            worker.run()
+            if worker is not None:
+                worker.run()
+            else:
+                # Hub-managed TCP mode: the input session runs on its own
+                # thread; just idle until interrupted.
+                while True:
+                    time.sleep(3600)
         return 0
     except KeyboardInterrupt:
         LOG.info("Stopping")
@@ -1423,8 +2029,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     finally:
         if worker is not None:
             worker.stop()
-        if preview is not None:
-            preview.stop()
+        if hub is not None:
+            hub.shutdown()
         backend.close()
 
 

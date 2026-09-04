@@ -24,6 +24,11 @@
     <string name="section_wheel">عجلة S Pen</string>
     <string name="wheel_color_title">لون العجلة</string>
     <string name="wheel_color_subtitle">اللون المميز لعجلة Air Command</string>
+    <string name="wheel_color_custom_label">Hex أو RGB</string>
+    <string name="wheel_color_hint">مثال: #29B6F6 أو 41,182,246</string>
+    <string name="wheel_color_invalid">لون غير صالح</string>
+    <string name="wheel_color_apply">تطبيق</string>
+    <string name="wheel_color_recent_title">المستخدمة حديثًا</string>
     <string name="wheel_slots_label">فتحات العجلة</string>
     <string name="wheel_slot_label">الفتحة %d</string>
     <string name="wheel_no_slots">لا توجد فتحات مكوّنة</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">الإطارات المرسلة: %1$d</string>
     <string name="tablet_preview_button">شاشة الحاسوب</string>
     <string name="tablet_preview_title">معاينة شاشة الحاسوب</string>
-    <string name="tablet_preview_hint">شغّل البرنامج على الحاسوب مع --preview لرؤية شاشة Windows هنا.</string>
+    <string name="tablet_preview_hint">شغّل البرنامج على الحاسوب (SPGF_Wacom.py) لرؤية شاشة Windows هنا.</string>
     <string name="tablet_preview_waiting">في انتظار بث المعاينة من الحاسوب…</string>
     <string name="tablet_preview_port">بث المعاينة على المنفذ %1$d</string>
     <string name="action_translate">ترجمة (الحافظة)</string>

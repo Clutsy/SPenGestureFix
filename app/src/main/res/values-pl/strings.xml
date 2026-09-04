@@ -24,6 +24,11 @@
     <string name="section_wheel">Koło S Pena</string>
     <string name="wheel_color_title">Kolor koła</string>
     <string name="wheel_color_subtitle">Kolor akcentu koła Air Command</string>
+    <string name="wheel_color_custom_label">Hex lub RGB</string>
+    <string name="wheel_color_hint">np. #29B6F6 lub 41,182,246</string>
+    <string name="wheel_color_invalid">Nieprawidłowy kolor</string>
+    <string name="wheel_color_apply">Zastosuj</string>
+    <string name="wheel_color_recent_title">Ostatnio używane</string>
     <string name="wheel_slots_label">Miejsca koła</string>
     <string name="wheel_slot_label">Miejsce %d</string>
     <string name="wheel_no_slots">Brak skonfigurowanych miejsc</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">Wysłane klatki: %1$d</string>
     <string name="tablet_preview_button">Ekran komputera</string>
     <string name="tablet_preview_title">Podgląd ekranu komputera</string>
-    <string name="tablet_preview_hint">Uruchom klienta na komputerze z opcją --preview, aby zobaczyć ekran Windows tutaj.</string>
+    <string name="tablet_preview_hint">Uruchom klienta na komputerze (SPGF_Wacom.py), aby zobaczyć ekran Windows tutaj.</string>
     <string name="tablet_preview_waiting">Oczekiwanie na strumień podglądu z komputera…</string>
     <string name="tablet_preview_port">Strumień podglądu na porcie %1$d</string>
     <string name="action_translate">Przetłumacz (schowek)</string>

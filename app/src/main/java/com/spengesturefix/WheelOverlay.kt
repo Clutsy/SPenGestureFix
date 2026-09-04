@@ -10,6 +10,7 @@ import android.graphics.Paint
 import android.graphics.PointF
 import android.graphics.PorterDuff
 import android.graphics.RadialGradient
+import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
 import android.os.Build
@@ -36,8 +37,8 @@ import kotlin.math.sin
  * Air Command-style wheel anchored to the lower-right screen corner.
  *
  * Design goals (2026.09 refinement):
- *  - clean pie menu: every slot sits on ONE even circle, spaced by equal
- *    angles — no staggered rings, no overlapping targets;
+ *  - classic lower-right quarter-arc fan with ONE even ring: equal angular
+ *    steps, no staggered rings, no overlapping targets;
  *  - real vector icons drawn from tinted VectorDrawables instead of emoji;
  *  - short localized labels under the icon, only inside the slot disc;
  *  - closing is the dedicated center disc (X icon), always the same place;
@@ -79,8 +80,8 @@ class WheelOverlay(context: Context) {
 
         val metrics = appContext.resources.displayMetrics
         val shortSide = min(metrics.widthPixels, metrics.heightPixels).coerceAtLeast(1)
-        val minimum = dp(250f).coerceAtMost(shortSide)
-        val size = (shortSide * 0.72f).roundToInt()
+        val minimum = dp(240f).coerceAtMost(shortSide)
+        val size = (shortSide * 0.66f).roundToInt()
             .coerceAtLeast(minimum)
             .coerceAtMost(shortSide)
         val inset = dp(10f)
@@ -112,11 +113,10 @@ class WheelOverlay(context: Context) {
                 WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
             android.graphics.PixelFormat.TRANSLUCENT
         ).apply {
-            // Centered pie menu: every slot is equidistant from the eye and the
-            // layout no longer crams all targets into one corner arc.
-            gravity = Gravity.CENTER
-            x = 0
-            y = 0
+            // Anchored at the lower-right like the original Note Air Command.
+            gravity = Gravity.BOTTOM or Gravity.END
+            x = inset
+            y = inset
         }
 
         try {
@@ -157,28 +157,30 @@ class WheelOverlay(context: Context) {
 }
 
 /**
- * Pure geometry for the centered full-circle pie menu. Exposed for unit
- * tests: the slot angle math is intentionally deterministic and hardware-free.
+ * Pure geometry for the lower-right quarter-arc fan. Exposed for unit tests:
+ * the slot angle math is intentionally deterministic and hardware-free.
  */
 object WheelGeometry {
     /**
-     * Slot k angle in radians. Slot 0 sits at the top and the rest follow
-     * clockwise at exactly even 2π/count steps, so every disc is identical
-     * and no pair of neighbors can drift closer than the chord distance.
+     * Slot k angle in radians: slot 0 anchors at the left (180°) and the fan
+     * sweeps upward to the top (90°) in exactly even steps, like the original
+     * Samsung Air Command anchored at the lower-right corner.
      */
     fun slotAngle(index: Int, count: Int): Double {
-        val n = count.coerceAtLeast(1)
-        return -PI / 2.0 + (2.0 * PI * index) / n
+        val denominator = (count - 1).coerceAtLeast(1).toDouble()
+        val fraction = if (count == 1) 0.5 else index.toDouble() / denominator
+        return PI + (PI / 2.0) * fraction
     }
 
     /**
-     * Chord distance between adjacent slot centers on a full circle of
-     * [ringRadius]: 2R·sin(π/count). Adjacent discs never touch as long as
-     * this stays above twice the disc radius.
+     * Chord distance between adjacent slot centers on the quarter arc of
+     * [ringRadius]: 2R·sin(step/2) with step = 90°/(count-1). Adjacent discs
+     * never touch as long as this stays above twice the disc radius.
      */
     fun minimumCenterDistance(count: Int, ringRadius: Float): Float {
         if (count < 2) return Float.MAX_VALUE
-        return (2.0 * ringRadius * sin(PI / count)).toFloat()
+        val step = (PI / 2.0) / (count - 1).coerceAtLeast(1)
+        return (2.0 * ringRadius * sin(step / 2.0)).toFloat()
     }
 
     /**
@@ -229,6 +231,7 @@ private class WheelView(
     }
 
     private val center = PointF()
+    private val guideRect = RectF()
     private val slotCenters = ArrayList<PointF>(slots.size + 1)
     private val labels = slots.map { compactLabel(it.label) }
     private val icons: List<android.graphics.drawable.Drawable?> = slots.map {
@@ -271,27 +274,37 @@ private class WheelView(
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
         val side = min(width, height).toFloat()
-        // Centered pie menu: the close disc sits exactly in the middle.
-        center.set(side * 0.5f, side * 0.5f)
+        // Anchored at the lower-right, like the original Note Air Command.
+        center.set(side * 0.86f, side * 0.86f)
 
-        // Every configured action gets a slot on one even circle.
+        // Every configured action gets a slot on one even quarter arc.
         val slotCount = slots.size.coerceAtLeast(1)
-        centerRadius = (side * 0.075f).coerceAtLeast(dp(21f).toFloat())
-        slotRadius = (side * 0.080f).coerceAtLeast(dp(23f).toFloat())
+        centerRadius = (side * 0.072f).coerceAtLeast(dp(21f).toFloat())
+        slotRadius = (side * 0.075f).coerceAtLeast(dp(22f).toFloat())
 
-        // Ring radius sized so adjacent discs always keep an air gap, capped
-        // by what the square window can actually show.
-        val maxReachable = min(center.x, center.y) - slotRadius - dp(6f)
+        // Ring radius sized so adjacent discs always keep an air gap:
+        // chord(R) = 2R·sin(step/2) must exceed 2·slotRadius·margin. Capped
+        // by what the corner-anchored window can actually show; the fan only
+        // spans up-left from the anchor, so the arc always fits.
+        val maxReachable = min(center.x, center.y) - slotRadius - dp(8f)
         val unitChord = WheelGeometry.minimumCenterDistance(slotCount, 1f)
-        val needed = if (unitChord > 0f) {
-            (slotRadius * 1.35f) / unitChord
+        val needed = if (unitChord.isInfinite() || unitChord <= 0f) {
+            0.45f
         } else {
-            0.34f
+            (slotRadius * 2.25f) / unitChord
         }
         ringRadius = (needed * side)
             .coerceAtLeast(side * 0.30f)
             .coerceAtMost(maxReachable)
             .coerceAtLeast(centerRadius + slotRadius + dp(10f))
+
+        val guideRadius = ringRadius
+        guideRect.set(
+            center.x - guideRadius,
+            center.y - guideRadius,
+            center.x + guideRadius,
+            center.y + guideRadius
+        )
 
         slotCenters.clear()
         repeat(slotCount) { index ->
@@ -339,10 +352,16 @@ private class WheelView(
     }
 
     private fun drawGuideArc(canvas: Canvas, alpha: Int) {
-        // Subtle accent ring through every slot center.
+        // Subtle accent arc through every slot center (quarter fan only).
         arcPaint.strokeWidth = dp(1.5f).toFloat()
         arcPaint.color = accent.withAlpha((alpha * 0.35f).roundToInt())
-        canvas.drawCircle(center.x, center.y, ringRadius, arcPaint)
+        canvas.drawArc(
+            guideRect,
+            Math.toDegrees(startAngle).toFloat(),
+            Math.toDegrees(sweepAngle).toFloat(),
+            false,
+            arcPaint
+        )
     }
 
     private fun drawSlots(canvas: Canvas, alpha: Int) {

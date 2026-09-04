@@ -48,13 +48,26 @@ The current architecture uses `exec getevent` per reader, idempotent process own
 
 ## Release notes
 
+### 1.6 — Desktop Duplication capture, app-gated input, runtime channels
+
+- **DXGI Desktop Duplication capture** (via the small `dxcam` package) is now **opt-in** with `--capture dxgi`: it can exceed 60 fps on machines with a reliable GPU duplicator, but on some driver stacks it degrades the stream, so the **stable default is GDI BitBlt** (`--capture gdi`). When DXGI fails twice in a row the session permanently falls back to GDI automatically.
+- **Adaptive preview quality:** when WiFi cannot sustain the fps target, JPEG quality and scale step down (to 30 / 0.5×) and recover when headroom returns — the stream stays smooth instead of stuttering. A quiet screen is no longer mistaken for congestion.
+- **Connection keep-alive:** the phone pings the PC (and paces idle pen sessions) once per second so the Wi-Fi radio never drops into power save during quiet stretches — no more stutters or resets when motion resumes after an idle period. The PC sender uses timeouts instead of blocking forever on a half-open link.
+- **Zombie connections eliminated:** both phone servers now serve the latest connection — a PC reconnect after a WiFi hiccup evicts the dead socket instantly instead of queueing behind it forever.
+- **Decode off the socket thread:** the preview server decodes JPEGs on a dedicated thread with a newest-wins queue, so a slow decode can no longer backpressure the stream.
+- **Input only while Tablet Mode is on in the app:** the PC now opens pen-input sessions on demand; mouse injection starts and stops with the app's Tablet Mode, held buttons are released the instant the session drops, and reconnects are capped at 5 s.
+- **Runtime channels from the already-running script:** type `preview` (screen stream) or `tcp` (pen input) in the console at any time — no `.bat`, no restarts. `status` shows both channels; the phone IP is remembered after the first launch.
+- **Phone-side reader rebuilt:** the preview server now reads the socket in bulk (up to 64 KB) instead of one byte at a time, so decoding no longer caps the stream well below the network rate.
+
 ### 1.5 — fast fullscreen preview, clean pie wheel, battery saver
 
-- **PC preview rebuilt for motion:** the GDI capture now hands the raw BGRA buffer straight to Pillow (C-speed conversion + downscale, measured ~40 fps on 1920×1080) instead of a per-pixel Python loop, and the phone shows the stream in a **true fullscreen view** with a live FPS counter. Video on Windows is now watchable from the phone.
-- **Interactive console:** on an interactive terminal you can now type `preview` (start/resume streaming), `stop` (pause capture), `fps` (actual stream rate), `status`, and `quit` at runtime — no script restart needed.
+- **PC preview rebuilt for motion:** three parallel threads (GDI capture → Pillow JPEG encode → send, with an event-driven handoff so the sender wakes the instant a frame is ready), the raw BGRA buffer fed straight to Pillow at C speed, and a 60 Hz frame-sequence recompose loop on the phone replacing the old 66 ms poll. Measured **~30 fps end-to-end** (was 16). The phone shows the stream in a **true fullscreen view** with a live FPS counter.
+- **No more retyping the command:** the client remembers your phone IP in `scripts\SPGF_Wacom.ini` after the first run — a plain `python scripts\SPGF_Wacom.py` reconnects to the same phone, and the interactive console creates channels at runtime.
+- **Interactive console:** on an interactive terminal you can now type `preview` (start or resume streaming — works even when the script was started without `--preview`, as long as `--host` was given), `stop` (pause capture), `fps` (actual stream rate), `status`, and `quit` at runtime — no script restart needed.
+- **`--preview-fps`** (default 30) sets the stream rate target; the adaptive encoder degrades gracefully to whatever the network sustains. `fps`/`status` report the true send rate.
 - **Wheel redesigned as a clean pie menu:** one even circle of uniform discs, real **vector icons** instead of emoji, short labels, and a dedicated center close disc. Adjacent targets can no longer overlap at any slot count.
 - **Fixed the phantom wheel opens:** digitizer touch events were being promoted to "pen extracted", auto-opening the wheel while writing. Presence now comes only from the physical slot switch.
-- **Battery saver (5-second rule):** with the pen stored and no input for five seconds, the root digitizer reader process is parked completely (toggleable in Settings, on by default); pulling the pen out wakes it instantly.
+- **Battery saver (5-second rule):** only when the physical slot switch confirms the pen is stored AND no input arrived for five seconds, the root digitizer reader process is parked completely (toggleable in Settings, on by default); pulling the pen out wakes it instantly. If the switch is unavailable the reader simply stays always-on, so gestures keep working.
 - Removed the experimental Screen-off memo.
 
 ### 1.4 — translate, ordered wheel, richer notes
@@ -158,15 +171,17 @@ python scripts\SPGF_Wacom.py --tcp --host 192.168.1.42 --port 7654
 The TCP stream starts with an optional newline-terminated metadata record, for example `#SPEN_TABLET 1 1920 1080 1 landscape`, followed by `X,Y,P,FLAGS` records. Legacy clients can ignore the comment line. Flags are tip `1`, right/barrel button `2`, eraser `4`, in-range `8`, and middle button `16`. Tablet Mode maps the source axes once; the Windows client only rotates again when its monitor aspect orientation differs from the source metadata.
 
 ### PC screen preview (reverse channel)
-<arg_value><b88a6f17>While a Tablet Mode session runs, the phone listens on port `7655` for a screen preview and shows it in a true fullscreen view with a live FPS counter. Start the PC client with `--preview`:
+<arg_value><b88a6f17>While a Tablet Mode session runs, the phone listens on port `7655` for a screen preview and shows it in a true fullscreen view with a live FPS counter. **Streaming starts automatically the moment the script launches** — no flags, no console commands:
 
 ```powershell
-python scripts\SPGF_Wacom.py --tcp --host 192.168.1.42 --preview
+python scripts\SPGF_Wacom.py
 ```
 
-The client captures the whole virtual desktop with GDI `BitBlt`, draws a live pen-position marker (blue hovering, red while touching, white ring when the barrel button is held), scales the image to `--preview-width` (default 960 px), and streams JPEG frames framed as `#PV` + 8 hex digits of payload length. Pillow produces the JPEG when installed (C-speed path, roughly 40 fps on 1080p); without it the script falls back to GDI+ encoding, so no third-party package is required. `--preview-quality` (15-95, default 55) and `--preview-port` tune the stream. In the app, tap **PC screen** in the Tablet Mode status bar to open the fullscreen preview.
+The phone IP is remembered after the first launch (`python scripts\SPGF_Wacom.py --host 192.168.1.42` once, or just edit `scripts\SPGF_Wacom.ini`). The same launch also arms pen input, which injects only while Tablet Mode is on in the app.
 
-On an interactive terminal the client also accepts runtime commands: `preview` starts or resumes the stream, `stop` pauses capture, `fps` prints the actual stream rate, `status` reports the current state, and `quit` exits.
+The client captures the whole virtual desktop with GDI `BitBlt`, draws a live pen-position marker (blue hovering, red while touching, white ring when the barrel button is held), scales the image to `--preview-width` (default 960 px), and streams JPEG frames framed as `#PV` + 8 hex digits of payload length. Pillow produces the JPEG when installed (C-speed path); without it the script falls back to GDI+ encoding, so no third-party package is required. `--preview-quality` (15-95, default 55), `--preview-fps` (default 30), `--capture gdi|dxgi` and `--preview-port` tune the stream; capture → encode → send run on parallel threads with an event-driven handoff, so the sender never waits for the next poll tick. In the app, tap **PC screen** in the Tablet Mode status bar to open the fullscreen preview.
+
+On an interactive terminal the client also accepts runtime commands (never required): `stop` pauses the screen stream, `preview` resumes it, `fps` prints the actual stream rate, `status` reports both channels, `tcp` re-arms pen input, and `quit` exits.
 
 ## Diagnostics
 

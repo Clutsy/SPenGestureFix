@@ -852,12 +852,53 @@ private fun presenceColor(presence: PenPresenceState): Color = when (presence) {
 }
 
 
+/**
+ * Parses a custom color from free text: hex (#RGB, #RRGGBB, #AARRGGBB, with
+ * optional "0x" prefix) or a decimal RGB triple ("R,G,B", semicolons or
+ * spaces as separators). Returns null when the text is not a valid color.
+ * Internal so the pure parsing logic stays unit-testable.
+ */
+internal fun parseWheelColorInput(raw: String): Color? {
+    val text = raw.trim()
+    if (text.isEmpty()) return null
+    val hex = text.removePrefix("#").removePrefix("0x").removePrefix("0X")
+    if (hex.isNotEmpty() && hex.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) {
+        return when (hex.length) {
+            3 -> {
+                val channels = hex.map { it.digitToInt(16) * 17 }
+                Color(0xFF000000.toInt() or (channels[0] shl 16) or (channels[1] shl 8) or channels[2])
+            }
+            6 -> hex.toLongOrNull(16)?.let { Color((0xFF000000L or it).toInt()) }
+            8 -> hex.toLongOrNull(16)?.let { Color(it.toInt()) }
+            else -> null
+        }
+    }
+    val parts = text.split(",", ";", " ").filter { it.isNotBlank() }
+    if (parts.size == 3) {
+        val channels = parts.map { it.toIntOrNull() }
+        if (channels.all { it != null && it in 0..255 }) {
+            return Color(
+                0xFF000000.toInt() or (channels[0]!! shl 16) or (channels[1]!! shl 8) or channels[2]!!
+            )
+        }
+    }
+    return null
+}
+
 @Composable
 private fun WheelColorRow(
     selected: Color,
     onSelect: (Color) -> Unit
 ) {
+    val context = LocalContext.current
     val presets = WHEEL_COLOR_PRESETS
+    // Recent colors refresh whenever the applied color changes (the caller
+    // updates `selected`), so the row always mirrors persistence.
+    val recent = remember(selected) { WheelConfig.getRecentWheelColors(context) }
+    var input by rememberSaveable { mutableStateOf("") }
+    val parsed = remember(input) { parseWheelColorInput(input) }
+    val inputInvalid = input.isNotBlank() && parsed == null
+
     Column {
         Text(
             text = stringResource(R.string.wheel_color_title),
@@ -869,28 +910,103 @@ private fun WheelColorRow(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
+
+        // Custom color entry: hex or decimal RGB with a live preview swatch.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            OutlinedTextField(
+                value = input,
+                onValueChange = { input = it },
+                modifier = Modifier.weight(1f),
+                singleLine = true,
+                label = { Text(stringResource(R.string.wheel_color_custom_label)) },
+                supportingText = {
+                    Text(
+                        text = if (inputInvalid) {
+                            stringResource(R.string.wheel_color_invalid)
+                        } else {
+                            stringResource(R.string.wheel_color_hint)
+                        },
+                        color = if (inputInvalid) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                isError = inputInvalid,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
+                trailingIcon = {
+                    Box(
+                        Modifier
+                            .padding(end = 6.dp)
+                            .size(22.dp)
+                            .background(parsed ?: selected, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    )
+                }
+            )
+            Button(
+                enabled = parsed != null && parsed != selected,
+                onClick = {
+                    parsed?.let { color ->
+                        onSelect(color)
+                        input = ""
+                    }
+                },
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Text(stringResource(R.string.wheel_color_apply))
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            presets.forEach { color ->
-                val isSelected = selected == color
-                Surface(
-                    color = color,
-                    shape = CircleShape,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .then(
-                            if (isSelected) Modifier.border(3.dp, Color.White, CircleShape)
-                            else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                        )
-                        .clickable { onSelect(color) }
-                ) {}
+            presets.forEach { color -> ColorSwatch(color, selected, onSelect) }
+        }
+
+        if (recent.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(R.string.wheel_color_recent_title),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                recent.forEach { color -> ColorSwatch(color, selected, onSelect) }
             }
         }
     }
+}
+
+@Composable
+private fun ColorSwatch(
+    color: Color,
+    selected: Color,
+    onSelect: (Color) -> Unit
+) {
+    val isSelected = selected == color
+    Surface(
+        color = color,
+        shape = CircleShape,
+        modifier = Modifier
+            .size(38.dp)
+            .then(
+                if (isSelected) Modifier.border(3.dp, Color.White, CircleShape)
+                else Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+            )
+            .clickable { onSelect(color) }
+    ) {}
 }
 

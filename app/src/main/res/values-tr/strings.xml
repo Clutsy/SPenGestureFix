@@ -24,6 +24,11 @@
     <string name="section_wheel">S Pen Tekerleği</string>
     <string name="wheel_color_title">Tekerlek rengi</string>
     <string name="wheel_color_subtitle">Air Command tekerleğinin vurgu rengi</string>
+    <string name="wheel_color_custom_label">Hex veya RGB</string>
+    <string name="wheel_color_hint">örn. #29B6F6 veya 41,182,246</string>
+    <string name="wheel_color_invalid">Geçersiz renk</string>
+    <string name="wheel_color_apply">Uygula</string>
+    <string name="wheel_color_recent_title">Son kullanılanlar</string>
     <string name="wheel_slots_label">Tekerlek yuvaları</string>
     <string name="wheel_slot_label">Yuva %d</string>
     <string name="wheel_no_slots">Yapılandırılmış yuva yok</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">Gönderilen kare: %1$d</string>
     <string name="tablet_preview_button">PC ekranı</string>
     <string name="tablet_preview_title">PC ekran önizlemesi</string>
-    <string name="tablet_preview_hint">Windows ekranını burada görmek için bilgisayarda istemciyi --preview ile başlatın.</string>
+    <string name="tablet_preview_hint">Windows ekranını burada görmek için bilgisayarda istemciyi (SPGF_Wacom.py) başlatın.</string>
     <string name="tablet_preview_waiting">PC\'den önizleme akışı bekleniyor…</string>
     <string name="tablet_preview_port">Önizleme akışı %1$d numaralı bağlantı noktasında</string>
     <string name="action_translate">Çevir (pano)</string>

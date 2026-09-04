@@ -24,6 +24,11 @@
     <string name="section_wheel">S Pen व्हील</string>
     <string name="wheel_color_title">व्हील का रंग</string>
     <string name="wheel_color_subtitle">Air Command व्हील का एक्सेंट रंग</string>
+    <string name="wheel_color_custom_label">Hex या RGB</string>
+    <string name="wheel_color_hint">जैसे #29B6F6 या 41,182,246</string>
+    <string name="wheel_color_invalid">अमान्य रंग</string>
+    <string name="wheel_color_apply">लागू करें</string>
+    <string name="wheel_color_recent_title">हाल में उपयोग किए गए</string>
     <string name="wheel_slots_label">व्हील स्लॉट</string>
     <string name="wheel_slot_label">स्लॉट %d</string>
     <string name="wheel_no_slots">कोई स्लॉट कॉन्फ़िगर नहीं</string>
@@ -192,7 +197,7 @@
     <string name="tablet_frames_sent">भेजे गए फ़्रेम: %1$d</string>
     <string name="tablet_preview_button">PC स्क्रीन</string>
     <string name="tablet_preview_title">PC स्क्रीन प्रीव्यू</string>
-    <string name="tablet_preview_hint">Windows स्क्रीन यहाँ देखने के लिए PC पर क्लाइंट को --preview के साथ चलाएँ।</string>
+    <string name="tablet_preview_hint">Windows स्क्रीन यहाँ देखने के लिए PC पर क्लाइंट (SPGF_Wacom.py) चलाएँ।</string>
     <string name="tablet_preview_waiting">PC से प्रीव्यू स्ट्रीम की प्रतीक्षा में…</string>
     <string name="tablet_preview_port">प्रीव्यू स्ट्रीम पोर्ट %1$d पर</string>
     <string name="action_translate">अनुवाद (क्लिपबोर्ड)</string>
