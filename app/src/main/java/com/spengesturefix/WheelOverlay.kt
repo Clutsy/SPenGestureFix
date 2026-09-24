@@ -51,7 +51,7 @@ class WheelOverlay(context: Context) {
     private val windowManager =
         appContext.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val mainHandler = Handler(Looper.getMainLooper())
-    private var wheelView: WheelView? = null
+    private var wheelView: View? = null
     private var visible = false
 
     fun toggle() {
@@ -71,32 +71,63 @@ class WheelOverlay(context: Context) {
     private fun showOnMain() {
         if (TabletModeState.isActive) return
 
+        // Custom open sound (SpenCommand's "Sound setting"), if configured.
+        // Plays for BOTH styles: the sounds belong to the wheel, not to one skin.
+        WheelSoundStore.play(appContext, open = true)
+
         val existing = wheelView
         if (existing != null) {
             visible = true
-            existing.playEnterAnimation()
+            when (existing) {
+                is WheelView -> existing.playEnterAnimation()
+                is RetroWheelView -> existing.playEnterAnimation()
+            }
             return
         }
 
         val metrics = appContext.resources.displayMetrics
         val shortSide = min(metrics.widthPixels, metrics.heightPixels).coerceAtLeast(1)
-        val minimum = dp(240f).coerceAtMost(shortSide)
-        val size = (shortSide * 0.66f).roundToInt()
-            .coerceAtLeast(minimum)
-            .coerceAtMost(shortSide)
+        val retro = WheelStyle.load(appContext) == WheelStyle.RETRO
+        // Classic serves the configured count on discs spread evenly along
+        // the authentic button spiral (4–7; the artwork disc spots are only
+        // the reference path, the original app laid its buttons at runtime).
+        val slots = WheelConfig.loadSlots(appContext)
+        // RETRO sizes the original SpenCommand window by the number of
+        // placed gestures: the fan scales 150/165/180dp (4/5/6 discs) so
+        // fewer slots never leave dead space around the artwork.
+        val size = if (retro) {
+            dp(RetroWheelLayout.panelDpFor(slots.size))
+        } else {
+            val minimum = dp(240f).coerceAtMost(shortSide)
+            (shortSide * 0.66f).roundToInt()
+                .coerceAtLeast(minimum)
+                .coerceAtMost(shortSide)
+        }
         val inset = dp(10f)
-        val view = WheelView(
-            context = appContext,
-            slots = WheelConfig.loadSlots(appContext),
-            accent = WheelConfig.getWheelColor(appContext).toArgb(),
-            onSlotTapped = { action ->
-                if (!TabletModeState.isActive) {
-                    ActionExecutor.execute(appContext, action, this)
-                }
-                dismiss()
-            },
-            onDismiss = ::dismiss
-        )
+        val accent = WheelConfig.getWheelColor(appContext).toArgb()
+        val onSlotTapped: (PenAction) -> Unit = { action ->
+            if (!TabletModeState.isActive) {
+                ActionExecutor.execute(appContext, action, this)
+            }
+            dismiss()
+        }
+        val view = if (retro) {
+            RetroWheelView(
+                context = appContext,
+                slots = slots,
+                accent = accent,
+                onSlotTapped = onSlotTapped,
+                onDismiss = ::dismiss
+            )
+        } else {
+            WheelView(
+                context = appContext,
+                slots = slots,
+                accent = accent,
+                onSlotTapped = onSlotTapped,
+                onDismiss = ::dismiss
+            )
+        }
         val overlayType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         } else {
@@ -123,7 +154,10 @@ class WheelOverlay(context: Context) {
             windowManager.addView(view, params)
             wheelView = view
             visible = true
-            view.playEnterAnimation()
+            when (view) {
+                is WheelView -> view.playEnterAnimation()
+                is RetroWheelView -> view.playEnterAnimation()
+            }
         } catch (_: WindowManager.BadTokenException) {
             visible = false
         } catch (_: SecurityException) {
@@ -136,15 +170,22 @@ class WheelOverlay(context: Context) {
     private fun dismissOnMain() {
         if (!visible) return
         visible = false
-        wheelView?.playExitAnimation { view ->
-            if (wheelView !== view) return@playExitAnimation
-            try {
-                windowManager.removeView(view)
-            } catch (_: IllegalArgumentException) {
-                // The host may have removed the window during service shutdown.
-            } finally {
-                wheelView = null
-            }
+        WheelSoundStore.play(appContext, open = false)
+        val current = wheelView
+        when (current) {
+            is WheelView -> current.playExitAnimation { view -> removeIfCurrent(view) }
+            is RetroWheelView -> current.playExitAnimation { view -> removeIfCurrent(view) }
+        }
+    }
+
+    private fun removeIfCurrent(view: View) {
+        if (wheelView !== view) return
+        try {
+            windowManager.removeView(view)
+        } catch (_: IllegalArgumentException) {
+            // The host may have removed the window during service shutdown.
+        } finally {
+            wheelView = null
         }
     }
 

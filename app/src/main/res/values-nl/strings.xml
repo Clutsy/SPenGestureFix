@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Accentkleur van het Air Command-rad</string>
     <string name="wheel_color_custom_label">Hex of RGB</string>
     <string name="wheel_color_hint">bijv. #29B6F6 of 41,182,246</string>
+    <string name="wheel_color_choose">Kleur kiezen</string>
     <string name="wheel_color_invalid">Ongeldige kleur</string>
     <string name="wheel_color_apply">Toepassen</string>
     <string name="wheel_color_recent_title">Onlangs gebruikt</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">E-mail versturen</string>
     <string name="settings_battery_saver">Batterijbesparing</string>
     <string name="settings_battery_saver_desc">Pauzeert de digitizer-lezer na 5 inactieve seconden met de pen opgeborgen; het eruit halen wekt hem direct</string>
+    <string name="wheel_style_title">Wielstijl</string>
+    <string name="wheel_style_subtitle">Moderne boog of de klassieke SpenCommand-waaier rechtsonder</string>
+    <string name="wheel_style_modern">Modern</string>
+    <string name="wheel_style_retro">Klassiek</string>
+    <string name="wheel_slot_count_title">Vakken op het wiel</string>
+    <string name="action_scrapbook">Verzameling</string>
+    <string name="action_offscreen_memo">Memo buiten beeld</string>
+    <string name="action_go_home">Home</string>
+    <string name="action_notifications">Meldingen</string>
+    <string name="action_recent_apps">Recente apps</string>
+    <string name="scrapbook_hint">Sleep over de schermafbeelding om bij te snijden en sla op.</string>
+    <string name="scrapbook_caption">Bijschrift (opgeslagen bij je notities)</string>
+    <string name="scrapbook_save">Knipsel opslaan</string>
+    <string name="memo_hint">Schrijf met de S Pen op het zwarte canvas, als op een schoolbord boven het scherm.</string>
+    <string name="memo_pen_size">Pennengrootte</string>
+    <string name="memo_clear">Wissen</string>
+    <string name="memo_undo">Ongedaan maken</string>
+    <string name="memo_save">Memo opslaan</string>
+    <string name="action_go_back">Terug</string>
+    <string name="wheel_sounds_title">Wielgeluiden</string>
+    <string name="wheel_sounds_subtitle">Eigen geluiden voor het openen en sluiten van het klassieke wiel</string>
+    <string name="wheel_sound_open">Geluid openen</string>
+    <string name="wheel_sound_close">Geluid sluiten</string>
+    <string name="wheel_sound_none">Geen geluid</string>
+    <string name="wheel_sound_choose">Kiezen</string>
 </resources>

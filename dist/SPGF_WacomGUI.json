@@ -1,0 +1,12 @@
+{
+  "host": "",
+  "preview_port": 7655,
+  "tablet_port": 7654,
+  "width": 960,
+  "quality": 55,
+  "fps": 30.0,
+  "capture": "gdi",
+  "debug": false,
+  "geometry": "1180x678",
+  "last_device": "note3"
+}

@@ -30,6 +30,7 @@
     <string name="wheel_color_subtitle">Accent color of the Air Command wheel</string>
     <string name="wheel_color_custom_label">Hex or RGB</string>
     <string name="wheel_color_hint">e.g. #29B6F6 or 41,182,246</string>
+    <string name="wheel_color_choose">Choose color</string>
     <string name="wheel_color_invalid">Invalid color</string>
     <string name="wheel_color_apply">Apply</string>
     <string name="wheel_color_recent_title">Recently used</string>
@@ -224,4 +225,31 @@
     <string name="btn_send_email">Send email</string>
     <string name="settings_battery_saver">Battery saver</string>
     <string name="settings_battery_saver_desc">Parks the digitizer reader after 5 idle seconds with the pen stored; taking the pen out wakes it instantly</string>
+    <string name="wheel_style_title">Wheel style</string>
+    <string name="wheel_style_subtitle">Modern arc or the classic SpenCommand fan in the lower-right corner</string>
+    <string name="wheel_style_modern">Modern</string>
+    <string name="wheel_style_retro">Classic</string>
+    <string name="wheel_slot_count_title">Slots on the wheel</string>
+    <string name="action_scrapbook">Scrapbook</string>
+    <string name="action_offscreen_memo">Off-screen memo</string>
+    <string name="action_go_home">Home</string>
+    <string name="action_notifications">Notifications</string>
+    <string name="action_recent_apps">Recent apps</string>
+    <string name="scrapbook_hint">Drag on the screenshot to crop it, then save.</string>
+    <string name="scrapbook_caption">Caption (saved with your notes)</string>
+    <string name="scrapbook_save">Save scrap</string>
+    <string name="memo_hint">Write on the black canvas with the S Pen, like a blackboard over the screen.</string>
+    <string name="memo_pen_size">Pen size</string>
+    <string name="memo_clear">Clear</string>
+    <string name="memo_undo">Undo</string>
+    <string name="memo_save">Save memo</string>
+    <string name="action_go_back">Back</string>
+    <string name="wheel_sounds_title">Wheel sounds</string>
+    <string name="wheel_sounds_subtitle">Custom sounds for opening and closing the classic wheel</string>
+    <string name="wheel_sound_open">Open sound</string>
+    <string name="wheel_sound_close">Close sound</string>
+    <string name="wheel_sound_none">No sound selected</string>
+    <string name="wheel_sound_choose">Choose</string>
+    <!-- Dashboard tile subtitles -->
+    <!-- Wheel placement and slot lock -->
 </resources>

@@ -39,6 +39,12 @@ object ActionExecutor {
             ActionType.TOGGLE_BLUETOOTH -> toggleBluetooth()
             ActionType.TOGGLE_MUTE -> rootShell("input keyevent 164") // KEYCODE_VOLUME_MUTE
             ActionType.LOCK_SCREEN -> rootShell("input keyevent 26") // KEYCODE_POWER
+            ActionType.SCRAPBOOK -> openScrapbook(context)
+            ActionType.OFFSCREEN_MEMO -> openOffscreenMemo(context)
+            ActionType.GO_HOME -> rootShell("input keyevent 3") // KEYCODE_HOME
+            ActionType.GO_BACK -> rootShell("input keyevent 4") // KEYCODE_BACK
+            ActionType.OPEN_NOTIFICATIONS -> rootShell("cmd statusbar expand-notifications")
+            ActionType.RECENT_APPS -> rootShell("input keyevent 187") // KEYCODE_APP_SWITCH
             ActionType.CUSTOM_SHELL -> rootShell(action.target)
         }
     }
@@ -90,6 +96,35 @@ object ActionExecutor {
         context.startActivity(Intent(context, QuickNoteActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         })
+    }
+
+    /**
+     * Samsung-style Scrapbook (from SpenCommand): screenshot first, then the
+     * collector opens on the fresh capture — scrap what is on screen now.
+     */
+    private fun openScrapbook(context: Context) {
+        Thread {
+            val path = "/sdcard/Pictures/SPenScreenshots/tmp_scrap_${System.currentTimeMillis()}.png"
+            rootShellSync("mkdir -p /sdcard/Pictures/SPenScreenshots && screencap -p $path")
+            try {
+                context.startActivity(Intent(context, ScrapbookActivity::class.java).apply {
+                    putExtra(ScrapbookActivity.EXTRA_IMAGE_PATH, path)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                })
+            } catch (_: Exception) {
+            }
+        }.start()
+    }
+
+    /**
+     * Off-screen memo (from SpenCommand): write on a black canvas with the
+     * S-Pen while the screen keeps showing content underneath the overlay.
+     * Launched through the shell so it also works from the background.
+     */
+    private fun openOffscreenMemo(context: Context) {
+        Thread {
+            rootShellSync("am start -n ${context.packageName}/.OffscreenMemoActivity")
+        }.start()
     }
 
     private fun openAppSearch(context: Context) {

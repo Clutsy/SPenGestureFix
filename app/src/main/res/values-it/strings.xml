@@ -30,6 +30,7 @@
     <string name="wheel_color_subtitle">Colore di accento della ruota Air Command</string>
     <string name="wheel_color_custom_label">Hex o RGB</string>
     <string name="wheel_color_hint">es. #29B6F6 oppure 41,182,246</string>
+    <string name="wheel_color_choose">Scegli colore</string>
     <string name="wheel_color_invalid">Colore non valido</string>
     <string name="wheel_color_apply">Applica</string>
     <string name="wheel_color_recent_title">Usati di recente</string>
@@ -224,4 +225,31 @@
     <string name="btn_send_email">Invia email</string>
     <string name="settings_battery_saver">Risparmio batteria</string>
     <string name="settings_battery_saver_desc">Mette in pausa il lettore del digitalizzatore dopo 5 secondi di inattività con la penna inserita; l\'estrazione la riattiva subito</string>
+    <string name="wheel_style_title">Stile della ruota</string>
+    <string name="wheel_style_subtitle">Arco moderno o il classico ventaglio SpenCommand nell\'angolo in basso a destra</string>
+    <string name="wheel_style_modern">Moderna</string>
+    <string name="wheel_style_retro">Classica</string>
+    <string name="wheel_slot_count_title">Spicchi sulla ruota</string>
+    <string name="action_scrapbook">Raccolta</string>
+    <string name="action_offscreen_memo">Memo off-screen</string>
+    <string name="action_go_home">Home</string>
+    <string name="action_notifications">Notifiche</string>
+    <string name="action_recent_apps">App recenti</string>
+    <string name="scrapbook_hint">Trascina sullo screenshot per ritagliarlo, poi salva.</string>
+    <string name="scrapbook_caption">Didascalia (salvata nelle note)</string>
+    <string name="scrapbook_save">Salva ritaglio</string>
+    <string name="memo_hint">Scrivi sulla tela nera con la S Pen, come su una lavagna sopra lo schermo.</string>
+    <string name="memo_pen_size">Dimensione penna</string>
+    <string name="memo_clear">Cancella</string>
+    <string name="memo_undo">Annulla</string>
+    <string name="memo_save">Salva memo</string>
+    <string name="action_go_back">Indietro</string>
+    <string name="wheel_sounds_title">Suoni della ruota</string>
+    <string name="wheel_sounds_subtitle">Suoni personalizzati per apertura e chiusura della ruota classica</string>
+    <string name="wheel_sound_open">Suono apertura</string>
+    <string name="wheel_sound_close">Suono chiusura</string>
+    <string name="wheel_sound_none">Nessun suono selezionato</string>
+    <string name="wheel_sound_choose">Scegli</string>
+    <!-- Dashboard tile subtitles -->
+    <!-- Wheel placement and slot lock -->
 </resources>

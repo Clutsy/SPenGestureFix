@@ -21,9 +21,15 @@ enum class ActionType(
     PEN_WINDOW     (R.string.action_pen_window,    R.drawable.ic_act_pen_window, needsAppTarget  = true),
     TOGGLE_FLASHLIGHT(R.string.action_flashlight,  R.drawable.ic_act_flashlight),
     TOGGLE_WIFI    (R.string.action_wifi,          R.drawable.ic_act_wifi),
+    GO_BACK        (R.string.action_go_back,       R.drawable.ic_act_go_back),
     TOGGLE_BLUETOOTH(R.string.action_bluetooth,    R.drawable.ic_act_bluetooth),
     TOGGLE_MUTE    (R.string.action_mute,          R.drawable.ic_act_mute),
     LOCK_SCREEN    (R.string.action_lock_screen,   R.drawable.ic_act_lock),
+    SCRAPBOOK      (R.string.action_scrapbook,     R.drawable.ic_act_scrapbook),
+    OFFSCREEN_MEMO (R.string.action_offscreen_memo, R.drawable.ic_act_quick_note),
+    GO_HOME        (R.string.action_go_home,       R.drawable.ic_act_go_home),
+    OPEN_NOTIFICATIONS (R.string.action_notifications, R.drawable.ic_act_bell),
+    RECENT_APPS    (R.string.action_recent_apps,   R.drawable.ic_act_launch_app),
     CUSTOM_SHELL   (R.string.action_custom_shell,  R.drawable.ic_act_shell, needsTextTarget = true);
 
     fun label(context: Context): String = context.getString(labelResId)

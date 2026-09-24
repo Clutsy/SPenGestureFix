@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Akzentfarbe des Air-Command-Rads</string>
     <string name="wheel_color_custom_label">Hex oder RGB</string>
     <string name="wheel_color_hint">z. B. #29B6F6 oder 41,182,246</string>
+    <string name="wheel_color_choose">Farbe wählen</string>
     <string name="wheel_color_invalid">Ungültige Farbe</string>
     <string name="wheel_color_apply">Anwenden</string>
     <string name="wheel_color_recent_title">Zuletzt verwendet</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">E-Mail senden</string>
     <string name="settings_battery_saver">Batteriesparmodus</string>
     <string name="settings_battery_saver_desc">Pausiert den Digitizer-Reader nach 5 Leerlaufsekunden bei eingelegtem Stift; das Herausziehen weckt ihn sofort</string>
+    <string name="wheel_style_title">Rad-Stil</string>
+    <string name="wheel_style_subtitle">Moderner Bogen oder der klassische SpenCommand-Fächer in der unteren rechten Ecke</string>
+    <string name="wheel_style_modern">Modern</string>
+    <string name="wheel_style_retro">Klassisch</string>
+    <string name="wheel_slot_count_title">Fächer auf dem Rad</string>
+    <string name="action_scrapbook">Sammlung</string>
+    <string name="action_offscreen_memo">Memo außerhalb des Bildschirms</string>
+    <string name="action_go_home">Start</string>
+    <string name="action_notifications">Benachrichtigungen</string>
+    <string name="action_recent_apps">Letzte Apps</string>
+    <string name="scrapbook_hint">Ziehen Sie auf dem Screenshot, um ihn zuzuschneiden, und speichern Sie.</string>
+    <string name="scrapbook_caption">Beschriftung (in Ihren Notizen gespeichert)</string>
+    <string name="scrapbook_save">Ausschnitt speichern</string>
+    <string name="memo_hint">Schreiben Sie mit dem S Pen auf die schwarze Leinwand, wie auf einer Tafel über dem Bildschirm.</string>
+    <string name="memo_pen_size">Stiftgröße</string>
+    <string name="memo_clear">Löschen</string>
+    <string name="memo_undo">Rückgängig</string>
+    <string name="memo_save">Memo speichern</string>
+    <string name="action_go_back">Zurück</string>
+    <string name="wheel_sounds_title">Rad-Sounds</string>
+    <string name="wheel_sounds_subtitle">Eigene Sounds zum Öffnen und Schließen des klassischen Rads</string>
+    <string name="wheel_sound_open">Öffnungssound</string>
+    <string name="wheel_sound_close">Schließungssound</string>
+    <string name="wheel_sound_none">Kein Sound</string>
+    <string name="wheel_sound_choose">Wählen</string>
 </resources>

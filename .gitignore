@@ -30,12 +30,14 @@ __pycache__/
 *.ap_
 *.dex
 *.log
+*.re
 build_output.txt
 
 # Native builds
 .externalNativeBuild/
 .cxx/
 *.class
+*.dist/
 
 # Local reports and temporary files
 reports/
@@ -50,7 +52,14 @@ out/
 *.keystore
 *keystore.properties
 
+# Portable desktop GUI build: only the exe is committed, not its local
+# settings or the intermediate build files.
+!/dist/SPGF_WacomGUI.exe
+scripts/SPGF_Wacom.ini
+scripts/SPGF_WacomGUI.json
+
 # Local agent and editor metadata
 .local-agent/
 .codex/
 .freebuff/
+.scripts/

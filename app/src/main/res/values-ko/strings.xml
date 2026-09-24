@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Air Command 휠의 강조 색상</string>
     <string name="wheel_color_custom_label">HEX 또는 RGB</string>
     <string name="wheel_color_hint">예: #29B6F6 또는 41,182,246</string>
+    <string name="wheel_color_choose">색 선택</string>
     <string name="wheel_color_invalid">잘못된 색상</string>
     <string name="wheel_color_apply">적용</string>
     <string name="wheel_color_recent_title">최근 사용한 색상</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">이메일 보내기</string>
     <string name="settings_battery_saver">배터리 전약</string>
     <string name="settings_battery_saver_desc">펜이 적재된 상태로 5초 목리하면 디지타이저 독인기를 일시 중지합니다; 개입하면 바로 재개합니다</string>
+    <string name="wheel_style_title">휠 스타일</string>
+    <string name="wheel_style_subtitle">모던 아크 또는 오른쪽 아래 모서리의 클래식 SpenCommand 부채꼴</string>
+    <string name="wheel_style_modern">모던</string>
+    <string name="wheel_style_retro">클래식</string>
+    <string name="wheel_slot_count_title">휠 슬롯 수</string>
+    <string name="action_scrapbook">스크랩북</string>
+    <string name="action_offscreen_memo">화면 꺼진 메모</string>
+    <string name="action_go_home">홈</string>
+    <string name="action_notifications">알림</string>
+    <string name="action_recent_apps">최근 앱</string>
+    <string name="scrapbook_hint">스크린샷을 드래그하여 잘라낸 후 저장하세요.</string>
+    <string name="scrapbook_caption">캡션(노트에 저장됨)</string>
+    <string name="scrapbook_save">스크랩 저장</string>
+    <string name="memo_hint">화면 위의 칠판처럼 S Pen으로 검은 캔버스에 쓰세요.</string>
+    <string name="memo_pen_size">펜 굵기</string>
+    <string name="memo_clear">지우기</string>
+    <string name="memo_undo">실행 취소</string>
+    <string name="memo_save">메모 저장</string>
+    <string name="action_go_back">뒤로</string>
+    <string name="wheel_sounds_title">휠 사운드</string>
+    <string name="wheel_sounds_subtitle">클래식 휠 열기와 닫기에 사용자 지정 사운드</string>
+    <string name="wheel_sound_open">열기 사운드</string>
+    <string name="wheel_sound_close">닫기 사운드</string>
+    <string name="wheel_sound_none">사운드 없음</string>
+    <string name="wheel_sound_choose">선택</string>
 </resources>

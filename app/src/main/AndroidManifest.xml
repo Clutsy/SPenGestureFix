@@ -48,6 +48,8 @@
             android:exported="false" />
         <activity android:name=".NotesListActivity" android:exported="false" />
         <activity android:name=".AppSearchActivity" android:exported="false" />
+        <activity android:name=".ScrapbookActivity" android:exported="false" />
+        <activity android:name=".OffscreenMemoActivity" android:exported="false" />
 
         <!-- Wacom Tablet Mode Activities -->
         <activity

@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Kolor akcentu koła Air Command</string>
     <string name="wheel_color_custom_label">Hex lub RGB</string>
     <string name="wheel_color_hint">np. #29B6F6 lub 41,182,246</string>
+    <string name="wheel_color_choose">Wybierz kolor</string>
     <string name="wheel_color_invalid">Nieprawidłowy kolor</string>
     <string name="wheel_color_apply">Zastosuj</string>
     <string name="wheel_color_recent_title">Ostatnio używane</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">Wyślij e-mail</string>
     <string name="settings_battery_saver">Oszczędzanie baterii</string>
     <string name="settings_battery_saver_desc">Wstrzymuje czytnik digitizera po 5 sekundach bezczynności przy schowanym rysiku; wyjęcie rysika natychmiast go wybudza</string>
+    <string name="wheel_style_title">Styl koła</string>
+    <string name="wheel_style_subtitle">Nowoczesny łuk lub klasyczny wachlarz SpenCommand w prawym dolnym rogu</string>
+    <string name="wheel_style_modern">Nowoczesny</string>
+    <string name="wheel_style_retro">Klasyczny</string>
+    <string name="wheel_slot_count_title">Segmenty na kole</string>
+    <string name="action_scrapbook">Wycinanki</string>
+    <string name="action_offscreen_memo">Notatka poza ekranem</string>
+    <string name="action_go_home">Ekran główny</string>
+    <string name="action_notifications">Powiadomienia</string>
+    <string name="action_recent_apps">Ostatnie aplikacje</string>
+    <string name="scrapbook_hint">Przeciągnij po zrzucie, aby przyciąć, a następnie zapisz.</string>
+    <string name="scrapbook_caption">Podpis (zapisany w notatkach)</string>
+    <string name="scrapbook_save">Zapisz wycinek</string>
+    <string name="memo_hint">Pisz S Penem na czarnym płótnie, jak na tablicy nad ekranem.</string>
+    <string name="memo_pen_size">Grubość pióra</string>
+    <string name="memo_clear">Wyczyść</string>
+    <string name="memo_undo">Cofnij</string>
+    <string name="memo_save">Zapisz notatkę</string>
+    <string name="action_go_back">Wstecz</string>
+    <string name="wheel_sounds_title">Dźwięki koła</string>
+    <string name="wheel_sounds_subtitle">Własne dźwięki otwierania i zamykania klasycznego koła</string>
+    <string name="wheel_sound_open">Dźwięk otwarcia</string>
+    <string name="wheel_sound_close">Dźwięk zamknięcia</string>
+    <string name="wheel_sound_none">Brak dźwięku</string>
+    <string name="wheel_sound_choose">Wybierz</string>
 </resources>

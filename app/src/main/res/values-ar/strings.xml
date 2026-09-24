@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">اللون المميز لعجلة Air Command</string>
     <string name="wheel_color_custom_label">Hex أو RGB</string>
     <string name="wheel_color_hint">مثال: #29B6F6 أو 41,182,246</string>
+    <string name="wheel_color_choose">اختر لوناً</string>
     <string name="wheel_color_invalid">لون غير صالح</string>
     <string name="wheel_color_apply">تطبيق</string>
     <string name="wheel_color_recent_title">المستخدمة حديثًا</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">إرسال بريد</string>
     <string name="settings_battery_saver">وفر البطارية</string>
     <string name="settings_battery_saver_desc">يوقف قائد اللوح الرقمي مؤقتًا بعد 5 ثوانٍ من الخمول والقلم مخزنًا؛ سحبه يملحه فورًا</string>
+    <string name="wheel_style_title">نمط العجلة</string>
+    <string name="wheel_style_subtitle">القوس الحديث أو مروحة SpenCommand الكلاسيكية في الزاوية السفلية اليمنى</string>
+    <string name="wheel_style_modern">حديث</string>
+    <string name="wheel_style_retro">كلاسيكي</string>
+    <string name="wheel_slot_count_title">الخانات على العجلة</string>
+    <string name="action_scrapbook">المجموعة</string>
+    <string name="action_offscreen_memo">مذكرة خارج الشاشة</string>
+    <string name="action_go_home">الرئيسية</string>
+    <string name="action_notifications">الإشعارات</string>
+    <string name="action_recent_apps">التطبيقات الأخيرة</string>
+    <string name="scrapbook_hint">اسحب على لقطة الشاشة لقصّها ثم احفظ.</string>
+    <string name="scrapbook_caption">تعليق (يُحفظ مع ملاحظاتك)</string>
+    <string name="scrapbook_save">حفظ القصاصة</string>
+    <string name="memo_hint">اكتب بقلم S Pen على اللوحة السوداء، كسبورة فوق الشاشة.</string>
+    <string name="memo_pen_size">حجم القلم</string>
+    <string name="memo_clear">مسح</string>
+    <string name="memo_undo">تراجع</string>
+    <string name="memo_save">حفظ المذكرة</string>
+    <string name="action_go_back">رجوع</string>
+    <string name="wheel_sounds_title">أصوات العجلة</string>
+    <string name="wheel_sounds_subtitle">أصوات مخصصة لفتح وإغلاق العجلة الكلاسيكية</string>
+    <string name="wheel_sound_open">صوت الفتح</string>
+    <string name="wheel_sound_close">صوت الإغلاق</string>
+    <string name="wheel_sound_none">لا يوجد صوت</string>
+    <string name="wheel_sound_choose">اختيار</string>
 </resources>

@@ -48,6 +48,30 @@ The current architecture uses `exec getevent` per reader, idempotent process own
 
 ## Release notes
 
+### 2.1 — refined desktop panel, credits in the app
+
+- **Clutsy is credited inside the app, not just the docs.** The sidebar carries a footer with the app mark, an "by Clutsy" link to `https://github.com/Clutsy` and the version; the Guide page ends with a Credits card (app & engine → Clutsy on GitHub, device photography → Wikimedia Commons contributors, both clickable) and the about card mentions the author next to the version. `--doctor` prints the project link too.
+- **Quieter, more finished dashboard.** The mirror area shows a branded empty state (the app mark plus a hint) instead of a dead black rectangle, and its frame border flashes green while streaming and amber while paused; the live/paused badge and the header device chip gained status icons (the chip's phone turns green when a device is detected). The window titlebar is painted dark on Windows so the chrome matches the theme.
+- **Selectable gallery.** The generation shown in the hero panel is ringed in accent blue inside the photo database grid, so the selection is visible at a glance; input fields get an accent focus ring. Guide cards are addressable (`guide_cards`) for tests and tooling.
+
+### 2.0 — rebuilt desktop panel, real device photos, truly portable exe
+
+- **The Windows panel was rewritten around five pages** (Dashboard, Phone, Options, Log, Guide) with a graphite theme, an accent sidebar with an active indicator, drawn vector icons, live stat tiles, keyboard shortcuts, a filterable log and a device chip in the header. Every control that used to need a command line is now one click away.
+- **Device photos actually look like the phones.** `fetch_device_photos.py` now keeps a curated Wikimedia Commons file per Note generation, scores search results (`portrait`, `transparent PNG`, model match, penalising boxes/back shots/tablets), knives out a uniform background where possible, and renders two assets per device: a transparent hero render and a ready-made card with a soft glow, drop shadow and rounded corners. Cards are generated at 2x for DPI-scaled displays. Eleven generations: Note (2011), Note II, Note 3, Note 4, Note Edge, Note 5, Note 7, Note 8, Note 9, Note 10/10+ and Note 20/Ultra, each with author and licence in `photo_credits.json`.
+- **The device pages show the phones at their real proportions.** The Phone page renders the selected generation into the exact box the layout gives it (and re-renders when the window changes), so a render is never stretched or clipped by its panel; the gallery lays every generation out in one wrapping grid at a single uniform scale, and the app mark (`gui_assets/logo.png`) drives the sidebar, the window icon and the exe icon.
+- **The exe is genuinely portable.** The PyInstaller spec produces one self-contained `SPGF_WacomGUI.exe` (about 20 MB) that carries the UI, the streaming engine, the customtkinter theme assets, the photo database and the app icon; it needs neither Python nor any package. Settings live in `SPGF_WacomGUI.json` next to the exe, so the folder can be copied to a USB stick as-is. If that folder is read-only it falls back to the user profile instead of failing.
+- **It survives other machines:** fonts are resolved from what is installed (no Segoe UI assumption), the window is clamped to the screen so a 1366x768 laptop does not lose its controls, the classic console opens through a platform-appropriate terminal, and unicode glyphs were replaced by drawn icons because Segoe UI renders ▶, ⟳ and ⚙ as empty boxes.
+- **Built-in diagnostics:** `SPGF_WacomGUI.exe --doctor` prints a one-screen report (bindings, photo database, adb, settings path, engine) and `--write-icon` regenerates the app icon.
+- **Fixed a startup crash:** the previous panel called a `main()` that did not exist, so it only ever ran in smoke-test mode.
+
+### 1.7 — hub dashboard, classic wheel up to 7 slots, real color picker, portable GUI
+
+- **Hub dashboard:** the home screen is now a grid of section tiles (Tablet Mode, Wheel look, Wheel slots, Wheel sounds, Gestures, Notes, Settings) plus the status card; tapping a tile opens that section as its own page with a back arrow in the top bar.
+- **Wheel sounds fixed:** open/close sounds now play for BOTH wheel styles (they were silently gated to the classic style before); the first play prepares the player synchronously so MP3 files are never swallowed, and starting one sound stops the other.
+- **Classic wheel supports 4/5/6/7 slots:** bitmap discs beyond the chosen count are erased pixel-perfectly from the extracted SpenCommand artwork; slot 7 continues the original spiral on a slightly wider (194dp) window. The classic style always shows exactly the slots configured in the dashboard.
+- **Real color picker:** the wheel color opens a proper picker dialog with an HSV plane, hue slider and a hex/RGB text field kept in sync; presets and recents remain one tap away.
+- **`SPGF_WacomGUI.exe` rebuilt around pages:** a sidebar opens Dashboard (live mirror, fps/quality chips, start/pause/resume), Telefono (adb detection with a REAL photo of the detected Galaxy Note generation — photos fetched from Wikimedia Commons with credits, line-art fallback), Opzioni (every streaming option) and Log (live event feed). Photo database refresh: `python scripts/fetch_device_photos.py`.
+
 ### 1.6 — Desktop Duplication capture, app-gated input, runtime channels
 
 - **DXGI Desktop Duplication capture** (via the small `dxcam` package) is now **opt-in** with `--capture dxgi`: it can exceed 60 fps on machines with a reliable GPU duplicator, but on some driver stacks it degrades the stream, so the **stable default is GDI BitBlt** (`--capture gdi`). When DXGI fails twice in a row the session permanently falls back to GDI automatically.
@@ -111,7 +135,7 @@ Potential, unverified targets include Galaxy Note 4/5 devices, Galaxy Note 8/9/1
 
 The application needs overlay permission for Air Command and notification permission on Android 13+ for the foreground service. Root is required for the kernel input stream and root actions.
 
-The in-app footer links to the project author at `https://github.com/clutsy`.
+The in-app footer links to the project author at `https://github.com/Clutsy` (the desktop panel also credits the author in its sidebar and Guide page).
 
 ## Build and install
 
@@ -128,6 +152,20 @@ On the Windows checkout used by this project, the local Gradle distribution (kep
 ```
 
 The build uses Kotlin, AndroidX, Jetpack Compose, and Material 3. No NDK or JNI code is required.
+
+The optional Windows panel builds from the same tree:
+
+```bash
+# From the repository root (needs Python 3.9+ with pillow and customtkinter)
+python scripts\SPGF_WacomGUI.py --write-icon    # refresh gui_assets\app.ico
+pyinstaller --noconfirm SPGF_WacomGUI.spec      # -> dist\SPGF_WacomGUI.exe
+
+# Check a fresh copy (source or exe)
+python scripts\SPGF_WacomGUI.py --doctor
+dist\SPGF_WacomGUI.exe --doctor
+```
+
+The spec produces a single portable exe: copy `dist\SPGF_WacomGUI.exe` anywhere (it writes `SPGF_WacomGUI.json` beside itself). `SPGF_Wacom.py` is only needed next to the exe if you want the **Classic console** button to open the terminal client.
 
 ## First launch
 
@@ -225,6 +263,9 @@ Custom root commands are intentionally powerful. Only assign commands you unders
 - `TabletNetworkServer.kt`: latest-frame TCP transport.
 - `TabletPreviewServer.kt`: reverse JPEG screen-preview transport (port 7655).
 - `scripts/SPGF_Wacom.py`: ADB-first PC emulator with optional screen preview.
+- `scripts/SPGF_WacomGUI.py`: portable desktop panel (Dashboard, Phone, Options, Log, Guide); `--doctor`, `--smoke`, `--write-icon`.
+- `scripts/fetch_device_photos.py`: builds `scripts/gui_assets` (device cards, hero renders, `photo_credits.json`) from Wikimedia Commons.
+- `scripts/gui_assets/logo.png`: the app artwork; `--write-icon` turns it into `app.ico`/`app.png`.
 - `docs/TRANSLATION.md`: documentation and localization workflow.
 
 ## Testing

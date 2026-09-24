@@ -5,10 +5,13 @@ package com.spengesturefix
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +39,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -61,7 +65,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -119,6 +128,8 @@ fun MainComposeScreen(
     gestures: Map<GestureKind, PenAction>,
     wheelSlots: List<PenAction>,
     wheelColor: Color,
+    wheelStyle: WheelStyle,
+    wheelSlotCount: Int,
     onCheckRoot: () -> Unit,
     onRequestOverlay: () -> Unit,
     onStartService: () -> Unit,
@@ -129,6 +140,10 @@ fun MainComposeScreen(
     onLanguageChanged: (String?) -> Unit,
     onActionPicked: (BindingTarget, PenAction) -> Unit,
     onWheelColorChanged: (Color) -> Unit,
+    onWheelStyleChanged: (WheelStyle) -> Unit,
+    onWheelSlotCountChanged: (Int) -> Unit,
+    onPickWheelSound: (Boolean) -> Unit,
+    onClearWheelSound: (Boolean) -> Unit,
     onMoveWheelSlot: (Int, Int) -> Unit,
     onOpenNotes: () -> Unit,
     onOpenTablet: () -> Unit,
@@ -142,21 +157,41 @@ fun MainComposeScreen(
     var pickerTarget by remember { mutableStateOf<BindingTarget?>(null) }
     var languageDialog by remember { mutableStateOf(false) }
     var permissionDialog by remember { mutableStateOf(!overlayGranted || !notificationGranted) }
+    // Hub navigation: null shows the section grid; a value opens that page.
+    var section by rememberSaveable { mutableStateOf<DashboardSection?>(null) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Column {
+                    val current = section
+                    if (current == null) {
+                        Column {
+                            Text(
+                                text = stringResource(R.string.app_name),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = stringResource(R.string.subtitle_device),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
                         Text(
-                            text = stringResource(R.string.app_name),
+                            text = stringResource(current.titleRes),
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            text = stringResource(R.string.subtitle_device),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    }
+                },
+                navigationIcon = {
+                    if (section != null) {
+                        IconButton(onClick = { section = null }) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_nav_back),
+                                contentDescription = stringResource(R.string.dialog_back)
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -172,171 +207,226 @@ fun MainComposeScreen(
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item(key = "intro", contentType = "header") {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.home_tagline),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.home_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
 
-            item(key = "status", contentType = "card") {
-                DeviceStatusCard(
-                    presence = presence,
-                    serviceActive = serviceActive,
-                    digitizerActive = digitizerActive,
-                    rootChecked = rootChecked,
-                    overlayGranted = overlayGranted,
-                    notificationGranted = notificationGranted,
-                    onCheckRoot = onCheckRoot,
-                    onRequestOverlay = onRequestOverlay,
-                    onStartService = onStartService,
-                    onStopService = onStopService
-                )
-            }
-
-            item(key = "tablet", contentType = "card") {
-                SectionCard(
-                    title = stringResource(R.string.section_tablet_mode),
-                    subtitle = stringResource(R.string.tablet_mode_subtitle),
-                    iconRes = R.drawable.ic_act_screen_write
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onOpenTablet, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.btn_start_tablet))
-                        }
-                        OutlinedButton(onClick = onOpenTabletSettings, modifier = Modifier.weight(1f)) {
-                            Text(stringResource(R.string.btn_tablet_settings))
-                        }
-                    }
-                }
-            }
-
-            item(key = "settings", contentType = "card") {
-                SectionCard(
-                    title = stringResource(R.string.section_settings),
-                    subtitle = stringResource(R.string.settings_subtitle),
-                    iconRes = R.drawable.ic_act_open_wheel
-                ) {
-                    SettingsRow(
-                        title = stringResource(R.string.settings_language),
-                        value = languageLabel(languageCode),
-                        onClick = { languageDialog = true }
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
-                    ToggleRow(
-                        title = stringResource(R.string.settings_amoled),
-                        subtitle = stringResource(R.string.settings_amoled_desc),
-                        checked = amoled,
-                        onCheckedChange = onAmoledChanged
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
-                    ToggleRow(
-                        title = stringResource(R.string.settings_autostart_pen),
-                        subtitle = stringResource(R.string.settings_autostart_pen_desc),
-                        checked = autoStart,
-                        onCheckedChange = onAutoStartChanged
-                    )
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
-                    ToggleRow(
-                        title = stringResource(R.string.settings_battery_saver),
-                        subtitle = stringResource(R.string.settings_battery_saver_desc),
-                        checked = batterySaver,
-                        onCheckedChange = onBatterySaverChanged
-                    )
-                }
-            }
-
-            item(key = "gestures", contentType = "card") {
-                SectionCard(
-                    title = stringResource(R.string.section_spen_button),
-                    subtitle = stringResource(R.string.hint_tap_row),
-                    iconRes = R.drawable.ic_act_none
-                ) {
-                    gestureKinds.forEach { gesture ->
-                        ActionRow(
-                            title = gestureLabel(gesture),
-                            action = gestures[gesture] ?: emptyAction,
-                            onClick = { pickerTarget = BindingTarget.Gesture(gesture) }
-                        )
-                        if (gesture != gestureKinds.last()) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
-                        }
-                    }
-                }
-            }
-
-            item(key = "wheel", contentType = "card") {
-                SectionCard(
-                    title = stringResource(R.string.section_wheel),
-                    subtitle = stringResource(R.string.wheel_slots_subtitle),
-                    iconRes = R.drawable.ic_act_open_wheel,
-                    accent = wheelColor
-                ) {
-                    WheelColorRow(
-                        selected = wheelColor,
-                        onSelect = onWheelColorChanged
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    repeat(WheelConfig.SLOT_COUNT) { index ->
-                        ActionRow(
-                            title = stringResource(R.string.wheel_slot_label, index + 1),
-                            action = wheelSlots.getOrNull(index) ?: emptyAction,
-                            onClick = { pickerTarget = BindingTarget.WheelSlot(index) },
-                            onMoveUp = if (index > 0) {
-                                { onMoveWheelSlot(index, index - 1) }
-                            } else null,
-                            onMoveDown = if (index < WheelConfig.SLOT_COUNT - 1) {
-                                { onMoveWheelSlot(index, index + 1) }
-                            } else null
-                        )
-                        if (index < WheelConfig.SLOT_COUNT - 1) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
-                        }
-                    }
-                }
-            }
-
-            item(key = "notes", contentType = "card") {
-                SectionCard(
-                    title = stringResource(R.string.section_notes),
-                    subtitle = stringResource(R.string.notes_card_subtitle),
-                    iconRes = R.drawable.ic_act_quick_note
-                ) {
-                    Button(onClick = onOpenNotes, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.btn_view_notes))
-                    }
-                }
-            }
-
-            item(key = "footer", contentType = "footer") {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+            if (section == null) {
+                // Hub: one tappable tile per section. Nothing else lives here:
+                // the grid IS the home screen.
+                item(key = "intro", contentType = "header") {
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        text = stringResource(R.string.footer_experimental),
-                        style = MaterialTheme.typography.labelSmall,
+                        text = stringResource(R.string.home_tagline),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(R.string.home_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    TextButton(
-                        onClick = {
-                            context.startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/clutsy"))
+                }
+
+                item(key = "status", contentType = "card") {
+                    DeviceStatusCard(
+                        presence = presence,
+                        serviceActive = serviceActive,
+                        digitizerActive = digitizerActive,
+                        rootChecked = rootChecked,
+                        overlayGranted = overlayGranted,
+                        notificationGranted = notificationGranted,
+                        onCheckRoot = onCheckRoot,
+                        onRequestOverlay = onRequestOverlay,
+                        onStartService = onStartService,
+                        onStopService = onStopService
+                    )
+                }
+
+                item(key = "tiles", contentType = "grid") {
+                    DashboardGrid(onOpen = { section = it })
+                }
+
+                item(key = "footer", contentType = "footer") {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = stringResource(R.string.footer_experimental),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(
+                            onClick = {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/clutsy"))
+                                )
+                            }
+                        ) {
+                            Text(stringResource(R.string.made_by))
+                        }
+                    }
+                }
+            } else {
+                when (section) {
+                    DashboardSection.TABLET -> item(key = "tablet", contentType = "card") {
+                        SectionCard(
+                            title = stringResource(R.string.section_tablet_mode),
+                            subtitle = stringResource(R.string.tablet_mode_subtitle),
+                            iconRes = R.drawable.ic_act_screen_write
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = onOpenTablet, modifier = Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.btn_start_tablet))
+                                }
+                                OutlinedButton(onClick = onOpenTabletSettings, modifier = Modifier.weight(1f)) {
+                                    Text(stringResource(R.string.btn_tablet_settings))
+                                }
+                            }
+                        }
+                    }
+
+                    DashboardSection.WHEEL_LOOK -> item(key = "wheel_look", contentType = "card") {
+                        SectionCard(
+                            title = stringResource(R.string.section_wheel),
+                            subtitle = stringResource(R.string.wheel_style_subtitle),
+                            iconRes = R.drawable.ic_act_open_wheel,
+                            accent = wheelColor
+                        ) {
+                            WheelStyleRow(
+                                selected = wheelStyle,
+                                onSelect = onWheelStyleChanged
+                            )
+                            Spacer(Modifier.height(12.dp))
+                            WheelColorRow(
+                                selected = wheelColor,
+                                onSelect = onWheelColorChanged
                             )
                         }
-                    ) {
-                        Text(stringResource(R.string.made_by))
                     }
+
+                    DashboardSection.WHEEL_SLOTS -> item(key = "wheel_slots", contentType = "card") {
+                        SectionCard(
+                            title = stringResource(R.string.wheel_slot_count_title),
+                            subtitle = stringResource(R.string.wheel_slots_subtitle),
+                            iconRes = R.drawable.ic_sec_slots
+                        ) {
+                            // Never render more rows than configured slots: the
+                            // classic style serves at most six authentic discs.
+                            val slotRows = minOf(wheelSlotCount, wheelSlots.size)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                WheelConfig.SLOT_COUNT_CHOICES.forEach { count ->
+                                    FilterChip(
+                                        selected = wheelSlotCount == count,
+                                        onClick = { onWheelSlotCountChanged(count) },
+                                        label = { Text(count.toString()) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(10.dp))
+                            repeat(slotRows) { index ->
+                                ActionRow(
+                                    title = stringResource(R.string.wheel_slot_label, index + 1),
+                                    action = wheelSlots.getOrNull(index) ?: emptyAction,
+                                    onClick = { pickerTarget = BindingTarget.WheelSlot(index) },
+                                    onMoveUp = if (index > 0) {
+                                        { onMoveWheelSlot(index, index - 1) }
+                                    } else null,
+                                    onMoveDown = if (index < slotRows - 1) {
+                                        { onMoveWheelSlot(index, index + 1) }
+                                    } else null
+                                )
+                                if (index < slotRows - 1) {
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
+                                }
+                            }
+                        }
+                    }
+
+                    DashboardSection.WHEEL_SOUNDS -> item(key = "wheel_sounds", contentType = "card") {
+                        SectionCard(
+                            title = stringResource(R.string.wheel_sounds_title),
+                            subtitle = stringResource(R.string.wheel_sounds_subtitle),
+                            iconRes = R.drawable.ic_act_media_play
+                        ) {
+                            WheelSoundsRow(
+                                onPick = onPickWheelSound,
+                                onClear = onClearWheelSound
+                            )
+                        }
+                    }
+
+                    DashboardSection.GESTURES -> item(key = "gestures", contentType = "card") {
+                        SectionCard(
+                            title = stringResource(R.string.section_spen_button),
+                            subtitle = stringResource(R.string.hint_tap_row),
+                            iconRes = R.drawable.ic_act_none
+                        ) {
+                            gestureKinds.forEach { gesture ->
+                                ActionRow(
+                                    title = gestureLabel(gesture),
+                                    action = gestures[gesture] ?: emptyAction,
+                                    onClick = { pickerTarget = BindingTarget.Gesture(gesture) }
+                                )
+                                if (gesture != gestureKinds.last()) {
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
+                                }
+                            }
+                        }
+                    }
+
+                    DashboardSection.NOTES -> item(key = "notes", contentType = "card") {
+                        SectionCard(
+                            title = stringResource(R.string.section_notes),
+                            subtitle = stringResource(R.string.notes_card_subtitle),
+                            iconRes = R.drawable.ic_act_quick_note
+                        ) {
+                            Button(onClick = onOpenNotes, modifier = Modifier.fillMaxWidth()) {
+                                Text(stringResource(R.string.btn_view_notes))
+                            }
+                        }
+                    }
+
+                    DashboardSection.SETTINGS -> item(key = "settings", contentType = "card") {
+                        SectionCard(
+                            title = stringResource(R.string.section_settings),
+                            subtitle = stringResource(R.string.settings_subtitle),
+                            iconRes = R.drawable.ic_act_open_wheel
+                        ) {
+                            SettingsRow(
+                                title = stringResource(R.string.settings_language),
+                                value = languageLabel(languageCode),
+                                onClick = { languageDialog = true }
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
+                            ToggleRow(
+                                title = stringResource(R.string.settings_amoled),
+                                subtitle = stringResource(R.string.settings_amoled_desc),
+                                checked = amoled,
+                                onCheckedChange = onAmoledChanged
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
+                            ToggleRow(
+                                title = stringResource(R.string.settings_autostart_pen),
+                                subtitle = stringResource(R.string.settings_autostart_pen_desc),
+                                checked = autoStart,
+                                onCheckedChange = onAutoStartChanged
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .35f))
+                            ToggleRow(
+                                title = stringResource(R.string.settings_battery_saver),
+                                subtitle = stringResource(R.string.settings_battery_saver_desc),
+                                checked = batterySaver,
+                                onCheckedChange = onBatterySaverChanged
+                            )
+                        }
+                    }
+                    null -> item(key = "empty", contentType = "card") {}
                 }
             }
         }
@@ -895,9 +985,7 @@ private fun WheelColorRow(
     // Recent colors refresh whenever the applied color changes (the caller
     // updates `selected`), so the row always mirrors persistence.
     val recent = remember(selected) { WheelConfig.getRecentWheelColors(context) }
-    var input by rememberSaveable { mutableStateOf("") }
-    val parsed = remember(input) { parseWheelColorInput(input) }
-    val inputInvalid = input.isNotBlank() && parsed == null
+    var showPicker by rememberSaveable { mutableStateOf(false) }
 
     Column {
         Text(
@@ -912,51 +1000,37 @@ private fun WheelColorRow(
         )
         Spacer(Modifier.height(10.dp))
 
-        // Custom color entry: hex or decimal RGB with a live preview swatch.
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        // Real color picker: HSV plane + hue slider + hex sync, like a
+        // desktop picker — the old text-only entry could never compete.
+        Surface(
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { showPicker = true }
         ) {
-            OutlinedTextField(
-                value = input,
-                onValueChange = { input = it },
-                modifier = Modifier.weight(1f),
-                singleLine = true,
-                label = { Text(stringResource(R.string.wheel_color_custom_label)) },
-                supportingText = {
-                    Text(
-                        text = if (inputInvalid) {
-                            stringResource(R.string.wheel_color_invalid)
-                        } else {
-                            stringResource(R.string.wheel_color_hint)
-                        },
-                        color = if (inputInvalid) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                isError = inputInvalid,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
-                trailingIcon = {
-                    Box(
-                        Modifier
-                            .padding(end = 6.dp)
-                            .size(22.dp)
-                            .background(parsed ?: selected, CircleShape)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                    )
-                }
-            )
-            Button(
-                enabled = parsed != null && parsed != selected,
-                onClick = {
-                    parsed?.let { color ->
-                        onSelect(color)
-                        input = ""
-                    }
-                },
-                shape = RoundedCornerShape(14.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                Text(stringResource(R.string.wheel_color_apply))
+                Box(
+                    Modifier
+                        .size(30.dp)
+                        .background(selected, CircleShape)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = stringResource(R.string.wheel_color_choose),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "#%06X".format(0xFFFFFF and (selected.toArgb().toLong().toInt())),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -968,6 +1042,17 @@ private fun WheelColorRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             presets.forEach { color -> ColorSwatch(color, selected, onSelect) }
+        }
+
+        if (showPicker) {
+            ColorPickerDialog(
+                initial = selected,
+                onDismiss = { showPicker = false },
+                onApply = { color ->
+                    showPicker = false
+                    onSelect(color)
+                }
+            )
         }
 
         if (recent.isNotEmpty()) {
@@ -986,6 +1071,103 @@ private fun WheelColorRow(
             ) {
                 recent.forEach { color -> ColorSwatch(color, selected, onSelect) }
             }
+        }
+    }
+}
+
+@Composable
+private fun WheelStyleRow(
+    selected: WheelStyle,
+    onSelect: (WheelStyle) -> Unit
+) {
+    Column {
+        Text(
+            text = stringResource(R.string.wheel_style_title),
+            style = MaterialTheme.typography.labelLarge
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = stringResource(R.string.wheel_style_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(6.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            WheelStyle.values().forEach { style ->
+                FilterChip(
+                    selected = selected == style,
+                    onClick = { onSelect(style) },
+                    label = { Text(stringResource(style.labelResId)) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WheelSoundsRow(
+    onPick: (Boolean) -> Unit,
+    onClear: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    Column {
+        Text(
+            text = stringResource(R.string.wheel_sounds_title),
+            style = MaterialTheme.typography.labelLarge
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = stringResource(R.string.wheel_sounds_subtitle),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        listOf(
+            Triple(true, stringResource(R.string.wheel_sound_open), WheelSoundStore.getOpenSound(context)),
+            Triple(false, stringResource(R.string.wheel_sound_close), WheelSoundStore.getCloseSound(context))
+        ).forEach { (open, label, uri) ->
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(label, style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            text = uri?.lastPathSegment ?: stringResource(R.string.wheel_sound_none),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                    TextButton(onClick = { onPick(open) }) {
+                        Text(stringResource(R.string.wheel_sound_choose))
+                    }
+                    if (uri != null) {
+                        TextButton(onClick = { onClear(open) }) {
+                            Text(stringResource(R.string.dialog_cancel))
+                        }
+                    }
+                    IconButton(onClick = { WheelSoundStore.play(context, open) }) {
+                        Icon(painterResource(R.drawable.ic_act_media_play), contentDescription = null)
+                    }
+                    if (uri == null) {
+                        // Keep an anchor view so spacing stays stable when empty.
+                        Spacer(Modifier.width(48.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
         }
     }
 }
@@ -1010,3 +1192,216 @@ private fun ColorSwatch(
     ) {}
 }
 
+/** Home sections of the hub. Each tile opens its own page. */
+enum class DashboardSection(val titleRes: Int, val iconRes: Int) {
+    TABLET(R.string.section_tablet_mode, R.drawable.ic_act_screen_write),
+    WHEEL_LOOK(R.string.section_wheel, R.drawable.ic_act_open_wheel),
+    WHEEL_SLOTS(R.string.wheel_slot_count_title, R.drawable.ic_sec_slots),
+    WHEEL_SOUNDS(R.string.wheel_sounds_title, R.drawable.ic_act_media_play),
+    GESTURES(R.string.section_spen_button, R.drawable.ic_sec_gestures),
+    NOTES(R.string.section_notes, R.drawable.ic_act_quick_note),
+    SETTINGS(R.string.section_settings, R.drawable.ic_act_settings)
+}
+
+@Composable
+private fun DashboardGrid(onOpen: (DashboardSection) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        DashboardSection.entries.chunked(2).forEach { pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                pair.forEach { entry ->
+                    SectionTile(entry, Modifier.weight(1f), onOpen)
+                }
+                if (pair.size == 1) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionTile(
+    entry: DashboardSection,
+    modifier: Modifier,
+    onOpen: (DashboardSection) -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        shape = RoundedCornerShape(18.dp),
+        modifier = modifier
+            .heightIn(min = 96.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .clickable { onOpen(entry) }
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Icon(
+                painter = painterResource(entry.iconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(26.dp)
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(entry.titleRes),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+/** HSV coordinates of [color] (h in 0..360, s/v in 0..1). */
+internal fun colorToHsv(color: Color): Triple<Float, Float, Float> {
+    val hsv = FloatArray(3)
+    android.graphics.Color.RGBToHSV(
+        (color.red * 255).toInt(), (color.green * 255).toInt(), (color.blue * 255).toInt(), hsv
+    )
+    return Triple(hsv[0], hsv[1], hsv[2])
+}
+
+internal fun hsvToColor(hue: Float, sat: Float, value: Float): Color =
+    Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, sat, value)))
+
+@Composable
+private fun ColorPickerDialog(
+    initial: Color,
+    onDismiss: () -> Unit,
+    onApply: (Color) -> Unit
+) {
+    val startHsv = remember { colorToHsv(initial) }
+    var hue by rememberSaveable { mutableStateOf(startHsv.first) }
+    var sat by rememberSaveable { mutableStateOf(startHsv.second) }
+    var value by rememberSaveable { mutableStateOf(startHsv.third) }
+    var textInput by rememberSaveable { mutableStateOf("") }
+    val current = hsvToColor(hue, sat, value)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.wheel_color_title)) },
+        text = {
+            Column {
+                // SV plane: x = saturation, y = value, at the current hue.
+                Canvas(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .pointerInput(hue) {
+                            detectDragGestures { change, _ ->
+                                change.consume()
+                                sat = change.position.x.coerceIn(0f, size.width.toFloat()) /
+                                    size.width.coerceAtLeast(1).toFloat()
+                                value = 1f - change.position.y.coerceIn(0f, size.height.toFloat()) /
+                                    size.height.coerceAtLeast(1).toFloat()
+                            }
+                        }
+                        .pointerInput(hue) {
+                            detectTapGestures { offset ->
+                                sat = offset.x.coerceIn(0f, size.width.toFloat()) /
+                                    size.width.coerceAtLeast(1).toFloat()
+                                value = 1f - offset.y.coerceIn(0f, size.height.toFloat()) /
+                                    size.height.coerceAtLeast(1).toFloat()
+                            }
+                        }
+                ) {
+                    val width = size.width
+                    val height = size.height
+                    val steps = 24
+                    for (column in 0 until steps) {
+                        for (row in 0 until steps) {
+                            val s = column / (steps - 1).toFloat()
+                            val v = 1f - row / (steps - 1).toFloat()
+                            drawRect(
+                                color = hsvToColor(hue, s, v),
+                                topLeft = Offset(column * width / steps, row * height / steps),
+                                size = androidx.compose.ui.geometry.Size(
+                                    width / steps + 1f, height / steps + 1f
+                                )
+                            )
+                        }
+                    }
+                    // selection ring
+                    drawCircle(
+                        color = Color.White,
+                        radius = 9.dp.toPx(),
+                        center = Offset(sat * width, (1f - value) * height),
+                        style = Stroke(width = 3.dp.toPx())
+                    )
+                    drawCircle(
+                        color = Color.Black.copy(alpha = 0.5f),
+                        radius = 9.dp.toPx(),
+                        center = Offset(sat * width, (1f - value) * height),
+                        style = Stroke(width = 1.5.dp.toPx())
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                // Hue slider drawn as a rainbow gradient with the thumb ring.
+                Canvas(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(26.dp)
+                        .clip(RoundedCornerShape(13.dp))
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, _ ->
+                                change.consume()
+                                hue = (change.position.x.coerceIn(0f, size.width.toFloat()) /
+                                    size.width.coerceAtLeast(1).toFloat()) * 360f
+                            }
+                        }
+                        .pointerInput(Unit) {
+                            detectTapGestures { offset ->
+                                hue = (offset.x.coerceIn(0f, size.width.toFloat()) /
+                                    size.width.coerceAtLeast(1).toFloat()) * 360f
+                            }
+                        }
+                ) {
+                    val rainbow = Brush.horizontalGradient(
+                        List(13) { i -> hsvToColor(i * 30f, 1f, 1f) }
+                    )
+                    drawRoundRect(
+                        brush = rainbow,
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height)
+                    )
+                    drawCircle(
+                        color = Color.White,
+                        radius = size.height * 0.42f,
+                        center = Offset(hue / 360f * size.width, size.height / 2f),
+                        style = Stroke(width = 3.dp.toPx())
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(34.dp)
+                            .background(current, CircleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    OutlinedTextField(
+                        value = textInput,
+                        onValueChange = { raw ->
+                            textInput = raw
+                            parseWheelColorInput(raw)?.let { parsed ->
+                                val hsv = colorToHsv(parsed)
+                                hue = hsv.first; sat = hsv.second; value = hsv.third
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        placeholder = { Text(stringResource(R.string.wheel_color_hint)) }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onApply(current) }) {
+                Text(stringResource(R.string.wheel_color_apply))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
+        }
+    )
+}

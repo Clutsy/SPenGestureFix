@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Акцентний колір колеса Air Command</string>
     <string name="wheel_color_custom_label">Hex або RGB</string>
     <string name="wheel_color_hint">напр. #29B6F6 або 41,182,246</string>
+    <string name="wheel_color_choose">Вибрати колір</string>
     <string name="wheel_color_invalid">Недійсний колір</string>
     <string name="wheel_color_apply">Застосувати</string>
     <string name="wheel_color_recent_title">Нещодавно використані</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">Надіслати лист</string>
     <string name="settings_battery_saver">Економія батареї</string>
     <string name="settings_battery_saver_desc">Призупиняє читач дигітайзера через 5 секунд бездіяльності звставленим пером; виняття пера мігдально його будить</string>
+    <string name="wheel_style_title">Стиль колеса</string>
+    <string name="wheel_style_subtitle">Сучасна дуга або класичний віяло SpenCommand у нижньому правому куті</string>
+    <string name="wheel_style_modern">Сучасний</string>
+    <string name="wheel_style_retro">Класичний</string>
+    <string name="wheel_slot_count_title">Секторів на колесі</string>
+    <string name="action_scrapbook">Добірка</string>
+    <string name="action_offscreen_memo">Нотатка поза екраном</string>
+    <string name="action_go_home">Додому</string>
+    <string name="action_notifications">Сповіщення</string>
+    <string name="action_recent_apps">Нещодавні програми</string>
+    <string name="scrapbook_hint">Проведіть по знімку екрана, щоб обрізати його, потім збережіть.</string>
+    <string name="scrapbook_caption">Підпис (зберігається у нотатках)</string>
+    <string name="scrapbook_save">Зберегти вирізку</string>
+    <string name="memo_hint">Пишіть S Pen на чорному полотні, як на дошці поверх екрана.</string>
+    <string name="memo_pen_size">Товщина пера</string>
+    <string name="memo_clear">Очистити</string>
+    <string name="memo_undo">Скасувати</string>
+    <string name="memo_save">Зберегти нотатку</string>
+    <string name="action_go_back">Назад</string>
+    <string name="wheel_sounds_title">Звуки колеса</string>
+    <string name="wheel_sounds_subtitle">Власні звуки для відкриття та закриття класичного колеса</string>
+    <string name="wheel_sound_open">Звук відкриття</string>
+    <string name="wheel_sound_close">Звук закриття</string>
+    <string name="wheel_sound_none">Немає звуку</string>
+    <string name="wheel_sound_choose">Вибрати</string>
 </resources>

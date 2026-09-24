@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Couleur d’accent de la roue Air Command</string>
     <string name="wheel_color_custom_label">Hex ou RVB</string>
     <string name="wheel_color_hint">ex. #29B6F6 ou 41,182,246</string>
+    <string name="wheel_color_choose">Choisir une couleur</string>
     <string name="wheel_color_invalid">Couleur invalide</string>
     <string name="wheel_color_apply">Appliquer</string>
     <string name="wheel_color_recent_title">Utilisés récemment</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">Envoyer un e-mail</string>
     <string name="settings_battery_saver">Économie de batterie</string>
     <string name="settings_battery_saver_desc">Met en pause le lecteur du numériseur après 5 secondes d\'inactivité, stylet rangé ; le sortir le réveille instantanément</string>
+    <string name="wheel_style_title">Style de la roue</string>
+    <string name="wheel_style_subtitle">Arc moderne ou l\'éventail classique SpenCommand dans le coin inférieur droit</string>
+    <string name="wheel_style_modern">Moderne</string>
+    <string name="wheel_style_retro">Classique</string>
+    <string name="wheel_slot_count_title">Emplacements sur la roue</string>
+    <string name="action_scrapbook">Collection</string>
+    <string name="action_offscreen_memo">Mémo hors écran</string>
+    <string name="action_go_home">Accueil</string>
+    <string name="action_notifications">Notifications</string>
+    <string name="action_recent_apps">Apps récentes</string>
+    <string name="scrapbook_hint">Faites glisser sur la capture pour la recadrer, puis enregistrez.</string>
+    <string name="scrapbook_caption">Légende (enregistrée dans vos notes)</string>
+    <string name="scrapbook_save">Enregistrer</string>
+    <string name="memo_hint">Écrivez sur la toile noire avec le S Pen, comme sur un tableau au-dessus de l\'écran.</string>
+    <string name="memo_pen_size">Taille du stylet</string>
+    <string name="memo_clear">Effacer</string>
+    <string name="memo_undo">Annuler</string>
+    <string name="memo_save">Enregistrer le mémo</string>
+    <string name="action_go_back">Retour</string>
+    <string name="wheel_sounds_title">Sons de la roue</string>
+    <string name="wheel_sounds_subtitle">Sons personnalisés pour l\'ouverture et la fermeture de la roue classique</string>
+    <string name="wheel_sound_open">Son d\'ouverture</string>
+    <string name="wheel_sound_close">Son de fermeture</string>
+    <string name="wheel_sound_none">Aucun son</string>
+    <string name="wheel_sound_choose">Choisir</string>
 </resources>

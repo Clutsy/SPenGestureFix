@@ -1287,6 +1287,11 @@ class PreviewStreamer:
         self._sent_times[:] = recent
         return len(recent) / 3.0
 
+    def latest_frame_jpeg(self) -> Optional[bytes]:
+        """Copy of the latest encoded JPEG (GUI mirror), or None."""
+        with self._frame_lock:
+            return self._frame
+
     # ------------------------------------------------------ adaptive quality
     def _note_frame_size(self, size: int) -> None:
         """Track send sizes; retunes quality/scale when the rate sags."""

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Scrapbook: page with two clipped photos. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M4,4C4,2.9 4.9,2 6,2L18,2C19.1,2 20,2.9 20,4L20,20C20,21.1 19.1,22 18,22L6,22C4.9,22 4,21.1 4,20L4,4ZM6,4L6,20L18,20L18,4L6,4Z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M8,7L11,7A1,1 0 0 1 12,8L12,11A1,1 0 0 1 11,12L8,12A1,1 0 0 1 7,11L7,8A1,1 0 0 1 8,7Z M8,9L8,10L9.5,8.5L11,10L11,8L8,8Z" />
+    <path android:fillColor="#FFFFFFFF"
+        android:pathData="M13,12L16,12A1,1 0 0 1 17,13L17,16A1,1 0 0 1 16,17L13,17A1,1 0 0 1 12,16L12,13A1,1 0 0 1 13,12Z M13,14L13,15L14.5,13.5L16,15L16,13L13,13Z" />
+</vector>

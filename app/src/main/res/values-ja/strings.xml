@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Air Commandホイールのアクセントカラー</string>
     <string name="wheel_color_custom_label">16進またはRGB</string>
     <string name="wheel_color_hint">例: #29B6F6 または 41,182,246</string>
+    <string name="wheel_color_choose">色を選択</string>
     <string name="wheel_color_invalid">無効な色です</string>
     <string name="wheel_color_apply">適用</string>
     <string name="wheel_color_recent_title">最近使用した色</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">メールを送信</string>
     <string name="settings_battery_saver">バッテリーセーバー</string>
     <string name="settings_battery_saver_desc">ペンが収納されている状態で5秒アイドルが続くとデジタイザ読み取りを一時停止；抽出すると即座に再開します</string>
+    <string name="wheel_style_title">ホイールのスタイル</string>
+    <string name="wheel_style_subtitle">モダンな円弧、または右下のクラシックな SpenCommand 扇形</string>
+    <string name="wheel_style_modern">モダン</string>
+    <string name="wheel_style_retro">クラシック</string>
+    <string name="wheel_slot_count_title">ホイールのスロット数</string>
+    <string name="action_scrapbook">スクラップブック</string>
+    <string name="action_offscreen_memo">画面外メモ</string>
+    <string name="action_go_home">ホーム</string>
+    <string name="action_notifications">通知</string>
+    <string name="action_recent_apps">最近のアプリ</string>
+    <string name="scrapbook_hint">スクリーンショットをドラッグして切り取り、保存します。</string>
+    <string name="scrapbook_caption">キャプション（ノートに保存）</string>
+    <string name="scrapbook_save">切り取りを保存</string>
+    <string name="memo_hint">画面の上の黒板のように、S Pen で黒いキャンバスに書きます。</string>
+    <string name="memo_pen_size">ペンの太さ</string>
+    <string name="memo_clear">クリア</string>
+    <string name="memo_undo">元に戻す</string>
+    <string name="memo_save">メモを保存</string>
+    <string name="action_go_back">戻る</string>
+    <string name="wheel_sounds_title">ホイールのサウンド</string>
+    <string name="wheel_sounds_subtitle">クラシックホイールの開閉に好きなサウンドを設定</string>
+    <string name="wheel_sound_open">オープン音</string>
+    <string name="wheel_sound_close">クローズ音</string>
+    <string name="wheel_sound_none">サウンド未選択</string>
+    <string name="wheel_sound_choose">選択</string>
 </resources>

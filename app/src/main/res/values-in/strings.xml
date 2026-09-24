@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Warna aksen roda Air Command</string>
     <string name="wheel_color_custom_label">Hex atau RGB</string>
     <string name="wheel_color_hint">mis. #29B6F6 atau 41,182,246</string>
+    <string name="wheel_color_choose">Pilih warna</string>
     <string name="wheel_color_invalid">Warna tidak valid</string>
     <string name="wheel_color_apply">Terapkan</string>
     <string name="wheel_color_recent_title">Baru digunakan</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">Kirim surel</string>
     <string name="settings_battery_saver">Penghemat baterai</string>
     <string name="settings_battery_saver_desc">Menjeda pembaca digitizer setelah 5 detik tidak aktif dengan pena tersimpan; mencabutnya langsung membangunkannya</string>
+    <string name="wheel_style_title">Gaya roda</string>
+    <string name="wheel_style_subtitle">Busur modern atau kipas klasik SpenCommand di sudut kanan bawah</string>
+    <string name="wheel_style_modern">Modern</string>
+    <string name="wheel_style_retro">Klasik</string>
+    <string name="wheel_slot_count_title">Slot pada roda</string>
+    <string name="action_scrapbook">Buku potongan</string>
+    <string name="action_offscreen_memo">Memo luar layar</string>
+    <string name="action_go_home">Beranda</string>
+    <string name="action_notifications">Notifikasi</string>
+    <string name="action_recent_apps">Aplikasi terbaru</string>
+    <string name="scrapbook_hint">Geser pada tangkapan layar untuk memotong, lalu simpan.</string>
+    <string name="scrapbook_caption">Keterangan (disimpan ke catatan Anda)</string>
+    <string name="scrapbook_save">Simpan potongan</string>
+    <string name="memo_hint">Tulis dengan S Pen di kanvas hitam, seperti papan tulis di atas layar.</string>
+    <string name="memo_pen_size">Ukuran pena</string>
+    <string name="memo_clear">Hapus</string>
+    <string name="memo_undo">Urungkan</string>
+    <string name="memo_save">Simpan memo</string>
+    <string name="action_go_back">Kembali</string>
+    <string name="wheel_sounds_title">Suara roda</string>
+    <string name="wheel_sounds_subtitle">Suara khusus untuk membuka dan menutup roda klasik</string>
+    <string name="wheel_sound_open">Suara buka</string>
+    <string name="wheel_sound_close">Suara tutup</string>
+    <string name="wheel_sound_none">Tidak ada suara</string>
+    <string name="wheel_sound_choose">Pilih</string>
 </resources>

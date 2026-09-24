@@ -35,13 +35,47 @@ class MainActivity : AppCompatActivity() {
     private var gestures by mutableStateOf<Map<GestureKind, PenAction>>(emptyMap())
     private var wheelSlots by mutableStateOf<List<PenAction>>(emptyList())
     private var wheelColor by mutableStateOf(androidx.compose.ui.graphics.Color(0xFF29B6F6))
+    private var wheelStyle by mutableStateOf(WheelStyle.MODERN)
+    private var wheelSlotCount by mutableStateOf(WheelConfig.DEFAULT_SLOT_COUNT)
     private val startPending = AtomicBoolean(false)
+
+    private companion object {
+        const val SOUND_OPEN = "open"
+        const val SOUND_CLOSE = "close"
+    }
 
     private val notificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             notificationGranted = granted
             if (granted && startPending.compareAndSet(true, false)) startGestureService()
         }
+
+    /** SAF pickers for the custom wheel open/close sounds (SpenCommand port). */
+    private var pendingSoundTarget: Boolean? = null
+    private val wheelSoundPicker =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            val open = pendingSoundTarget ?: return@registerForActivityResult
+            pendingSoundTarget = null
+            if (uri != null) {
+                val local = WheelSoundStore.importSound(this, uri, open)
+                if (local != null) {
+                    if (open) WheelSoundStore.setOpenSound(this, local)
+                    else WheelSoundStore.setCloseSound(this, local)
+                    // Recompose the sounds page so the new file name shows
+                    // immediately (the store persists but Compose cannot see it).
+                    refreshState()
+                }
+            }
+        }
+
+    private fun pickWheelSound(open: Boolean) {
+        pendingSoundTarget = open
+        try {
+            wheelSoundPicker.launch(arrayOf("audio/*"))
+        } catch (_: Exception) {
+            pendingSoundTarget = null
+        }
+    }
 
     private val statusReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -83,6 +117,8 @@ class MainActivity : AppCompatActivity() {
                     gestures = gestures,
                     wheelSlots = wheelSlots,
                     wheelColor = wheelColor,
+                    wheelStyle = wheelStyle,
+                    wheelSlotCount = wheelSlotCount,
                     onCheckRoot = ::checkRoot,
                     onRequestOverlay = ::requestOverlayPermission,
                     onStartService = ::requestPermissionsAndStart,
@@ -108,6 +144,20 @@ class MainActivity : AppCompatActivity() {
                     onWheelColorChanged = {
                         wheelColor = it
                         WheelConfig.setWheelColor(this, it)
+                    },
+                    onWheelStyleChanged = {
+                        wheelStyle = it
+                        WheelStyle.save(this, it)
+                    },
+                    onWheelSlotCountChanged = { count ->
+                        WheelConfig.resizeSlots(this, count)
+                        wheelSlotCount = count
+                        wheelSlots = WheelConfig.loadSlots(this)
+                    },
+                    onPickWheelSound = { open -> pickWheelSound(open) },
+                    onClearWheelSound = { open ->
+                        if (open) WheelSoundStore.setOpenSound(this, null)
+                        else WheelSoundStore.setCloseSound(this, null)
                     },
                     onMoveWheelSlot = { from, to ->
                         WheelConfig.moveSlot(this, from, to)
@@ -161,6 +211,8 @@ class MainActivity : AppCompatActivity() {
         gestures = GestureKind.values().associateWith { GestureBindings.load(this, it) }
         wheelSlots = WheelConfig.loadSlots(this)
         wheelColor = WheelConfig.getWheelColor(this)
+        wheelStyle = WheelStyle.load(this)
+        wheelSlotCount = WheelConfig.slotCount(this)
     }
 
     private fun saveBinding(target: BindingTarget, action: PenAction) {

@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Air Command tekerleğinin vurgu rengi</string>
     <string name="wheel_color_custom_label">Hex veya RGB</string>
     <string name="wheel_color_hint">örn. #29B6F6 veya 41,182,246</string>
+    <string name="wheel_color_choose">Renk seç</string>
     <string name="wheel_color_invalid">Geçersiz renk</string>
     <string name="wheel_color_apply">Uygula</string>
     <string name="wheel_color_recent_title">Son kullanılanlar</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">E-posta gönder</string>
     <string name="settings_battery_saver">Pil tasarrufu</string>
     <string name="settings_battery_saver_desc">Kalem takılıyken 5 saniye boşta kalınca dijitalleştirici okuyucusunu duraklatır; kalemi çıkarmak anında uyandırır</string>
+    <string name="wheel_style_title">Tekerlek stili</string>
+    <string name="wheel_style_subtitle">Modern yay veya sağ alt köşedeki klasik SpenCommand yelpazesi</string>
+    <string name="wheel_style_modern">Modern</string>
+    <string name="wheel_style_retro">Klasik</string>
+    <string name="wheel_slot_count_title">Tekerlekteki dilimler</string>
+    <string name="action_scrapbook">Karalama defteri</string>
+    <string name="action_offscreen_memo">Ekran dışı not</string>
+    <string name="action_go_home">Ana ekran</string>
+    <string name="action_notifications">Bildirimler</string>
+    <string name="action_recent_apps">Son uygulamalar</string>
+    <string name="scrapbook_hint">Kırpmak için ekran görüntüsü üzerinde sürükleyin ve kaydedin.</string>
+    <string name="scrapbook_caption">Açıklama (notlarınıza kaydedilir)</string>
+    <string name="scrapbook_save">Kırpmayı kaydet</string>
+    <string name="memo_hint">Ekranın üzerindeki kara tahtada gibi S Pen ile siyah tuvale yazın.</string>
+    <string name="memo_pen_size">Kalem boyutu</string>
+    <string name="memo_clear">Temizle</string>
+    <string name="memo_undo">Geri al</string>
+    <string name="memo_save">Notu kaydet</string>
+    <string name="action_go_back">Geri</string>
+    <string name="wheel_sounds_title">Tekerlek sesleri</string>
+    <string name="wheel_sounds_subtitle">Klasik tekerleği açma ve kapatma için özel sesler</string>
+    <string name="wheel_sound_open">Açılış sesi</string>
+    <string name="wheel_sound_close">Kapanış sesi</string>
+    <string name="wheel_sound_none">Ses yok</string>
+    <string name="wheel_sound_choose">Seç</string>
 </resources>

@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Cor de destaque da roda Air Command</string>
     <string name="wheel_color_custom_label">Hex ou RGB</string>
     <string name="wheel_color_hint">ex.: #29B6F6 ou 41,182,246</string>
+    <string name="wheel_color_choose">Escolher cor</string>
     <string name="wheel_color_invalid">Cor inválida</string>
     <string name="wheel_color_apply">Aplicar</string>
     <string name="wheel_color_recent_title">Usados recentemente</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">Enviar e-mail</string>
     <string name="settings_battery_saver">Poupança de bateria</string>
     <string name="settings_battery_saver_desc">Pausa o leitor do digitalizador após 5 segundos de inatividade com a caneta guardada; retirá-la acorda-o instantaneamente</string>
+    <string name="wheel_style_title">Estilo da roda</string>
+    <string name="wheel_style_subtitle">Arco moderno ou o leque clássico do SpenCommand no canto inferior direito</string>
+    <string name="wheel_style_modern">Moderna</string>
+    <string name="wheel_style_retro">Clássica</string>
+    <string name="wheel_slot_count_title">Setores na roda</string>
+    <string name="action_scrapbook">Coleção</string>
+    <string name="action_offscreen_memo">Nota fora da tela</string>
+    <string name="action_go_home">Início</string>
+    <string name="action_notifications">Notificações</string>
+    <string name="action_recent_apps">Apps recentes</string>
+    <string name="scrapbook_hint">Arraste na captura de tela para recortá-la e salve.</string>
+    <string name="scrapbook_caption">Legenda (salva nas suas notas)</string>
+    <string name="scrapbook_save">Salvar recorte</string>
+    <string name="memo_hint">Escreva na tela preta com a S Pen, como num quadro sobre a tela.</string>
+    <string name="memo_pen_size">Tamanho da caneta</string>
+    <string name="memo_clear">Limpar</string>
+    <string name="memo_undo">Desfazer</string>
+    <string name="memo_save">Salvar nota</string>
+    <string name="action_go_back">Voltar</string>
+    <string name="wheel_sounds_title">Sons da roda</string>
+    <string name="wheel_sounds_subtitle">Sons personalizados para abrir e fechar a roda clássica</string>
+    <string name="wheel_sound_open">Som de abertura</string>
+    <string name="wheel_sound_close">Som de fecho</string>
+    <string name="wheel_sound_none">Sem som</string>
+    <string name="wheel_sound_choose">Escolher</string>
 </resources>

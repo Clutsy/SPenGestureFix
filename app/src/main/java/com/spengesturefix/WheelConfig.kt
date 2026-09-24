@@ -7,12 +7,41 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Persistent configuration for the six Air Command actions and its accent.
+ * Persistent configuration for the Air Command actions and its accent.
  * The wheel intentionally has no background-photo setting: a compact,
  * consistent surface is faster and keeps the pen input path unobstructed.
+ *
+ * The slot count is user-selectable (4/5/6/8, like SpenCommand's shortcuts
+ * setting found by reverse engineering the original app); every consumer
+ * derives its count from [slotCount] instead of a compile-time constant.
  */
 object WheelConfig {
-    const val SLOT_COUNT = 7
+    /**
+     * Slot counts offered by the dashboard, taken from SpenCommand's
+     * shortcuts option. Both styles serve every count: the classic fan
+     * spreads its discs evenly along the authentic button spiral, so 4–7
+     * gestures all get a disc.
+     */
+    val SLOT_COUNT_CHOICES = intArrayOf(4, 5, 6, 7)
+
+    /** Safe default when nothing was configured yet. */
+    const val DEFAULT_SLOT_COUNT = 6
+    private const val MIN_SLOT_COUNT = 1
+    private const val MAX_SLOT_COUNT = 12
+    private const val KEY_SLOT_COUNT = "slot_count"
+
+    /** Persisted slot count, clamped to a safe range. */
+    fun slotCount(context: Context): Int {
+        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getInt(KEY_SLOT_COUNT, DEFAULT_SLOT_COUNT)
+        return stored.coerceIn(MIN_SLOT_COUNT, MAX_SLOT_COUNT)
+    }
+
+    fun setSlotCount(context: Context, count: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt(KEY_SLOT_COUNT, count.coerceIn(MIN_SLOT_COUNT, MAX_SLOT_COUNT))
+            .apply()
+    }
     /** How many recently used wheel colors are remembered. */
     const val RECENT_COLOR_LIMIT = 8
     private const val PREFS = "spen_wheel"
@@ -42,8 +71,14 @@ object WheelConfig {
                     }
                     PenAction(type, label, target)
                 }.getOrNull()
-            }.take(SLOT_COUNT)
-            (parsed + fallback).take(SLOT_COUNT)
+            }
+            val count = slotCount(context)
+            val merged = parsed + fallback
+            // Pad with blank slots up to the configured count so the wheel and
+            // the dashboard always agree on how many slots exist.
+            return (merged + List(count) {
+                PenAction(ActionType.NONE, ActionType.NONE.label(context))
+            }).take(count)
         } catch (_: Exception) {
             fallback
         }
@@ -61,7 +96,7 @@ object WheelConfig {
     ).map { type -> PenAction(type, type.label(context)) }
 
     fun saveSlot(context: Context, index: Int, action: PenAction) {
-        if (index !in 0 until SLOT_COUNT) return
+        if (index !in 0 until slotCount(context)) return
         val slots = loadSlots(context).toMutableList()
         slots[index] = action
         saveSlots(context, slots)
@@ -69,7 +104,8 @@ object WheelConfig {
 
     /** Reorders a slot; used by the dashboard reorder controls. */
     fun moveSlot(context: Context, fromIndex: Int, toIndex: Int) {
-        if (fromIndex !in 0 until SLOT_COUNT || toIndex !in 0 until SLOT_COUNT) return
+        val count = slotCount(context)
+        if (fromIndex !in 0 until count || toIndex !in 0 until count) return
         if (fromIndex == toIndex) return
         val slots = loadSlots(context).toMutableList()
         val item = slots.removeAt(fromIndex)
@@ -79,7 +115,7 @@ object WheelConfig {
 
     private fun saveSlots(context: Context, slots: List<PenAction>) {
         val array = JSONArray()
-        slots.take(SLOT_COUNT).forEach {
+        slots.forEach {
             array.put(JSONObject().apply {
                 put("type", it.type.name)
                 put("label", it.label)
@@ -89,6 +125,20 @@ object WheelConfig {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_SLOTS, array.toString())
             .apply()
+    }
+
+    /**
+     * Resizes the stored slot list: shrinking keeps the first [count] entries,
+     * growing pads with defaults so the wheel never renders empty slots.
+     */
+    fun resizeSlots(context: Context, count: Int) {
+        val clamped = count.coerceIn(MIN_SLOT_COUNT, MAX_SLOT_COUNT)
+        val slots = loadSlots(context).toMutableList()
+        while (slots.size < clamped) {
+            slots += PenAction(ActionType.NONE, ActionType.NONE.label(context))
+        }
+        saveSlots(context, slots.take(clamped))
+        setSlotCount(context, clamped)
     }
 
     fun getWheelColor(context: Context): Color {

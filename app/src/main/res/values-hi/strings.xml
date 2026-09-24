@@ -26,6 +26,7 @@
     <string name="wheel_color_subtitle">Air Command व्हील का एक्सेंट रंग</string>
     <string name="wheel_color_custom_label">Hex या RGB</string>
     <string name="wheel_color_hint">जैसे #29B6F6 या 41,182,246</string>
+    <string name="wheel_color_choose">रंग चुनें</string>
     <string name="wheel_color_invalid">अमान्य रंग</string>
     <string name="wheel_color_apply">लागू करें</string>
     <string name="wheel_color_recent_title">हाल में उपयोग किए गए</string>
@@ -209,4 +210,29 @@
     <string name="btn_send_email">ईमेल भेजें</string>
     <string name="settings_battery_saver">बैटरी सेवर</string>
     <string name="settings_battery_saver_desc">पेन संग्रहित होने पर 5 सेकंड निष्क्रियता के बाद डिजिटाइज़र रीडर को रोकता है; पेन निकालते ही वे तुरंत जाग जाता है</string>
+    <string name="wheel_style_title">व्हील शैली</string>
+    <string name="wheel_style_subtitle">आधुनिक चाप या निचले दाएँ कोने में क्लासिक SpenCommand पंखा</string>
+    <string name="wheel_style_modern">आधुनिक</string>
+    <string name="wheel_style_retro">क्लासिक</string>
+    <string name="wheel_slot_count_title">व्हील पर स्लॉट</string>
+    <string name="action_scrapbook">स्क्रैपबुक</string>
+    <string name="action_offscreen_memo">ऑफ-स्क्रीन मेमो</string>
+    <string name="action_go_home">होम</string>
+    <string name="action_notifications">सूचनाएँ</string>
+    <string name="action_recent_apps">हाल के ऐप्स</string>
+    <string name="scrapbook_hint">काटने के लिए स्क्रीनशॉट पर खींचें, फिर सहेजें।</string>
+    <string name="scrapbook_caption">कैप्शन (आपके नोट्स में सहेजा जाता है)</string>
+    <string name="scrapbook_save">कटाई सहेजें</string>
+    <string name="memo_hint">स्क्रीन के ऊपर ब्लैकबोर्ड की तरह S Pen से काले कैनवास पर लिखें।</string>
+    <string name="memo_pen_size">पेन आकार</string>
+    <string name="memo_clear">साफ़ करें</string>
+    <string name="memo_undo">पूर्ववत करें</string>
+    <string name="memo_save">मेमो सहेजें</string>
+    <string name="action_go_back">वापस</string>
+    <string name="wheel_sounds_title">व्हील ध्वनियाँ</string>
+    <string name="wheel_sounds_subtitle">क्लासिक व्हील खोलने और बंद करने के लिए कस्टम ध्वनियाँ</string>
+    <string name="wheel_sound_open">खोलने की ध्वनि</string>
+    <string name="wheel_sound_close">बंद करने की ध्वनि</string>
+    <string name="wheel_sound_none">कोई ध्वनि नहीं</string>
+    <string name="wheel_sound_choose">चुनें</string>
 </resources>

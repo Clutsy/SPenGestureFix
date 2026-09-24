@@ -40,6 +40,7 @@
     <string name="wheel_color_subtitle">Color de acento de la rueda Air Command</string>
     <string name="wheel_color_custom_label">Hex o RGB</string>
     <string name="wheel_color_hint">p. ej. #29B6F6 o 41,182,246</string>
+    <string name="wheel_color_choose">Elegir color</string>
     <string name="wheel_color_invalid">Color no válido</string>
     <string name="wheel_color_apply">Aplicar</string>
     <string name="wheel_color_recent_title">Usados recientemente</string>
@@ -208,4 +209,29 @@
     <string name="btn_send_email">Enviar correo</string>
     <string name="settings_battery_saver">Ahorro de batería</string>
     <string name="settings_battery_saver_desc">Pausa el lector del digitalizador tras 5 segundos de inactividad con la pluma guardada; sacarla lo reactiva al instante</string>
+    <string name="wheel_style_title">Estilo de la rueda</string>
+    <string name="wheel_style_subtitle">Arco moderno o el abanico clásico de SpenCommand en la esquina inferior derecha</string>
+    <string name="wheel_style_modern">Moderna</string>
+    <string name="wheel_style_retro">Clásica</string>
+    <string name="wheel_slot_count_title">Huecos en la rueda</string>
+    <string name="action_scrapbook">Recortes</string>
+    <string name="action_offscreen_memo">Nota fuera de pantalla</string>
+    <string name="action_go_home">Inicio</string>
+    <string name="action_notifications">Notificaciones</string>
+    <string name="action_recent_apps">Apps recientes</string>
+    <string name="scrapbook_hint">Arrastra sobre la captura para recortarla y guarda.</string>
+    <string name="scrapbook_caption">Leyenda (se guarda en tus notas)</string>
+    <string name="scrapbook_save">Guardar recorte</string>
+    <string name="memo_hint">Escribe en el lienzo negro con la S Pen, como en una pizarra sobre la pantalla.</string>
+    <string name="memo_pen_size">Tamaño del lápiz</string>
+    <string name="memo_clear">Borrar</string>
+    <string name="memo_undo">Deshacer</string>
+    <string name="memo_save">Guardar nota</string>
+    <string name="action_go_back">Atrás</string>
+    <string name="wheel_sounds_title">Sonidos de la rueda</string>
+    <string name="wheel_sounds_subtitle">Sonidos personalizados para abrir y cerrar la rueda clásica</string>
+    <string name="wheel_sound_open">Sonido de apertura</string>
+    <string name="wheel_sound_close">Sonido de cierre</string>
+    <string name="wheel_sound_none">Sin sonido</string>
+    <string name="wheel_sound_choose">Elegir</string>
 </resources>
