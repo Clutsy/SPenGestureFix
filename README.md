@@ -1,14 +1,28 @@
 
-# SPenGestureFix
+# SPenGestureFix (SPGF)
 
+<table>
+  <tr>
+    <td><img src="docs/screenshots/android_home_wheel.jpg" width="196" alt="Classic SpenCommand fan open on the home screen"></td>
+    <td><img src="docs/screenshots/android_dashboard.png" width="196" alt="App dashboard with the service live and pen state"></td>
+    <td><img src="docs/screenshots/android_wheel_settings.png" width="196" alt="Wheel settings with Modern and Classic styles and the color picker"></td>
+    <td><img src="docs/screenshots/android_button_settings.png" width="196" alt="Action picker over the programmable button settings"></td>
+  </tr>
+</table>
 
-<img width="270" height="480" alt="spen_1787403401482" src="https://github.com/user-attachments/assets/18cd7b03-5857-4e33-9aed-1bca8537ee93" />
+The classic Air Command skin opens with the original 18-frame SpenCommand animation — bitmaps extracted from Samsung's own APK, replayed at the authentic 20 ms per frame (360 ms) and reversed on close. The modern arc springs open with an overshoot ease.
 
-<img width="270" height="480" alt="Screenshot_20260822-145738_S Pen Gesture Fix" src="https://github.com/user-attachments/assets/796a8eca-d723-4d23-adf0-0bb53b26f33a" />
+### The portable Windows panel
 
-<img width="270" height="480" alt="spen_1787403373153" src="https://github.com/user-attachments/assets/e3c53420-9fd1-44e1-85a8-a94336f41a53" />
+The streaming side is driven by <b>SPGF_WacomGUI.exe</b>, a portable Windows control panel: live mirror of the frames the phone receives, adb device detection with a real photo of every Note generation, streaming options, log and guide — five pages, no installer, no Python.
 
-<img width="480" height="270" alt="Screenshot_20260822-150541_S Pen Gesture Fix" src="https://github.com/user-attachments/assets/fc026071-416f-4fe2-99df-0e4960987934" />
+<table>
+  <tr>
+    <td><img src="docs/screenshots/panel_dashboard.png" width="330" alt="SPGF_WacomGUI dashboard with live mirror and controls"></td>
+    <td><img src="docs/screenshots/panel_phone.png" width="330" alt="Phone page with the detected Note7 and credits"></td>
+    <td><img src="docs/screenshots/panel_gallery.png" width="330" alt="Photo database gallery with all eleven Note generations"></td>
+  </tr>
+</table>
 
 
 A focused, local-first Android utility for rooted phones with a compatible S Pen/Wacom input stack. It restores programmable S Pen gestures and exposes the device digitizer as a low-latency tablet input source on rooted AOSP/LineageOS ROMs.
@@ -18,7 +32,7 @@ A focused, local-first Android utility for rooted phones with a compatible S Pen
 ## Product capabilities
 
 - **Programmable side button:** single click, double click, and long press can run independent actions.
-- **Air Command wheel:** a staggered two-ring fan anchored in the lower-right corner like classic Note Air Command. Alternating inner/outer slot radii give every target 30 degrees of separation, labels render inside each slot in the device language, and a dedicated close slot keeps every spoke a real, labeled target. Selection follows the Samsung original: press and drag across the fan with a haptic tick on each slot, release to launch. A soft radial backdrop keeps the wheel readable over any app without blocking touches outside the window.
+- **Air Command wheel:** a staggered two-ring fan anchored in the lower-right corner like classic Note Air Command. Alternating inner/outer slot radii give every target 30 degrees of separation, labels render inside each slot in the device language, and a dedicated close slot keeps every spoke a real, labeled target. Selection follows the Samsung original: press and drag across the fan with a haptic tick on each slot, release to launch. A soft radial backdrop keeps the wheel readable over any app without blocking touches outside the window. The **classic skin** renders Samsung's original `popup_gimp_1..18` bitmaps and replays the authentic opening animation — 18 frames at 20 ms (360 ms), reversed on close — while adapting to 4–7 slots on the original fan geometry; the modern arc opens with an overshoot ease instead.
 - **Quick Notes:** offline notes with editing, search, copy, sharing, character counting, phone-number dialing, and Maps lookup.
 - **Screen tools:** annotate a screenshot or crop a rectangular region with coordinate-correct bitmap mapping.
 - **Wacom Tablet Mode:** pressure curves, monitor-matched orientation, physical display resolution detection with a landscape-first default, a manual monitor override, haptics, smoothing, configurable right/middle/eraser/disabled pen-button behavior, a normalized TCP stream for a PC client, live session stats (frames sent), and an optional reverse PC-screen preview channel so the phone shows the Windows desktop while drawing.
@@ -297,4 +311,4 @@ The Android package is `com.spengesturefix`. Keep it unchanged: it is part of th
 
 ## License
 
-Open source.
+Open source under the MIT license with a mandatory attribution clause: anyone may use, modify and redistribute the project (including in renamed or rebranded form), but **the original project must always be credited** — `SPenGestureFix (SPGF) by Clutsy — https://github.com/Clutsy/SPenGestureFix` — in the source tree, in the app's user-visible About section, in the documentation and on any download or store page. See the `LICENSE` file for the exact wording.

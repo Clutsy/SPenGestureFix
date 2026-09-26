@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">Dibuat oleh clutsy</string>
     <string name="section_status">Status</string>
     <string name="btn_check_root">Periksa izin root</string>
@@ -98,7 +98,7 @@
     <string name="toast_pen_extracted">S Pen dikeluarkan — roda terbuka</string>
     <string name="toast_pen_inserted">S Pen dimasukkan — roda tertutup</string>
     <string name="notif_channel_name">Layanan Isyarat S Pen</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">Menunggu digitizer S Pen…</string>
     <string name="notif_not_found">Digitizer "%s" tidak ditemukan</string>
     <string name="notif_active">Aktif di %s</string>

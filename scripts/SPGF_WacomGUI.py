@@ -74,15 +74,16 @@ HERE = Path(__file__).resolve().parent
 ASSETS = HERE / "gui_assets"
 
 # ------------------------------------------------------------------- palette --
-# One calm graphite theme: deep panels, a single blue accent, clear status
-# colours. customtkinter paints the widgets, so the app stays sharp on any
-# Windows DPI setting and reads the same on macOS and Linux.
-BG = "#0f1116"
-SIDEBAR = "#0a0c10"
-PANEL = "#161a21"
-PANEL_ALT = "#1d222c"
-PANEL_HI = "#232a36"
-STROKE = "#272e3b"
+# True-black AMOLED theme, matching the Android app: pure black surfaces with
+# near-black raised panels, a single blue accent and clear status colours.
+# customtkinter paints the widgets, so the app stays sharp on any Windows DPI
+# setting and reads the same on macOS and Linux.
+BG = "#000000"
+SIDEBAR = "#000000"
+PANEL = "#0c0e12"
+PANEL_ALT = "#12151a"
+PANEL_HI = "#1a1e26"
+STROKE = "#242936"
 FG = "#e8ecf3"
 FG_DIM = "#8b93a3"
 FG_MUTED = "#646d7e"
@@ -96,7 +97,7 @@ RED = "#ef4444"
 CYAN = "#22d3ee"
 ON_ACCENT = "#08121f"
 
-MIRROR_BG = "#080a0e"
+MIRROR_BG = "#000000"
 
 # Font families are resolved at runtime: the app must not depend on Segoe UI.
 FAMILY = "Segoe UI"
@@ -229,7 +230,7 @@ def brand_image(size: int = 256) -> "object":
     s = int(size)
     image = Image.new("RGBA", (s, s), (0, 0, 0, 0))
     d = ImageDraw.Draw(image)
-    d.rounded_rectangle((0, 0, s - 1, s - 1), radius=int(s * 0.22), fill="#0b0d13")
+    d.rounded_rectangle((0, 0, s - 1, s - 1), radius=int(s * 0.22), fill="#000000")
     mark = logo_mark()
     if mark is None:  # drawn fallback: keeps the icon alive without the artwork
         d.rectangle((int(0.22 * s), int(0.22 * s), int(0.78 * s), int(0.78 * s)),
@@ -1204,7 +1205,7 @@ class WacomGUI(_CTkBase):  # type: ignore[misc, valid-type]
         ).grid(row=0, column=3)
 
         self.log_box = ctk.CTkTextbox(
-            card, font=F_MONO_S(), fg_color="#0b0e13", text_color=FG,
+            card, font=F_MONO_S(), fg_color="#000000", text_color=FG,
             wrap="word", corner_radius=12, border_width=1, border_color=STROKE,
         )
         self.log_box.grid(row=1, column=0, sticky="nsew", padx=16, pady=(0, 16))

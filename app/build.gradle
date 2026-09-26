@@ -44,6 +44,14 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = '1.5.8'
     }
+
+    // The distributed artifact is SPGF.apk, matching the app name on the
+    // launcher and the download links on the site.
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            outputFileName = "SPGF.apk"
+        }
+    }
 }
 
 dependencies {

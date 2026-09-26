@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">제작: clutsy</string>
     <string name="section_status">상태</string>
     <string name="btn_check_root">root 권한 확인</string>
@@ -98,7 +98,7 @@
     <string name="toast_pen_extracted">S Pen 분리됨 — 휠 열림</string>
     <string name="toast_pen_inserted">S Pen 삽입됨 — 휠 닫힘</string>
     <string name="notif_channel_name">S Pen 제스처 서비스</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">S Pen 디지타이저 대기 중…</string>
     <string name="notif_not_found">디지타이저 "%s"을(를) 찾을 수 없음</string>
     <string name="notif_active">%s에서 활성화됨</string>

@@ -58,6 +58,9 @@ out/
 scripts/SPGF_Wacom.ini
 scripts/SPGF_WacomGUI.json
 
+# Vercel local state (the site in site/ deploys automatically from the repo)
+.vercel/
+
 # Local agent and editor metadata
 .local-agent/
 .codex/

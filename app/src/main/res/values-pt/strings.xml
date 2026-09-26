@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">Criado por clutsy</string>
     <string name="section_status">Status</string>
     <string name="btn_check_root">Verificar permissões de root</string>
@@ -98,7 +98,7 @@
     <string name="toast_pen_extracted">S Pen extraída — roda aberta</string>
     <string name="toast_pen_inserted">S Pen inserida — roda fechada</string>
     <string name="notif_channel_name">Serviço de gestos da S Pen</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">Aguardando digitalizador da S Pen…</string>
     <string name="notif_not_found">Digitalizador "%s" não encontrado</string>
     <string name="notif_active">Ativo em %s</string>

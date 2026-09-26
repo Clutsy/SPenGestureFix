@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">Made by clutsy</string>
     <!-- Status section -->
     <string name="section_status">Status</string>
@@ -110,7 +110,7 @@
     <string name="toast_pen_inserted">S Pen inserted — wheel closed</string>
     <!-- Service notifications -->
     <string name="notif_channel_name">S Pen Gesture Service</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">Waiting for S Pen digitizer…</string>
     <string name="notif_not_found">Digitizer \"%s\" not found</string>
     <string name="notif_active">Active on %s</string>

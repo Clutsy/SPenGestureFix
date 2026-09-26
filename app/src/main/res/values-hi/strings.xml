@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">clutsy द्वारा निर्मित</string>
     <string name="section_status">स्थिति</string>
     <string name="btn_check_root">रूट अनुमतियाँ जाँचें</string>
@@ -98,7 +98,7 @@
     <string name="toast_pen_extracted">S Pen निकाला गया — व्हील खुला</string>
     <string name="toast_pen_inserted">S Pen डाला गया — व्हील बंद</string>
     <string name="notif_channel_name">S Pen इशारा सेवा</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">S Pen डिजिटाइज़र की प्रतीक्षा…</string>
     <string name="notif_not_found">डिजिटाइज़र "%s" नहीं मिला</string>
     <string name="notif_active">%s पर सक्रिय</string>

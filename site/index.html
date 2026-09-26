@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPGF — Restore S Pen Gestures &amp; Air Command on Rooted Galaxy Notes</title>
+<meta name="description" content="SPGF (SPenGestureFix) restores programmable S Pen side-button gestures and a classic Air Command wheel on rooted AOSP/LineageOS Galaxy Notes, turns the digitizer into a low-latency Wacom tablet for your PC, and ships a portable Windows control panel. Local-first, open source (MIT).">
+<meta name="theme-color" content="#05060f">
+<meta property="og:title" content="SPGF — Bring the S Pen back to life">
+<meta property="og:description" content="Programmable barrel button, Air Command wheel, Quick Notes, screen tools, a full Wacom Mode and a portable Windows panel for rooted AOSP/LineageOS Notes. MIT licensed — attribution required.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/icon-512.png">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="bg-grid" aria-hidden="true"></div>
+<div class="glow g1" aria-hidden="true"></div>
+<div class="glow g2" aria-hidden="true"></div>
+<div class="glow g3" aria-hidden="true"></div>
+
+<!-- NAV -->
+<header class="nav">
+  <div class="nav-inner container">
+    <a href="#top" class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(40 60 40)"><path d="M60 7 C66.2 7 69.5 11 69.5 17 L69.5 45 C69.5 51.5 65.5 56.5 60 62 C54.5 56.5 50.5 51.5 50.5 45 L50.5 17 C50.5 11 53.8 7 60 7 Z"/><path d="M56.4 17 L56.4 41"/><path d="M63.6 17 L63.6 41"/></g><path d="M43 69 C34.5 74.5 32.5 84 40.5 89.5 C50 96 60.5 88.5 66 80.5 C71 73.5 78.5 71 83.5 76 C88.5 81 86.5 88.5 79.5 88.5"/></svg>
+      </span>
+      <span class="brand-name">SP<b>GF</b></span>
+    </a>
+    <nav class="nav-links" aria-label="Main navigation">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#tablet">Wacom Mode</a>
+      <a href="#desktop">Desktop panel</a>
+      <a href="#changelog">Changelog</a>
+      <a href="#screenshots">Gallery</a>
+      <a href="#setup">Setup</a>
+      <a href="#download">Download</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn btn-ghost btn-sm" href="https://github.com/Clutsy/SPenGestureFix" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <button class="nav-burger" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy reveal visible">
+        <div class="hero-badges">
+          <span class="pill pill-grad">v2.1</span>
+          <span class="pill">MIT · open source</span>
+          <span class="pill">Root required</span>
+          <span class="pill">100% local</span>
+        </div>
+        <h1>Bring the <span class="stroke-word">S&nbsp;Pen<svg class="stroke-underline" viewBox="0 0 220 14" preserveAspectRatio="none" aria-hidden="true"><path d="M4 10 C 60 2, 150 2, 216 8" fill="none"/></svg></span> back to life on your rooted Note</h1>
+        <p class="lead"><b>SPGF</b> (SPenGestureFix) is a local-first toolkit that restores programmable barrel-button gestures and a classic Air Command wheel on AOSP/LineageOS Notes, streams the Wacom digitizer to your PC, and drives it all from a portable Windows panel — no Samsung framework, no cloud, no telemetry.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#download">Download</a>
+          <a class="btn btn-ghost" href="https://github.com/Clutsy/SPenGestureFix" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+        <dl class="hero-stats">
+          <div><dt class="js-downloads">—</dt><dd>APK downloads</dd></div>
+          <div><dt class="js-stars">—</dt><dd>GitHub stars</dd></div>
+          <div><dt data-count="17">0</dt><dd>languages</dd></div>
+          <div><dt data-count="12">0</dt><dd>mapped actions</dd></div>
+        </dl>
+      </div>
+
+      <!-- Interactive phone + Air Command demo -->
+      <div class="hero-visual reveal visible">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="phone-statusbar"><span class="ps-time">14:57</span><span class="ps-icons"><i></i><i></i><i class="bat"></i></span></div>
+            <div class="phone-content">
+              <div class="sk sk-title"></div>
+              <div class="sk sk-lg"></div>
+              <div class="sk"></div>
+              <div class="sk sk-short"></div>
+              <div class="sk-card"><div class="sk sk-dot"></div><div class="sk-lines"><div class="sk"></div><div class="sk sk-short"></div></div></div>
+              <div class="sk-card"><div class="sk sk-dot"></div><div class="sk-lines"><div class="sk"></div><div class="sk sk-short"></div></div></div>
+            </div>
+
+            <!-- Air Command fan -->
+            <div class="wheel">
+              <button class="wheel-slot" style="--tx:0px;--ty:-76px" data-label="Quick Note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></button>
+              <button class="wheel-slot" style="--tx:-24px;--ty:-72px" data-label="Screenshot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="14" r="3.5"/></svg></button>
+              <button class="wheel-slot" style="--tx:-45px;--ty:-62px" data-label="Smart Select"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg></button>
+              <button class="wheel-slot" style="--tx:-62px;--ty:-45px" data-label="Flashlight"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12l-3 6v12h-6V9L6 3Z"/><path d="M9 13h6"/></svg></button>
+              <button class="wheel-slot" style="--tx:-72px;--ty:-24px" data-label="Wi-Fi toggle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M2 9.5a15 15 0 0 1 20 0"/><path d="M12 20h.01"/></svg></button>
+              <button class="wheel-slot" style="--tx:-76px;--ty:0px" data-label="Screen Write"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8.5 15.5 7-7"/><path d="m12 15.5 3.5-3.5"/></svg></button>
+              <button class="wheel-core" aria-label="Toggle Air Command demo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <p class="wheel-hint">Tap the pen to open Air Command</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM / SOLUTION -->
+  <section class="section" id="problem">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Why it exists</span>
+        <h2>Custom ROMs kill the pen.<br>This brings it back.</h2>
+      </header>
+      <div class="two-col">
+        <article class="card problem-card reveal">
+          <div class="card-icon danger" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"/></svg></div>
+          <h3>The problem</h3>
+          <p>Flash AOSP or LineageOS on a Galaxy Note and Samsung's entire S Pen framework disappears. Air Command is gone, the barrel button goes dead, and one of the best Wacom digitizers ever shipped in a phone becomes just another input node nobody listens to.</p>
+        </article>
+        <article class="card solution-card reveal">
+          <div class="card-icon ok" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+          <h3>The solution</h3>
+          <p><b>SPGF talks to the kernel directly.</b> A root shell reads raw events from <code>sec_e-pen</code> and the <code>w1</code> presence switch, a state machine decodes clicks and hovers, and a foreground service drives overlays, actions and a normalized tablet stream. The Windows side mirrors the desktop and injects pen input back. No Samsung framework, no cloud, no telemetry.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="section" id="features">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Product capabilities</span>
+        <h2>Everything the pen should do</h2>
+        <p>All running locally on your devices, with nothing phoning home.</p>
+      </header>
+
+      <div class="feature-grid">
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m13 2-2 9h5l-3 11 7-13h-5l3-7Z"/></svg></div>
+          <h3>Programmable side button</h3>
+          <p>Single click, double click and long press each run an independent action — remap them anytime from the dashboard.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="m4.93 19.07 2.83-2.83"/><path d="m16.24 7.76 2.83-2.83"/></svg></div>
+          <h3>Air Command wheel</h3>
+          <p>A configurable radial fan anchored lower-right like classic Note Air Command — up to seven slots in the classic skin, custom accent color, real color picker, open/close sounds, optional open-on-extraction.</p>
+          <p class="card-footnote">The <b>classic skin opens with the original 18-frame SpenCommand animation</b> — bitmaps extracted from Samsung's own APK, replayed at the authentic 20&nbsp;ms per frame (360&nbsp;ms), and reversed on close. The modern arc springs open with an overshoot ease instead.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></div>
+          <h3>Quick Notes</h3>
+          <p>Fully offline notes with editing, search, copy, sharing, character counting, phone-number dialing and Maps lookup.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="m8.5 15.5 7-7"/><path d="m12 15.5 3.5-3.5"/></svg></div>
+          <h3>Screen tools</h3>
+          <p>Annotate a screenshot with <b>Screen Write</b>, or crop a precise rectangle with <b>Smart Select</b> — both use coordinate-correct bitmap mapping.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2.5"/><path d="M9 22h6"/><path d="M12 18.5h.01"/></svg></div>
+          <h3>Wacom Mode</h3>
+          <p>Tunable pressure curves, monitor-matched orientation, smoothing, haptics, configurable pen button — plus a normalized TCP stream for the PC.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></div>
+          <h3>Portable Windows panel</h3>
+          <p>A single <b>SPGF_WacomGUI.exe</b> — no installer, no Python — with a live desktop mirror, adb detection, every streaming option, a filterable log and a photo card for each detected Note generation.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10Z"/></svg></div>
+          <h3>Modern UI · 17 languages</h3>
+          <p>Jetpack Compose + Material 3, localized into English, Italian, Spanish, French, German, Portuguese, Dutch, Polish, Turkish, Russian, Ukrainian, Chinese, Japanese, Korean, Arabic, Hindi and Indonesian.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <h3>Local-first by design</h3>
+          <p>No accounts, no analytics, no network calls beyond your own LAN stream. Every byte is parsed on-device from your kernel's input stream.</p>
+        </article>
+      </div>
+
+      <!-- Side button interactive demo -->
+      <div class="gesture-demo card reveal">
+        <div class="gesture-demo-copy">
+          <span class="eyebrow">Interactive demo</span>
+          <h3>The barrel button, reborn</h3>
+          <p>Pick a gesture to see how a real mapping behaves. Every gesture is fully remappable in-app.</p>
+          <div class="gesture-buttons" role="group" aria-label="Gesture selector">
+            <button class="g-btn active" data-g="single" type="button">Single click</button>
+            <button class="g-btn" data-g="double" type="button">Double click</button>
+            <button class="g-btn" data-g="long" type="button">Long press</button>
+          </div>
+        </div>
+        <div class="gesture-out" id="gesture-out" aria-live="polite">
+          <div class="go-label" id="go-gesture">Single click</div>
+          <div class="go-action" id="go-action">Screenshot</div>
+          <div class="go-desc" id="go-desc">Captured into Pictures/SPenScreenshots</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section alt" id="how">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Hardware architecture</span>
+        <h2>From kernel events to actions</h2>
+        <p>Phone Wacom drivers surface as Linux input devices, not reliable USB HID gadgets — so the service reads <code>getevent -l</code> through a root shell and owns every layer of the pipeline.</p>
+      </header>
+
+      <ol class="timeline">
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>1</span></div>
+          <div class="tl-body">
+            <h3>Kernel devices</h3>
+            <p><code>sec_e-pen</code> carries absolute X/Y, pressure, hover, tip and barrel-button events. The separate <code>w1</code> node reports physical S Pen insertion/removal through a device-specific switch code.</p>
+          </div>
+        </li>
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>2</span></div>
+          <div class="tl-body">
+            <h3>Isolated readers</h3>
+            <p>Each device gets its own <code>EPenInputReader</code> process running <code>exec getevent</code>. Stopping one reader never kills another process — a lesson learned the hard way.</p>
+          </div>
+        </li>
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>3</span></div>
+          <div class="tl-body">
+            <h3>State machine</h3>
+            <p><code>PenGestureAnalyzer</code> decodes single/double/long presses and hover transitions without ever blocking the digitizer stream.</p>
+          </div>
+        </li>
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>4</span></div>
+          <div class="tl-body">
+            <h3>Orchestrator</h3>
+            <p><code>SPenGestureService</code>, an Android foreground service, routes results to overlays, broadcasts, mapped actions and the tablet capture pipeline. Overlay operations run only on the main thread.</p>
+          </div>
+        </li>
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>5</span></div>
+          <div class="tl-body">
+            <h3>Exclusive Wacom Mode ownership</h3>
+            <p>Entering Wacom Mode pauses the normal reader and takes exclusive ownership of <code>sec_e-pen</code>, handing it back on exit. Two readers never compete for the same kernel stream — and a back event can't leave Wacom Mode accidentally.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="detail-grid">
+        <article class="card detail-card reveal">
+          <h4><span class="dot dot-violet"></span>Smart presence detection</h4>
+          <p>Some ROMs never report the live switch, so presence also follows real activity: any pen event marks it extracted, and 5 seconds of silence marks it inserted again. This never gates the digitizer pipeline.</p>
+        </article>
+        <article class="card detail-card reveal">
+          <h4><span class="dot dot-cyan"></span>Discovery fallbacks</h4>
+          <p>Devices are found via <code>/proc/bus/input/devices</code>, falling back to <code>getevent -lp</code> because some ROMs deny the proc file even to root. Initial slot state can come from driver nodes like <code>epen_connection</code> (<code>OK</code>/<code>NG</code>).</p>
+        </article>
+        <article class="card detail-card reveal">
+          <h4><span class="dot dot-pink"></span>Clean overlay scope</h4>
+          <p>Compose pointer input stays local to a screen or the compact wheel window. The service never intercepts Android <code>MotionEvent</code> dispatch, so normal touch keeps working everywhere else.</p>
+        </article>
+      </div>
+
+      <aside class="callout reveal">
+        <div class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="10"/></svg></div>
+        <div>
+          <h4>Engineering note — why the digitizer used to die</h4>
+          <p>An earlier build ran <code>pkill -f 'getevent -l'</code> when the pen was inserted. That was global: it could terminate the <code>w1</code> reader mid-event, kill the <code>sec_e-pen</code> reader or a diagnostic process, and lose both presence notifications and Wacom events at once. Overlays were also created off the main thread. The current architecture replaced all of it with per-reader <code>exec getevent</code>, idempotent process ownership, background parsing and main-thread-only overlay operations.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- TABLET MODE -->
+  <section class="section" id="tablet">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Wacom Mode</span>
+        <h2>Your Note becomes a drawing tablet</h2>
+        <p>Stream pressure-aware pen input straight into any desktop app on your PC — over ADB or Wi-Fi.</p>
+      </header>
+
+      <div class="tablet-grid">
+        <div class="tablet-list">
+          <ul class="checklist reveal">
+            <li>Tunable <b>pressure curves</b> with JVM-tested math</li>
+            <li><b>Monitor-matched orientation</b> with a forced landscape default for horizontal monitors</li>
+            <li><b>Physical display metrics detection</b> plus a one-tap resolution reset after rotation or monitor override</li>
+            <li>Manual monitor override for unusual setups</li>
+            <li><b>Haptics</b> feedback and configurable input smoothing</li>
+            <li>Pen button maps to <b>right-click, middle-click, eraser or disabled</b></li>
+            <li>Normalized TCP stream on port <b>7654</b> for any client</li>
+          </ul>
+        </div>
+
+        <div class="protocol card reveal">
+          <h4 class="proto-title">Wire protocol</h4>
+          <div class="codeblock">
+            <div class="code-head"><span>stream format · tcp://phone:7654</span><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code><span class="tok-c"># optional newline-terminated metadata record:</span>
+#SPEN_TABLET 1 1920 1080 1 landscape
+
+<span class="tok-c"># then one record per frame:</span>
+X,Y,P,FLAGS</code></pre>
+          </div>
+          <table class="flag-table">
+            <caption class="sr-only">Frame flag bits</caption>
+            <thead><tr><th scope="col">Bit</th><th scope="col">Meaning</th></tr></thead>
+            <tbody>
+              <tr><td><kbd>1</kbd></td><td>Tip pressed</td></tr>
+              <tr><td><kbd>2</kbd></td><td>Right / barrel button</td></tr>
+              <tr><td><kbd>4</kbd></td><td>Eraser end</td></tr>
+              <tr><td><kbd>8</kbd></td><td>In-range (hover)</td></tr>
+              <tr><td><kbd>16</kbd></td><td>Middle button</td></tr>
+            </tbody>
+          </table>
+          <p class="proto-note">Axis mapping happens once on the phone; the Windows client only re-orients when its monitor aspect differs from the source metadata. Legacy clients can safely ignore the comment line.</p>
+        </div>
+      </div>
+
+      <div class="pc-connect card reveal">
+        <div class="pc-copy">
+          <h3>Connect your PC</h3>
+          <p>Two ways in: the classic console <code>scripts/SPGF_Wacom.py</code> for terminal lovers, or the graphical <b>SPGF_WacomGUI.exe</b> with the live mirror below. Both drive the same engine — DPI-aware cursor injection over <code>SendInput</code>, or the TCP stream over Wi-Fi.</p>
+        </div>
+        <div class="codeblock">
+          <div class="code-head"><span>terminal</span><button class="copy-btn" type="button">Copy</button></div>
+          <pre><code><span class="tok-c"># discover devices and real axis limits</span>
+python scripts\SPGF_Wacom.py --list
+
+<span class="tok-c"># ADB mode over USB</span>
+python scripts\SPGF_Wacom.py --screen-w 1920 --screen-h 1080
+
+<span class="tok-c"># or just run the portable panel and press Start</span>
+SPGF_WacomGUI.exe</code></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DESKTOP PANEL -->
+  <section class="section alt" id="desktop">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">New in v2.x · Windows</span>
+        <h2>The desktop control panel</h2>
+        <p>One portable exe that mirrors, configures and monitors the whole stream — built for people who never want to open a terminal.</p>
+      </header>
+
+      <div class="panel-shot card reveal">
+        <div class="photo-slot" data-slot="desktop-panel">
+          <img src="assets/shots/desktop-panel.png" alt="The SPGF Windows panel: sidebar, live mirror, stat tiles and controls" loading="lazy" width="1180" height="760">
+        </div>
+        <figcaption>Dashboard page — live mirror of exactly what the phone receives, stat tiles and session controls.</figcaption>
+      </div>
+
+      <div class="feature-grid">
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg></div>
+          <h3>Five focused pages</h3>
+          <p>Dashboard (mirror + controls), Phone (detection + photo database), Options (connection, quality, capture), Log and Guide — keyboard shortcuts included.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M10 18.5h4"/></svg></div>
+          <h3>Knows your Note</h3>
+          <p>adb detection matches the model code to the generation — from the 2011 Note to the Note20 Ultra, Note Edge and Note7 included — and shows a real photo with author and licence credits.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></div>
+          <h3>Portable by design</h3>
+          <p>No installer, no Python, no registry: one exe, settings in a JSON file next to it, fonts resolved at runtime, window clamped to the screen. Copy the folder to a USB stick and it just works.</p>
+        </article>
+        <article class="card feature-card reveal">
+          <div class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V9"/><path d="M8 17V5"/><path d="M12 17v-7"/><path d="M16 17V7"/><path d="M20 17v-4"/></svg></div>
+          <h3>Live encoder feedback</h3>
+          <p>FPS, JPEG quality, scale and frame counters update in real time; the mirror frame turns green when live and amber when paused, and the adaptive encoder degrades gracefully on weak Wi-Fi.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACTIONS -->
+  <section class="section" id="actions">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Action library</span>
+        <h2>Twelve actions. Infinite combos.</h2>
+        <p>Assign any action to any side-button gesture or any wheel slot.</p>
+      </header>
+
+      <div class="action-grid">
+        <article class="card action-card reveal"><h3>Open app</h3><p>Launches a selected launcher application.</p></article>
+        <article class="card action-card reveal"><h3>Open S Pen Wheel</h3><p>Opens or closes Air Command.</p></article>
+        <article class="card action-card reveal"><h3>Screenshot</h3><p>Captures into <code>Pictures/SPenScreenshots</code>.</p></article>
+        <article class="card action-card reveal"><h3>Screen Write</h3><p>Captures and annotates a screenshot.</p></article>
+        <article class="card action-card reveal"><h3>Smart Select</h3><p>Crops a selected rectangle from a screenshot.</p></article>
+        <article class="card action-card reveal"><h3>Quick Note</h3><p>Opens the offline note editor.</p></article>
+        <article class="card action-card reveal"><h3>App search</h3><p>Searches launcher applications and opens one.</p></article>
+        <article class="card action-card reveal"><h3>Pen Window</h3><p>Starts a selected app in an experimental freeform window.</p></article>
+        <article class="card action-card reveal"><h3>Flashlight</h3><p>Toggles the available camera torch.</p></article>
+        <article class="card action-card reveal"><h3>Wi-Fi / Bluetooth</h3><p>Runs the corresponding rooted <code>svc</code> command.</p></article>
+        <article class="card action-card reveal"><h3>Mute / Lock screen</h3><p>Sends the relevant rooted key event.</p></article>
+        <article class="card action-card reveal"><h3>Custom root command</h3><p>Runs an explicitly configured root command.</p></article>
+      </div>
+
+      <aside class="callout warn reveal">
+        <div class="callout-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.7 3.86a2 2 0 0 0-3.4 0Z"/></svg></div>
+        <div>
+          <h4>A word on custom commands</h4>
+          <p>Custom root commands are intentionally powerful. Only assign commands you understand — and keep the device protected.</p>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- CHANGELOG -->
+  <section class="section alt" id="changelog">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Changelog</span>
+        <h2>How the project grew</h2>
+        <p>The milestones, newest first — full details in the README release notes.</p>
+      </header>
+
+      <ol class="timeline changelog-list">
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>2.1</span></div>
+          <div class="tl-body">
+            <h3>Desktop panel polish · MIT</h3>
+            <p>Dark Windows titlebar, branded empty state and live border on the mirror, gallery selection ring, focus rings, status icons — and the project relicensed under MIT with a mandatory attribution clause. The app is now simply named <b>SPGF</b>.</p>
+          </div>
+        </li>
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>2.0</span></div>
+          <div class="tl-body">
+            <h3>The portable Windows panel</h3>
+            <p>The desktop panel was rewritten around five pages with a graphite theme, real photos for all eleven Note generations (fetched from Wikimedia Commons with credits), proportional hero renders, and a single-file portable exe — no Python needed on the target machine. Fixed a startup crash that kept the old panel in smoke-test mode forever.</p>
+          </div>
+        </li>
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>1.7</span></div>
+          <div class="tl-body">
+            <h3>Hub dashboard &amp; wheel overhaul</h3>
+            <p>Hub dashboard with section tiles, classic wheel up to seven slots with pixel-perfect bitmap discs, real HSV color picker, wheel sounds fixed for both styles — and the classic skin now opens with Samsung's original 18-frame SpenCommand animation (20&nbsp;ms per frame, reversed on close).</p>
+          </div>
+        </li>
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>1.6</span></div>
+          <div class="tl-body">
+            <h3>Desktop Duplication capture &amp; app-gated input</h3>
+            <p>Preview streaming gained a DXGI capture path with GDI fallback, input injection became app-gated, and runtime channels landed.</p>
+          </div>
+        </li>
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>1.2</span></div>
+          <div class="tl-body">
+            <h3>Preview mode</h3>
+            <p>Screen mirroring from Windows to the phone via ADB while keeping the stylus working — you see on the Note exactly what the PC sends, at real quality.</p>
+          </div>
+        </li>
+        <li class="tl-step reveal">
+          <div class="tl-marker"><span>1.0</span></div>
+          <div class="tl-body">
+            <h3>First public release</h3>
+            <p>Rooted barrel-button gestures, Air Command wheel, Quick Notes, screen tools and the first ADB-first Wacom emulator for Windows.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="section" id="screenshots">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Gallery</span>
+        <h2>Straight from the devices</h2>
+        <p>Real captures from the tested hardware and the desktop panel.</p>
+      </header>
+      <div class="gallery">
+        <figure class="shot reveal">
+          <div class="photo-slot" data-slot="gallery-1">
+            <img src="assets/shots/shot-1.jpg" alt="Classic SpenCommand Air Command fan open on the home screen, next to the pen anchor" loading="lazy" width="720" height="1280">
+          </div>
+          <figcaption>The classic wheel in action — authentic fan on the home screen</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <div class="photo-slot" data-slot="gallery-2">
+            <img src="assets/shots/shot-2.png" alt="App dashboard: service active, digitizer reader online and section tiles" loading="lazy" width="720" height="1280">
+          </div>
+          <figcaption>Command center — service live, pen state and quick tiles</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <div class="photo-slot" data-slot="gallery-3">
+            <img src="assets/shots/shot-3.png" alt="Wheel settings with Modern and Classic styles, color picker and live preview arc" loading="lazy" width="720" height="1280">
+          </div>
+          <figcaption>Modern or classic, your accent color — with a live preview arc</figcaption>
+        </figure>
+        <figure class="shot reveal">
+          <div class="photo-slot" data-slot="gallery-4">
+            <img src="assets/shots/shot-4.png" alt="Action picker sheet over the programmable button settings" loading="lazy" width="720" height="1280">
+          </div>
+          <figcaption>Twelve actions, three gestures — tap a row to remap</figcaption>
+        </figure>
+        <figure class="shot landscape reveal">
+          <div class="photo-slot" data-slot="gallery-5">
+            <img src="assets/shots/panel-large-dashboard.png" alt="SPGF_WacomGUI dashboard: live mirror, stat tiles and session controls" loading="lazy" width="1180" height="701">
+          </div>
+          <figcaption>Desktop panel — the dashboard: live mirror, stats and controls</figcaption>
+        </figure>
+        <figure class="shot landscape reveal">
+          <div class="photo-slot" data-slot="gallery-6">
+            <img src="assets/shots/panel-large-phone.png" alt="SPGF_WacomGUI phone page with the detected Note7 and its photo credits" loading="lazy" width="1180" height="701">
+          </div>
+          <figcaption>Desktop panel — adb detection with the real device photo and credits</figcaption>
+        </figure>
+        <figure class="shot landscape reveal">
+          <div class="photo-slot" data-slot="gallery-panel-gallery">
+            <img src="assets/shots/panel-large-gallery.png" alt="SPGF_WacomGUI photo database with all eleven Note generations and the selection ring" loading="lazy" width="1180" height="735">
+          </div>
+          <figcaption>Desktop panel — all eleven generations at a glance, selection ringed</figcaption>
+        </figure>
+      </div>
+      <figure class="shot wide reveal">
+        <div class="photo-slot" data-slot="gallery-wide">
+          <img src="assets/shots/desktop-panel.png" alt="The SPGF Windows panel dashboard with the live mirror and controls" loading="lazy" width="1180" height="701">
+        </div>
+        <figcaption>The SPGF_WacomGUI panel — portable exe, live mirror, one click away</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- SETUP -->
+  <section class="section" id="setup">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Getting started</span>
+        <h2>From clone to working pen</h2>
+        <p>Everything you need before the first gesture fires.</p>
+      </header>
+
+      <div class="setup-grid">
+        <article class="card req-card reveal">
+          <h3>Requirements</h3>
+          <ul class="checklist">
+            <li><b>Samsung Galaxy Note 3 SM-N9005</b> for the tested configuration, or a compatible Wacom kernel device for experimental use</li>
+            <li>Root access via <b>Magisk, SuperSU</b> or an equivalent <code>su</code></li>
+            <li>An <b>AOSP/LineageOS-based ROM</b> that exposes the input devices</li>
+            <li><b>Display over other apps</b> permission for the wheel</li>
+            <li><b>Notification permission</b> on Android 13+ for the foreground service</li>
+            <li><b>Windows 10/11</b> for the desktop panel (portable exe — nothing to install)</li>
+          </ul>
+
+          <h3 class="mt">Build &amp; install</h3>
+          <div class="codeblock">
+            <div class="code-head"><span>shell</span><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code><span class="tok-c"># From the repository root (Gradle 8.x or bundled .tools/gradle-8.13)</span>
+gradle :app:assembleDebug
+
+<span class="tok-c"># Install on a connected device</span>
+adb install -r app/build/outputs/apk/debug/app-debug.apk</code></pre>
+          </div>
+          <p class="req-note">Kotlin · AndroidX · Jetpack Compose · Material 3 — no NDK or JNI required.</p>
+        </article>
+
+        <article class="card steps-card reveal">
+          <h3>First launch checklist</h3>
+          <ol class="steps">
+            <li><span>Grant root access when requested.</span></li>
+            <li><span>Grant <b>Display over other apps</b> for the wheel.</span></li>
+            <li><span>Allow notifications on Android 13+.</span></li>
+            <li><span>Start the S Pen service from the dashboard — it must stay running, because extraction is a Linux input event, not a system broadcast.</span></li>
+            <li><span>Enable <b>Open wheel on S Pen extraction</b> for automatic Air Command.</span></li>
+            <li><span>Configure side-button gestures, the wheel slots and the accent color.</span></li>
+            <li><span>Run <b>SPGF_WacomGUI.exe</b> on the PC, press Detect, then Start streaming.</span></li>
+            <li><span>In Wacom Mode, tap <b>Detect device resolution</b> after changing orientation or a monitor override.</span></li>
+          </ol>
+          <p class="steps-note">The service notification reports whether the digitizer reader is active. If the kernel device is missing, the app stays usable as a configuration tool and reports the failure instead of blocking the UI.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPATIBILITY -->
+  <section class="section" id="compat">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Hardware compatibility</span>
+        <h2>Tested where it matters</h2>
+      </header>
+      <div class="compat-grid">
+        <article class="card compat-card tested reveal">
+          <h3><span class="badge badge-ok">Tested end-to-end</span></h3>
+          <p class="device-name">Samsung Galaxy Note 3 <span>SM-N9005</span></p>
+          <p>The only hardware validated on the connected rooted ROM used by this repository. Everything — presence switch, digitizer axes, Wacom Mode, the wheel — is tuned against this device.</p>
+        </article>
+        <article class="card compat-card reveal">
+          <h3><span class="badge badge-warn">Potential · unverified</span></h3>
+          <ul class="checklist">
+            <li>Galaxy Note 4 / Edge / 5 / 7</li>
+            <li>Galaxy Note 8 / 9 / 10 / 20</li>
+            <li>Galaxy Tab models with a Wacom digitizer</li>
+            <li>Any rooted Android hardware exposing a Linux input node with <code>ABS_X</code>, <code>ABS_Y</code>, pressure, <code>BTN_TOUCH</code> and <code>BTN_STYLUS</code></li>
+          </ul>
+          <p class="proto-note">Each target needs its own device-name, axis-range, switch-polarity, kernel-permission and orientation validation. An S Pen slot alone implies nothing.</p>
+        </article>
+        <article class="card compat-card reveal">
+          <h3><span class="dot dot-cyan"></span>Diagnose your device</h3>
+          <div class="codeblock">
+            <div class="code-head"><span>adb</span><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code><span class="tok-c"># Inspect input devices without changing state</span>
+adb shell su -c "getevent -lp"
+
+<span class="tok-c"># Watch the app's own logs</span>
+adb logcat -s SPenGestureService EPenInputReader SPenDebug</code></pre>
+          </div>
+          <p class="proto-note">Expected capabilities include <code>BTN_TOUCH</code>, <code>BTN_STYLUS</code> and <code>BTN_DIGI</code>. The service accepts switch codes <code>001a</code>, <code>SW_001A</code> and common pen-switch aliases; if the switch never fires, the 5-second activity fallback takes over.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIMITATIONS + DEV -->
+  <section class="section alt" id="dev">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Honest engineering</span>
+        <h2>Limitations &amp; project map</h2>
+        <p>No magic, no overpromises — here is exactly what this tool is and isn't.</p>
+      </header>
+
+      <div class="dev-grid">
+        <article class="card reveal">
+          <h3>Known limitations</h3>
+          <ul class="x-list">
+            <li>Text-based <code>getevent</code> parsing has slightly more latency than a native binary reader.</li>
+            <li>No Samsung handwriting recognition — Screen Write and Smart Select are deliberately simple utilities.</li>
+            <li>Pen Window and root toggles depend on the ROM and aren't available on every build.</li>
+            <li>Android overlay policy and the kernel can limit touch passthrough or background execution.</li>
+            <li>The wheel is intentionally compact with no blurred backdrop: Android can't blur another app's private pixels, and a small window never blocks unrelated touches.</li>
+            <li>If a ROM mounts the panel in reverse, pick <b>Landscape (inverted)</b> or use <code>--orientation landscape-inverted</code>.</li>
+          </ul>
+        </article>
+
+        <article class="card reveal">
+          <h3>Project map</h3>
+          <dl class="filemap">
+            <dt><code>SPenGestureService.kt</code></dt><dd>Foreground orchestration and runtime state</dd>
+            <dt><code>EPenInputReader.kt</code></dt><dd>Isolated root input reader and event parser</dd>
+            <dt><code>EventDeviceFinder.kt</code></dt><dd>Stable device discovery and capability limits</dd>
+            <dt><code>PenGestureAnalyzer.kt</code></dt><dd>Non-blocking button and hover state machine</dd>
+            <dt><code>WheelOverlay.kt</code></dt><dd>Compact lower-right Canvas Air Command overlay</dd>
+            <dt><code>MainComposeScreen.kt</code> et al.</dt><dd>Material 3 screens (notes, tablet UI)</dd>
+            <dt><code>TabletInputCapture.kt</code></dt><dd>Capability-aware normalized frames</dd>
+            <dt><code>TabletNetworkServer.kt</code></dt><dd>Latest-frame TCP transport</dd>
+            <dt><code>scripts/SPGF_Wacom.py</code></dt><dd>ADB-first PC emulator (classic console)</dd>
+            <dt><code>scripts/SPGF_WacomGUI.py</code></dt><dd>Portable Windows control panel</dd>
+            <dt><code>site/</code></dt><dd>This landing page, deployed on Vercel</dd>
+            <dt><code>docs/TRANSLATION.md</code></dt><dd>Documentation and localization workflow</dd>
+          </dl>
+          <h3 class="mt">Testing</h3>
+          <div class="codeblock">
+            <div class="code-head"><span>JVM tests are hardware-free</span><button class="copy-btn" type="button">Copy</button></div>
+            <pre><code>gradle :app:testDebugUnitTest
+python scripts\test_i18n.py
+python scripts\test_spen_mouse_emulator.py</code></pre>
+          </div>
+          <p class="proto-note">Covers input parsing, presence decoding, the five-second idle rule, coordinate normalization and pressure curves. A connected phone is recommended for final acceptance testing because switch codes and polarity are kernel-specific.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD -->
+  <section class="section" id="download">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">Download</span>
+        <h2>Get SPGF</h2>
+        <p>Grab the latest APK and the portable Windows panel straight from GitHub Releases — or build them yourself from source.</p>
+      </header>
+
+      <div class="dl-grid">
+        <div class="dl-hero card reveal">
+          <div class="dl-icon-wrap">
+            <img src="assets/icon-192.png" alt="SPGF app icon" width="120" height="120" class="dl-icon">
+            <span class="pill pill-grad" id="dl-version">Android</span>
+          </div>
+          <div class="dl-info">
+            <h3>SPGF <span class="dl-pkg">com.spengesturefix</span></h3>
+            <p>Rooted Android · AOSP/LineageOS-based ROM · Wacom digitizer required. Root via Magisk/SuperSU, overlay permission and notifications on Android 13+.</p>
+            <div class="dl-chips">
+              <span class="chip">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l2.9 6.26 6.6.56-5 4.36 1.5 6.45L12 16.9 5.99 19.63l1.5-6.45-5-4.36 6.6-.56L12 2z"/></svg>
+                <b class="js-stars">—</b> stars
+              </span>
+              <span class="chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                <b class="js-downloads">—</b> downloads
+              </span>
+            </div>
+            <div class="dl-actions">
+              <a class="btn btn-primary" id="dl-apk" href="https://github.com/Clutsy/SPenGestureFix/releases/latest" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                Download latest APK
+              </a>
+              <a class="btn btn-ghost" href="https://github.com/Clutsy/SPenGestureFix/releases" target="_blank" rel="noopener">All releases</a>
+              <a class="btn btn-ghost" href="#setup">Build from source</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="dl-hero card reveal">
+          <div class="dl-icon-wrap">
+            <span class="dl-badge dl-badge-logo"><img src="assets/logo.png" alt="SPGF mark — white pen line art" width="120" height="120"></span>
+            <span class="pill pill-grad">Windows · v2.1</span>
+          </div>
+          <div class="dl-info">
+            <h3>SPGF_WacomGUI.exe <span class="dl-pkg">portable · ~20 MB</span></h3>
+            <p>Windows 10/11 · no installer, no Python. Settings live next to the exe; copy the file anywhere. USB detection uses adb if present, otherwise set the phone IP manually.</p>
+            <div class="dl-actions">
+              <a class="btn btn-primary" href="https://github.com/Clutsy/SPenGestureFix/releases/latest" target="_blank" rel="noopener">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                Download the panel
+              </a>
+              <a class="btn btn-ghost" href="#desktop">What it does</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="dl-sub reveal">Release history</h3>
+      <div id="release-list" class="release-list reveal" aria-live="polite">
+        <article class="release card">
+          <div class="release-head">
+            <span class="release-tag">Build2</span>
+            <span class="release-name">Second Release</span>
+            <span class="release-date">Sep 4, 2026</span>
+          </div>
+          <p class="release-notes">Added Preview mode — screen mirroring from Windows to the phone via ADB while keeping the stylus working — plus a new UI.</p>
+          <div class="release-assets">
+            <a class="asset-btn" href="https://github.com/Clutsy/SPenGestureFix/releases/download/Build2/SPenGestureFix.apk" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>SPGF.apk
+              <span class="asset-size">13.3 MB</span>
+            </a>
+            <a class="asset-btn" href="https://github.com/Clutsy/SPenGestureFix/releases/download/Build2/SPGF_Wacom.py" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>SPGF_Wacom.py
+              <span class="asset-size">84.4 KB</span>
+            </a>
+          </div>
+        </article>
+        <article class="release card">
+          <div class="release-head">
+            <span class="release-tag">Build</span>
+            <span class="release-name">First Release</span>
+            <span class="release-date">Aug 22, 2026</span>
+          </div>
+          <p class="release-notes">First public release. To use SPGF_Wacom.py you need ADB and Python installed on your Windows machine.</p>
+          <div class="release-assets">
+            <a class="asset-btn" href="https://github.com/Clutsy/SPenGestureFix/releases/download/Build/SPenGestureFix.apk" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>SPGF.apk
+              <span class="asset-size">13.2 MB</span>
+            </a>
+            <a class="asset-btn" href="https://github.com/Clutsy/SPenGestureFix/releases/download/Build/SPGF_Wacom.py" target="_blank" rel="noopener">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>SPGF_Wacom.py
+              <span class="asset-size">36.0 KB</span>
+            </a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- LICENSE -->
+  <section class="section" id="license">
+    <div class="container">
+      <header class="section-head reveal">
+        <span class="eyebrow">License</span>
+        <h2>MIT, with credit where it's due</h2>
+      </header>
+      <div class="license-card card reveal">
+        <p>SPGF is <b>free and open source under the MIT license</b>. You can use, study, modify and redistribute it — including in your own fork or rebranded build — with one condition:</p>
+        <blockquote>
+          Any copy, fork, modification or redistribution — including renamed or rebranded versions — <b>must credit the original project</b>: <b>SPenGestureFix (SPGF) by Clutsy — github.com/Clutsy/SPenGestureFix</b> — in the source tree, in the app's About screen, in the documentation and on any download page.
+        </blockquote>
+        <p>The full wording lives in the <a href="https://github.com/Clutsy/SPenGestureFix/blob/main/LICENSE" target="_blank" rel="noopener">LICENSE file</a>. Independent open-source project — not affiliated with or endorsed by Samsung. S Pen and Galaxy Note are trademarks of Samsung Electronics.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final-cta" id="get-started">
+    <div class="container reveal">
+      <span class="eyebrow center">Open source · MIT</span>
+      <h2>Ready to wake up your pen?</h2>
+      <p>Clone it, build it, flash your gestures back. Star the repo if it saves your Note from a drawer.</p>
+      <div class="hero-actions center">
+        <a class="btn btn-primary lg" href="#download">Download</a>
+        <a class="btn btn-ghost lg" href="https://github.com/Clutsy/SPenGestureFix" target="_blank" rel="noopener">Star on GitHub</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <a href="#top" class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(40 60 40)"><path d="M60 7 C66.2 7 69.5 11 69.5 17 L69.5 45 C69.5 51.5 65.5 56.5 60 62 C54.5 56.5 50.5 51.5 50.5 45 L50.5 17 C50.5 11 53.8 7 60 7 Z"/><path d="M56.4 17 L56.4 41"/><path d="M63.6 17 L63.6 41"/></g><path d="M43 69 C34.5 74.5 32.5 84 40.5 89.5 C50 96 60.5 88.5 66 80.5 C71 73.5 78.5 71 83.5 76 C88.5 81 86.5 88.5 79.5 88.5"/></svg></span><span class="brand-name">SP<b>GF</b></span></a>
+      <p>A focused, local-first toolkit restoring S Pen gestures, Air Command and Wacom tablet input on rooted AOSP/LineageOS Notes — with a portable Windows panel.</p>
+      <p class="footer-fine">SPenGestureFix (SPGF) by <a href="https://github.com/Clutsy" target="_blank" rel="noopener">Clutsy</a>. MIT licensed — attribution required.</p>
+    </div>
+    <nav class="footer-col" aria-label="Site">
+      <h4>Site</h4>
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#tablet">Wacom Mode</a>
+      <a href="#desktop">Desktop panel</a>
+      <a href="#changelog">Changelog</a>
+      <a href="#screenshots">Gallery</a>
+      <a href="#setup">Setup</a>
+      <a href="#download">Download</a>
+    </nav>
+    <nav class="footer-col" aria-label="Project">
+      <h4>Project</h4>
+      <a href="https://github.com/Clutsy/SPenGestureFix" target="_blank" rel="noopener">GitHub repository</a>
+      <a href="https://github.com/Clutsy/SPenGestureFix/releases" target="_blank" rel="noopener">Releases</a>
+      <a href="https://github.com/Clutsy/SPenGestureFix/blob/main/README.md" target="_blank" rel="noopener">README</a>
+      <a href="https://github.com/Clutsy/SPenGestureFix/blob/main/LICENSE" target="_blank" rel="noopener">License (MIT)</a>
+      <a href="https://github.com/clutsy" target="_blank" rel="noopener">@Clutsy</a>
+    </nav>
+  </div>
+  <div class="container footer-bottom">
+    <p>© <span id="year">2026</span> Clutsy — released under the MIT license. Android package: <code>com.spengesturefix</code>.</p>
+    <p class="fine">Independent open-source project. Not affiliated with or endorsed by Samsung. S Pen and Galaxy Note are trademarks of Samsung Electronics. Device photography from Wikimedia Commons contributors (see the panel's photo credits).</p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+
+</body>
+</html>

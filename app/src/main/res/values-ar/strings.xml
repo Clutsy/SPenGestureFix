@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">صنعه clutsy</string>
     <string name="section_status">الحالة</string>
     <string name="btn_check_root">التحقق من صلاحيات الجذر</string>
@@ -98,7 +98,7 @@
     <string name="toast_pen_extracted">تم إخراج S Pen — فُتحت العجلة</string>
     <string name="toast_pen_inserted">تم إدخال S Pen — أُغلقت العجلة</string>
     <string name="notif_channel_name">خدمة إيماءات S Pen</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">انتظار جهاز الترقيم S Pen…</string>
     <string name="notif_not_found">جهاز الترقيم "%s" غير موجود</string>
     <string name="notif_active">نشط على %s</string>

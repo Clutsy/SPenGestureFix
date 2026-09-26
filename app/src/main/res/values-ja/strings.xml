@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">制作: clutsy</string>
     <string name="section_status">ステータス</string>
     <string name="btn_check_root">root権限を確認</string>
@@ -98,7 +98,7 @@
     <string name="toast_pen_extracted">S Penを取り外しました — ホイールを開きました</string>
     <string name="toast_pen_inserted">S Penを挿入しました — ホイールを閉じました</string>
     <string name="notif_channel_name">S Penジェスチャーサービス</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">S Penデジタイザーを待機中…</string>
     <string name="notif_not_found">デジタイザー"%s"が見つかりません</string>
     <string name="notif_active">%sで動作中</string>

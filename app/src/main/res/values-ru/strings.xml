@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">Автор: clutsy</string>
     <string name="section_status">Статус</string>
     <string name="btn_check_root">Проверить права root</string>
@@ -98,7 +98,7 @@
     <string name="toast_pen_extracted">S Pen извлечён — колесо открыто</string>
     <string name="toast_pen_inserted">S Pen вставлен — колесо закрыто</string>
     <string name="notif_channel_name">Служба жестов S Pen</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">Ожидание дигитайзера S Pen…</string>
     <string name="notif_not_found">Дигитайзер "%s" не найден</string>
     <string name="notif_active">Активен на %s</string>

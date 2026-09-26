@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">作者：clutsy</string>
     <string name="section_status">状态</string>
     <string name="btn_check_root">检查root权限</string>
@@ -98,7 +98,7 @@
     <string name="toast_pen_extracted">S Pen已拔出 — 圆环已打开</string>
     <string name="toast_pen_inserted">S Pen已插入 — 圆环已关闭</string>
     <string name="notif_channel_name">S Pen手势服务</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">正在等待S Pen数字化仪…</string>
     <string name="notif_not_found">未找到数字化仪"%s"</string>
     <string name="notif_active">在%s上运行</string>

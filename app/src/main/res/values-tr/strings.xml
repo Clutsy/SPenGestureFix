@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">S Pen Gesture Fix</string>
+    <string name="app_name">SPGF</string>
     <string name="made_by">Geliştiren: clutsy</string>
     <string name="section_status">Durum</string>
     <string name="btn_check_root">Root izinlerini kontrol et</string>
@@ -98,7 +98,7 @@
     <string name="toast_pen_extracted">S Pen çıkarıldı — tekerlek açıldı</string>
     <string name="toast_pen_inserted">S Pen takıldı — tekerlek kapandı</string>
     <string name="notif_channel_name">S Pen Hareket Hizmeti</string>
-    <string name="notif_title">S Pen Gesture Fix</string>
+    <string name="notif_title">SPGF</string>
     <string name="notif_waiting">S Pen sayısallaştırıcısı bekleniyor…</string>
     <string name="notif_not_found">Sayısallaştırıcı "%s" bulunamadı</string>
     <string name="notif_active">%s üzerinde etkin</string>
